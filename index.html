@@ -95,25 +95,17 @@
     }
     .card.missing .card-img-wrap img { opacity: 0.3; filter: grayscale(50%); }
 
-    .card-badge {
-      position: absolute;
-      top: 4px; right: 4px;
-      background: #2d6a4f;
-      color: #b7e4c7;
-      border-radius: 50%;
-      width: 18px; height: 18px;
-      font-size: 0.65rem;
-      font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.3rem;
+      padding: 0 0.1rem;
     }
-    .card-num-overlay {
-      position: absolute;
-      bottom: 3px; left: 4px;
-      font-size: 0.55rem;
-      color: rgba(255,255,255,0.5);
-    }
+    .card-num  { font-size: 0.58rem; color: #555; }
+    .card-check { font-size: 0.7rem; color: #52b788; font-weight: 700; }
 
-    .card-name   { font-size: 0.68rem; font-weight: 700; margin-top: 0.3rem; line-height: 1.2; }
+    .card-name   { font-size: 0.68rem; font-weight: 700; margin-top: 0.1rem; line-height: 1.2; }
     .card-rarity { font-size: 0.58rem; margin-top: 0.1rem; }
 
     .r-holo     { color: #ffd700; }
@@ -605,8 +597,10 @@ function render() {
     return `<div class="card ${isOwned ? 'owned' : 'missing'}" onclick="toggle(${c.n})">
       <div class="card-img-wrap">
         <img src="${img}" loading="lazy" alt="${c.name}">
-        ${isOwned ? '<div class="card-badge">&#10003;</div>' : ''}
-        <div class="card-num-overlay">${c.n}/${total}</div>
+      </div>
+      <div class="card-footer">
+        <span class="card-num">${c.n}/${total}</span>
+        ${isOwned ? '<span class="card-check">&#10003; owned</span>' : ''}
       </div>
       <div class="card-name">${c.name}</div>
       <div class="card-rarity ${RARITY_CLASS[c.r]}">${RARITY_SYMBOL[c.r]} ${c.r}</div>
