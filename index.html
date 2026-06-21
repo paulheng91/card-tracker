@@ -117,6 +117,18 @@
 
     .empty { text-align: center; color: #444; padding: 3rem 1rem; grid-column: 1/-1; font-size: 0.9rem; }
 
+    .set-divider {
+      grid-column: 1 / -1;
+      font-size: 1rem;
+      font-weight: 800;
+      color: #ffd700;
+      background: #16213e;
+      border: 1px solid #ffd700;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      margin-top: 1rem;
+      letter-spacing: 0.05em;
+    }
     .section-header {
       grid-column: 1 / -1;
       font-size: 0.72rem;
@@ -186,14 +198,15 @@
 <header>
   <h1>Pokemon Card Tracker</h1>
   <div class="set-tabs">
-    <button class="set-tab active" data-set="overview">Overview</button>
-    <button class="set-tab" data-set="base1">Base Set</button>
+    <button class="set-tab active" data-set="base1">Base Set</button>
     <button class="set-tab" data-set="jungle">Jungle</button>
     <button class="set-tab" data-set="fossil">Fossil</button>
     <button class="set-tab" data-set="rocket">Team Rocket</button>
     <button class="set-tab" data-set="gym1">Gym Heroes</button>
     <button class="set-tab" data-set="gym2">Gym Challenge</button>
     <button class="set-tab" data-set="promo">WotC Promos</button>
+    <button class="set-tab" data-set="all">All Cards</button>
+    <button class="set-tab" data-set="overview">Overview</button>
   </div>
   <div class="progress-wrap">
     <div class="progress-bar" id="bar" style="width:0%"></div>
@@ -931,7 +944,7 @@ const RARITY_CLASS  = {"Holo Rare":"r-holo","Rare":"r-rare","Uncommon":"r-uncomm
 const SET_KEYS = ['base1','jungle','fossil','rocket','gym1','gym2','promo'];
 
 let ownedMap = { base1: new Set(), jungle: new Set(), fossil: new Set(), rocket: new Set(), gym1: new Set(), gym2: new Set(), promo: new Set() };
-let activeSet = 'overview';
+let activeSet = 'base1';
 let filter = 'all';
 let saveTimer = null;
 
@@ -1029,7 +1042,7 @@ function saveToken() {
 document.querySelectorAll('.set-tab').forEach(btn => {
   btn.addEventListener('click', () => {
     switchSet(btn.dataset.set);
-    document.getElementById('filters').style.display = btn.dataset.set === 'overview' ? 'none' : 'flex';
+    document.getElementById('filters').style.display = ['overview','all'].includes(btn.dataset.set) ? 'none' : 'flex';
   });
 });
 
@@ -1044,6 +1057,13 @@ document.querySelectorAll('.btn[data-filter]').forEach(btn => {
 
 function toggle(n) {
   const s = ownedMap[activeSet];
+  s.has(n) ? s.delete(n) : s.add(n);
+  render();
+  scheduleSave();
+}
+
+function toggleInSet(key, n) {
+  const s = ownedMap[key];
   s.has(n) ? s.delete(n) : s.add(n);
   render();
   scheduleSave();
@@ -1091,6 +1111,43 @@ function render() {
       </div>`;
 
     grid.appendChild(wrap);
+    return;
+  }
+
+  if (activeSet === 'all') {
+    const totalOwned = SET_KEYS.reduce((s,k) => s + ownedMap[k].size, 0);
+    const totalCards = SET_KEYS.reduce((s,k) => s + SETS[k].cards.length, 0);
+    const totalPct   = Math.round((totalOwned / totalCards) * 100);
+    document.getElementById('stats').textContent = `${totalOwned} / ${totalCards} total collected (${totalPct}%)`;
+    document.getElementById('bar').style.width = totalPct + '%';
+
+    const items = [];
+    SET_KEYS.forEach(key => {
+      const set   = SETS[key];
+      const owned = ownedMap[key];
+      const total = set.cards.length;
+      let lastSection = null;
+      items.push(`<div class="set-divider">${set.name}</div>`);
+      set.cards.forEach(c => {
+        const section = getSection(c);
+        if (section !== lastSection) {
+          items.push(`<div class="section-header">${section}</div>`);
+          lastSection = section;
+        }
+        const isOwned = owned.has(c.n);
+        const img = `https://images.pokemontcg.io/${set.cdn}/${c.n}.png`;
+        items.push(`<div class="card ${isOwned ? 'owned' : 'missing'}" onclick="toggleInSet('${key}',${c.n})">
+          <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+          <div class="card-footer">
+            <span class="card-num">${c.n}/${total}</span>
+            ${isOwned ? '<span class="card-check">&#10003; owned</span>' : '<span class="card-need">NEED</span>'}
+          </div>
+          <div class="card-name">${c.name}</div>
+          <div class="card-rarity ${RARITY_CLASS[c.r]}">${RARITY_SYMBOL[c.r]} ${c.r}</div>
+        </div>`);
+      });
+    });
+    grid.innerHTML = items.join('');
     return;
   }
 
@@ -1145,6 +1202,7 @@ function render() {
 function switchSet(key) {
   activeSet = key;
   document.querySelectorAll('.set-tab').forEach(b => b.classList.toggle('active', b.dataset.set === key));
+  document.getElementById('filters').style.display = ['overview','all'].includes(key) ? 'none' : 'flex';
   render();
 }
 
