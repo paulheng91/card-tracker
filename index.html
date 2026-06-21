@@ -42,7 +42,7 @@
       transition: all 0.15s;
     }
     .btn.active { background: #ffd700; color: #1a1a2e; }
-    .btn-token { margin-left: auto; background: #1a1a2e; color: #555; border: 1px solid #333; }
+    .btn-token { background: #1a1a2e; color: #555; border: 1px solid #333; }
 
     .grid {
       display: grid;
@@ -61,12 +61,12 @@
       transition: transform 0.1s;
     }
     .card:active { transform: scale(0.93); }
-    .card.owned  { background: #1a3a2a; border-color: #2d6a4f; }
+    .card.owned   { background: #1a3a2a; border-color: #2d6a4f; }
     .card.missing { background: #251515; border-color: #3a2020; opacity: 0.6; }
 
-    .card-num  { font-size: 0.58rem; color: #666; }
+    .card-num   { font-size: 0.58rem; color: #666; }
     .card-check { font-size: 0.85rem; min-height: 1.1rem; margin: 0.1rem 0; }
-    .card-name { font-size: 0.72rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.2rem; }
+    .card-name  { font-size: 0.72rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.2rem; }
     .card-rarity { font-size: 0.6rem; }
 
     .r-holo     { color: #ffd700; }
@@ -77,7 +77,6 @@
 
     .empty { text-align: center; color: #444; padding: 3rem 1rem; grid-column: 1/-1; font-size: 0.9rem; }
 
-    /* Token modal */
     .modal-backdrop {
       display: none;
       position: fixed; inset: 0;
@@ -143,11 +142,10 @@
 
 <div class="grid" id="grid"></div>
 
-<!-- Token modal -->
 <div class="modal-backdrop" id="tokenModal">
   <div class="modal">
     <h2>GitHub Token</h2>
-    <p>Enter a GitHub personal access token with <strong>public_repo</strong> scope. It's stored only in this browser and used to save your collection back to the repo.</p>
+    <p>Enter a GitHub personal access token with <strong>gist</strong> scope. Your collection is stored in a secret gist — no commit history. The token is saved only in this browser.</p>
     <input type="password" id="tokenInput" placeholder="ghp_..." />
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeTokenModal()">Cancel</button>
@@ -157,10 +155,9 @@
 </div>
 
 <script>
-const REPO  = 'paulheng91/card-tracker';
-const FILE  = 'collection.json';
-const RAW   = `https://raw.githubusercontent.com/${REPO}/main/${FILE}`;
-const API   = `https://api.github.com/repos/${REPO}/contents/${FILE}`;
+const GIST_DESC = 'card-tracker-collection';
+const GIST_FILE = 'collection.json';
+const GISTS_API = 'https://api.github.com/gists';
 
 const CARDS = [
   // Holo Rares
@@ -282,52 +279,71 @@ const TOTAL = CARDS.length;
 let owned = new Set();
 let filter = 'all';
 let saveTimer = null;
-let currentSha = null;
+let gistId = localStorage.getItem('gist-id') || null;
 
-// --- GitHub API ---
+function token() { return localStorage.getItem('gh-token'); }
+function authHeaders() { return { Authorization: `token ${token()}`, 'Content-Type': 'application/json' }; }
+
+async function resolveGistId() {
+  if (gistId) return gistId;
+  if (!token()) { openTokenModal(); return null; }
+
+  const res = await fetch(GISTS_API, { headers: authHeaders() });
+  if (!res.ok) throw new Error('auth failed');
+  const list = await res.json();
+  const existing = list.find(g => g.description === GIST_DESC && g.files[GIST_FILE]);
+
+  if (existing) {
+    gistId = existing.id;
+  } else {
+    const create = await fetch(GISTS_API, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ description: GIST_DESC, public: false, files: { [GIST_FILE]: { content: '[]' } } })
+    });
+    if (!create.ok) throw new Error('create failed');
+    gistId = (await create.json()).id;
+  }
+
+  localStorage.setItem('gist-id', gistId);
+  return gistId;
+}
 
 async function loadCollection() {
+  if (!token()) { render(); return; }
   setStatus('loading...', '');
   try {
-    const res = await fetch(RAW + '?t=' + Date.now());
-    if (!res.ok) throw new Error('not found');
+    const id = await resolveGistId();
+    if (!id) { render(); return; }
+    const res = await fetch(`${GISTS_API}/${id}`, { headers: authHeaders() });
+    if (!res.ok) throw new Error('load failed');
     const data = await res.json();
-    owned = new Set(data);
+    owned = new Set(JSON.parse(data.files[GIST_FILE].content));
     setStatus('', '');
-  } catch {
-    owned = new Set();
-    setStatus('', '');
+  } catch (e) {
+    setStatus(e.message === 'auth failed' ? 'bad token' : 'load failed', 'error');
+    setTimeout(() => setStatus('', ''), 3000);
   }
   render();
 }
 
 async function pushCollection() {
-  const token = localStorage.getItem('gh-token');
-  if (!token) { openTokenModal(); return; }
-
+  if (!token()) { openTokenModal(); return; }
   setStatus('saving...', 'saving');
   try {
-    // Get current SHA
-    const meta = await fetch(API, {
-      headers: { Authorization: `token ${token}` }
-    });
-    if (!meta.ok) throw new Error('auth failed');
-    const metaJson = await meta.json();
-    currentSha = metaJson.sha;
-
+    const id = await resolveGistId();
+    if (!id) return;
     const sorted = [...owned].sort((a, b) => a - b);
-    const content = btoa(JSON.stringify(sorted));
-
-    const put = await fetch(API, {
-      method: 'PUT',
-      headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: 'Update collection', content, sha: currentSha })
+    const res = await fetch(`${GISTS_API}/${id}`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(sorted) } } })
     });
-    if (!put.ok) throw new Error('save failed');
+    if (!res.ok) throw new Error('save failed');
     setStatus('saved', 'saved');
     setTimeout(() => setStatus('', ''), 2000);
-  } catch (e) {
-    setStatus('save failed — check token', 'error');
+  } catch {
+    setStatus('save failed', 'error');
   }
 }
 
@@ -342,10 +358,8 @@ function setStatus(text, cls) {
   el.className = 'save-status' + (cls ? ' ' + cls : '');
 }
 
-// --- Token modal ---
-
 function openTokenModal() {
-  document.getElementById('tokenInput').value = localStorage.getItem('gh-token') || '';
+  document.getElementById('tokenInput').value = token() || '';
   document.getElementById('tokenModal').classList.add('open');
 }
 function closeTokenModal() {
@@ -353,11 +367,14 @@ function closeTokenModal() {
 }
 function saveToken() {
   const val = document.getElementById('tokenInput').value.trim();
-  if (val) localStorage.setItem('gh-token', val);
+  if (val) {
+    localStorage.setItem('gh-token', val);
+    gistId = null;
+    localStorage.removeItem('gist-id');
+  }
   closeTokenModal();
+  loadCollection();
 }
-
-// --- UI ---
 
 document.querySelectorAll('.btn[data-filter]').forEach(btn => {
   btn.addEventListener('click', () => {
