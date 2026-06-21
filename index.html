@@ -165,6 +165,7 @@
     <button class="set-tab active" data-set="base1">Base Set</button>
     <button class="set-tab" data-set="jungle">Jungle</button>
     <button class="set-tab" data-set="fossil">Fossil</button>
+    <button class="set-tab" data-set="rocket">Team Rocket</button>
   </div>
   <div class="progress-wrap">
     <div class="progress-bar" id="bar" style="width:0%"></div>
@@ -451,13 +452,102 @@ const SETS = {
       {n:61, name:"Recycle",          r:"Common",    cat:"trainer"},
       {n:62, name:"Mysterious Fossil",r:"Common",    cat:"trainer"},
     ]
+  },
+  rocket: {
+    name: 'Team Rocket',
+    cdn: 'base5',
+    cards: [
+      {n:1,  name:"Dark Alakazam",           r:"Holo Rare", cat:"pokemon"},
+      {n:2,  name:"Dark Arbok",              r:"Holo Rare", cat:"pokemon"},
+      {n:3,  name:"Dark Blastoise",          r:"Holo Rare", cat:"pokemon"},
+      {n:4,  name:"Dark Charizard",          r:"Holo Rare", cat:"pokemon"},
+      {n:5,  name:"Dark Dragonite",          r:"Holo Rare", cat:"pokemon"},
+      {n:6,  name:"Dark Dugtrio",            r:"Holo Rare", cat:"pokemon"},
+      {n:7,  name:"Dark Golbat",             r:"Holo Rare", cat:"pokemon"},
+      {n:8,  name:"Dark Gyarados",           r:"Holo Rare", cat:"pokemon"},
+      {n:9,  name:"Dark Hypno",              r:"Holo Rare", cat:"pokemon"},
+      {n:10, name:"Dark Machamp",            r:"Holo Rare", cat:"pokemon"},
+      {n:11, name:"Dark Magneton",           r:"Holo Rare", cat:"pokemon"},
+      {n:12, name:"Dark Slowbro",            r:"Holo Rare", cat:"pokemon"},
+      {n:13, name:"Dark Vileplume",          r:"Holo Rare", cat:"pokemon"},
+      {n:14, name:"Dark Weezing",            r:"Holo Rare", cat:"pokemon"},
+      {n:15, name:"Here Comes Team Rocket!", r:"Holo Rare", cat:"trainer"},
+      {n:16, name:"Rocket's Sneak Attack",   r:"Holo Rare", cat:"trainer"},
+      {n:17, name:"Rainbow Energy",          r:"Holo Rare", cat:"energy"},
+      {n:18, name:"Dark Alakazam",           r:"Rare",      cat:"pokemon"},
+      {n:19, name:"Dark Arbok",              r:"Rare",      cat:"pokemon"},
+      {n:20, name:"Dark Blastoise",          r:"Rare",      cat:"pokemon"},
+      {n:21, name:"Dark Charizard",          r:"Rare",      cat:"pokemon"},
+      {n:22, name:"Dark Dragonite",          r:"Rare",      cat:"pokemon"},
+      {n:23, name:"Dark Dugtrio",            r:"Rare",      cat:"pokemon"},
+      {n:24, name:"Dark Golbat",             r:"Rare",      cat:"pokemon"},
+      {n:25, name:"Dark Gyarados",           r:"Rare",      cat:"pokemon"},
+      {n:26, name:"Dark Hypno",              r:"Rare",      cat:"pokemon"},
+      {n:27, name:"Dark Machamp",            r:"Rare",      cat:"pokemon"},
+      {n:28, name:"Dark Magneton",           r:"Rare",      cat:"pokemon"},
+      {n:29, name:"Dark Slowbro",            r:"Rare",      cat:"pokemon"},
+      {n:30, name:"Dark Vileplume",          r:"Rare",      cat:"pokemon"},
+      {n:31, name:"Dark Weezing",            r:"Rare",      cat:"pokemon"},
+      {n:32, name:"Dark Charmeleon",         r:"Uncommon",  cat:"pokemon"},
+      {n:33, name:"Dark Dragonair",          r:"Uncommon",  cat:"pokemon"},
+      {n:34, name:"Dark Electrode",          r:"Uncommon",  cat:"pokemon"},
+      {n:35, name:"Dark Flareon",            r:"Uncommon",  cat:"pokemon"},
+      {n:36, name:"Dark Gloom",              r:"Uncommon",  cat:"pokemon"},
+      {n:37, name:"Dark Golduck",            r:"Uncommon",  cat:"pokemon"},
+      {n:38, name:"Dark Jolteon",            r:"Uncommon",  cat:"pokemon"},
+      {n:39, name:"Dark Kadabra",            r:"Uncommon",  cat:"pokemon"},
+      {n:40, name:"Dark Machoke",            r:"Uncommon",  cat:"pokemon"},
+      {n:41, name:"Dark Muk",               r:"Uncommon",  cat:"pokemon"},
+      {n:42, name:"Dark Persian",            r:"Uncommon",  cat:"pokemon"},
+      {n:43, name:"Dark Primeape",           r:"Uncommon",  cat:"pokemon"},
+      {n:44, name:"Dark Rapidash",           r:"Uncommon",  cat:"pokemon"},
+      {n:45, name:"Dark Vaporeon",           r:"Uncommon",  cat:"pokemon"},
+      {n:46, name:"Dark Wartortle",          r:"Uncommon",  cat:"pokemon"},
+      {n:47, name:"Magikarp",               r:"Uncommon",  cat:"pokemon"},
+      {n:48, name:"Porygon",                r:"Uncommon",  cat:"pokemon"},
+      {n:49, name:"Abra",                   r:"Common",    cat:"pokemon"},
+      {n:50, name:"Charmander",             r:"Common",    cat:"pokemon"},
+      {n:51, name:"Dark Raticate",          r:"Common",    cat:"pokemon"},
+      {n:52, name:"Diglett",                r:"Common",    cat:"pokemon"},
+      {n:53, name:"Dratini",                r:"Common",    cat:"pokemon"},
+      {n:54, name:"Drowzee",                r:"Common",    cat:"pokemon"},
+      {n:55, name:"Eevee",                  r:"Common",    cat:"pokemon"},
+      {n:56, name:"Ekans",                  r:"Common",    cat:"pokemon"},
+      {n:57, name:"Grimer",                 r:"Common",    cat:"pokemon"},
+      {n:58, name:"Koffing",                r:"Common",    cat:"pokemon"},
+      {n:59, name:"Machop",                 r:"Common",    cat:"pokemon"},
+      {n:60, name:"Magnemite",              r:"Common",    cat:"pokemon"},
+      {n:61, name:"Mankey",                 r:"Common",    cat:"pokemon"},
+      {n:62, name:"Meowth",                 r:"Common",    cat:"pokemon"},
+      {n:63, name:"Oddish",                 r:"Common",    cat:"pokemon"},
+      {n:64, name:"Ponyta",                 r:"Common",    cat:"pokemon"},
+      {n:65, name:"Psyduck",                r:"Common",    cat:"pokemon"},
+      {n:66, name:"Rattata",                r:"Common",    cat:"pokemon"},
+      {n:67, name:"Slowpoke",               r:"Common",    cat:"pokemon"},
+      {n:68, name:"Squirtle",               r:"Common",    cat:"pokemon"},
+      {n:69, name:"Voltorb",                r:"Common",    cat:"pokemon"},
+      {n:70, name:"Zubat",                  r:"Common",    cat:"pokemon"},
+      {n:71, name:"Here Comes Team Rocket!",r:"Rare",      cat:"trainer"},
+      {n:72, name:"Rocket's Sneak Attack",  r:"Rare",      cat:"trainer"},
+      {n:73, name:"The Boss's Way",         r:"Uncommon",  cat:"trainer"},
+      {n:74, name:"Challenge!",             r:"Uncommon",  cat:"trainer"},
+      {n:75, name:"Digger",                 r:"Uncommon",  cat:"trainer"},
+      {n:76, name:"Imposter Oak's Revenge", r:"Uncommon",  cat:"trainer"},
+      {n:77, name:"Nightly Garbage Run",    r:"Uncommon",  cat:"trainer"},
+      {n:78, name:"Goop Gas Attack",        r:"Common",    cat:"trainer"},
+      {n:79, name:"Sleep!",                 r:"Common",    cat:"trainer"},
+      {n:80, name:"Rainbow Energy",         r:"Rare",      cat:"energy"},
+      {n:81, name:"Full Heal Energy",       r:"Uncommon",  cat:"energy"},
+      {n:82, name:"Potion Energy",          r:"Uncommon",  cat:"energy"},
+      {n:83, name:"Dark Raichu",            r:"Holo Rare", cat:"pokemon"},
+    ]
   }
 };
 
 const RARITY_SYMBOL = {"Holo Rare":"★★","Rare":"★","Uncommon":"◆","Common":"●"};
 const RARITY_CLASS  = {"Holo Rare":"r-holo","Rare":"r-rare","Uncommon":"r-uncommon","Common":"r-common"};
 
-let ownedMap = { base1: new Set(), jungle: new Set(), fossil: new Set() };
+let ownedMap = { base1: new Set(), jungle: new Set(), fossil: new Set(), rocket: new Set() };
 let activeSet = 'base1';
 let filter = 'all';
 let saveTimer = null;
@@ -484,6 +574,7 @@ async function loadCollection() {
       ownedMap.base1  = new Set(data.base1  ?? []);
       ownedMap.jungle = new Set(data.jungle ?? allNums('jungle'));
       ownedMap.fossil = new Set(data.fossil ?? allNums('fossil'));
+      ownedMap.rocket = new Set(data.rocket ?? []);
     }
     setStatus('', '');
   } catch {
@@ -503,6 +594,7 @@ async function pushCollection() {
       base1:  [...ownedMap.base1].sort((a,b) => a-b),
       jungle: [...ownedMap.jungle].sort((a,b) => a-b),
       fossil: [...ownedMap.fossil].sort((a,b) => a-b),
+      rocket: [...ownedMap.rocket].sort((a,b) => a-b),
     };
     const res = await fetch(GIST_API, {
       method: 'PATCH',
