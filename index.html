@@ -46,33 +46,66 @@
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-      gap: 0.5rem;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 0.6rem;
       padding: 0.75rem;
     }
 
     .card {
-      border-radius: 8px;
-      padding: 0.5rem 0.4rem;
+      border-radius: 10px;
+      padding: 0.4rem;
       cursor: pointer;
       text-align: center;
       user-select: none;
-      border: 1px solid transparent;
-      transition: transform 0.1s;
+      border: 2px solid transparent;
+      transition: transform 0.1s, border-color 0.15s;
+      background: #12122a;
     }
     .card:active { transform: scale(0.93); }
-    .card.owned   { background: #1a3a2a; border-color: #2d6a4f; }
-    .card.missing { background: #251515; border-color: #3a2020; opacity: 0.6; }
+    .card.owned   { border-color: #2d6a4f; }
+    .card.missing { border-color: #2a2a3a; }
 
-    .card-num   { font-size: 0.58rem; color: #666; }
-    .card-check { font-size: 0.85rem; min-height: 1.1rem; margin: 0.1rem 0; }
-    .card-name  { font-size: 0.72rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.2rem; }
-    .card-rarity { font-size: 0.6rem; }
+    .card-img-wrap {
+      position: relative;
+      border-radius: 6px;
+      overflow: hidden;
+      aspect-ratio: 63 / 88;
+      background: #0a0a1a;
+    }
+    .card-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.2s;
+    }
+    .card.missing .card-img-wrap img { opacity: 0.3; filter: grayscale(50%); }
+
+    .card-badge {
+      position: absolute;
+      top: 4px; right: 4px;
+      background: #2d6a4f;
+      color: #b7e4c7;
+      border-radius: 50%;
+      width: 18px; height: 18px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card-num-overlay {
+      position: absolute;
+      bottom: 3px; left: 4px;
+      font-size: 0.55rem;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .card-name  { font-size: 0.68rem; font-weight: 700; margin-top: 0.3rem; line-height: 1.2; }
+    .card-rarity { font-size: 0.58rem; margin-top: 0.1rem; }
 
     .r-holo     { color: #ffd700; }
     .r-rare     { color: #a8c0ff; }
     .r-uncommon { color: #b5ead7; }
-    .r-common   { color: #666; }
+    .r-common   { color: #555; }
     .owned .r-common { color: #52b788; }
 
     .empty { text-align: center; color: #444; padding: 3rem 1rem; grid-column: 1/-1; font-size: 0.9rem; }
@@ -378,9 +411,13 @@ function render() {
 
   grid.innerHTML = visible.map(c => {
     const isOwned = owned.has(c.n);
+    const img = `https://images.pokemontcg.io/base1/${c.n}.png`;
     return `<div class="card ${isOwned ? 'owned' : 'missing'}" onclick="toggle(${c.n})">
-      <div class="card-num">${c.n}/102</div>
-      <div class="card-check">${isOwned ? '&#10003;' : ''}</div>
+      <div class="card-img-wrap">
+        <img src="${img}" loading="lazy" alt="${c.name}">
+        ${isOwned ? '<div class="card-badge">&#10003;</div>' : ''}
+        <div class="card-num-overlay">${c.n}/102</div>
+      </div>
       <div class="card-name">${c.name}</div>
       <div class="card-rarity ${RARITY_CLASS[c.r]}">${RARITY_SYMBOL[c.r]} ${c.r}</div>
     </div>`;
