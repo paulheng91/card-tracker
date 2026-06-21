@@ -66,14 +66,19 @@
       background: #12122a; border: 2px solid #2d2d5e; border-radius: 10px;
       overflow: hidden; cursor: pointer; transition: transform 0.15s, border-color 0.15s; position: relative;
     }
-    .card:hover { transform: scale(1.03); }
+    .card:hover  { transform: scale(1.03); }
+    .card:active { transform: scale(0.93); }
     .card.complete { border-color: #2d6a4f; }
     .card.partial  { border-color: #b7791f; }
     .card.missing  { border-color: #6b1a1a; }
     .card.picked   { border-color: #9f7aea; box-shadow: 0 0 12px rgba(159,122,234,0.6); }
     .card.passed   { opacity: 0.45; }
+    .card.basic-land { border-color: #3a3a3a; cursor: default; }
+    .card.basic-land:hover  { transform: none; }
+    .card.basic-land:active { transform: none; }
 
-    .card-img-wrap img { width: 100%; display: block; border-radius: 6px 6px 0 0; }
+    .card-img-wrap { aspect-ratio: 63/88; overflow: hidden; background: #0a0a1a; border-radius: 6px 6px 0 0; }
+    .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.2s; }
     .card.missing .card-img-wrap img { opacity: 0.2; filter: grayscale(80%); }
     .card.partial  .card-img-wrap img { opacity: 0.65; }
 
@@ -111,7 +116,7 @@
     .lbl-part  { color: #ffd700; font-weight: 700; }
     .lbl-need  { color: #e05555; font-weight: 700; }
 
-    .card-name { padding: 0 0.5rem 0.35rem; font-size: 0.65rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-name { padding: 0 0.5rem 0.35rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* ── Pack opener ── */
     .pack-splash {
@@ -299,6 +304,7 @@ let saveTimer       = null;
 let packState       = { cards: [], pick: null, packNum: 1 };
 let flippedCards    = new Set();  // card names currently showing back face
 let excludedFromDraft = {};       // { isd: Set(['Card Name', ...]) } — owned but skip in pack gen
+let basicLandPool   = [];         // Innistrad basic land cards (fetched separately)
 
 // ── Token UI ──────────────────────────────────────────────────────────────────
 function getToken() { return localStorage.getItem('ghtoken') ?? ''; }
@@ -421,21 +427,49 @@ function toggleExcluded(cardName) {
   scheduleSave();
 }
 
+async function fetchBasicLands(setCode) {
+  try {
+    const url  = `https://api.scryfall.com/cards/search?q=set:${setCode}+type:basic&order=collector&unique=prints`;
+    const data = await (await fetch(url)).json();
+    return data.data ?? [];
+  } catch { return []; }
+}
+
 function openNewPack() {
-  const cards   = cardCache[activeCube] ?? [];
-  const excl    = excludedFromDraft[activeCube] ?? new Set();
-  const pool    = { common: [], uncommon: [], rare: [], mythic: [] };
-  for (const c of cards) { if (pool[c.rarity] && !excl.has(c.name)) pool[c.rarity].push(c); }
+  const cards = cardCache[activeCube] ?? [];
+  const excl  = excludedFromDraft[activeCube] ?? new Set();
+
+  // Separate DFC and non-DFC pools by rarity
+  const pool = { commonNorm: [], commonDFC: [], uncommonNorm: [], uncommonDFC: [], rare: [], mythic: [] };
+  for (const c of cards) {
+    if (excl.has(c.name)) continue;
+    const dfc = isDFC(c);
+    if (c.rarity === 'common')   { if (dfc) pool.commonDFC.push(c);   else pool.commonNorm.push(c); }
+    if (c.rarity === 'uncommon') { if (dfc) pool.uncommonDFC.push(c); else pool.uncommonNorm.push(c); }
+    if (c.rarity === 'rare')    pool.rare.push(c);
+    if (c.rarity === 'mythic')  pool.mythic.push(c);
+  }
 
   const pack = [];
-  // 1 rare slot — 1-in-8 chance of mythic
+
+  // 1 rare/mythic slot (1-in-8 chance of mythic)
   const useMythic = pool.mythic.length && Math.random() < 0.125;
   const rareSlot  = shuffle(useMythic ? pool.mythic : pool.rare);
   if (rareSlot.length) pack.push(rareSlot[0]);
-  // 3 uncommons
-  pack.push(...shuffle(pool.uncommon).slice(0, 3));
-  // 10 commons
-  pack.push(...shuffle(pool.common).slice(0, 10));
+
+  // 1 guaranteed DFC slot (common DFC → uncommon DFC fallback)
+  const dfcSlot = shuffle([...pool.commonDFC, ...pool.uncommonDFC]);
+  if (dfcSlot.length) pack.push(dfcSlot[0]);
+
+  // 3 uncommons (non-DFC)
+  pack.push(...shuffle(pool.uncommonNorm).slice(0, 3));
+
+  // Fill commons: 9 normal commons (+ 1 DFC = 10 non-rare slots)
+  pack.push(...shuffle(pool.commonNorm).slice(0, 9));
+
+  // 1 basic land from the set
+  const basics = basicLandPool.length ? basicLandPool : [];
+  if (basics.length) pack.push({ ...shuffle([...basics])[0], _isBasicLand: true });
 
   packState = { cards: pack, pick: null, packNum: packState.packNum + (packState.pick ? 1 : 0) };
   render();
@@ -673,15 +707,19 @@ function renderPack() {
   if (!packState.cards.length) {
     grid.innerHTML = `<div class="pack-splash">
       <h2>Innistrad Draft Simulator</h2>
-      <p>14 cards per pack · 1 rare/mythic · 3 uncommons · 10 commons</p>
+      <p>15 cards per pack · 1 rare/mythic · 3 uncommons · 9 commons · 1 DFC · 1 basic land</p>
       <button class="btn btn-lg" onclick="openNewPack()">Open Pack 1</button>
     </div>`;
     return;
   }
 
-  // Sort pack: rare first, then uncommon, then common; within each by collector number
+  // Sort: rare first, then DFC (uncommon/common), then uncommon, then common, then land
   const rarityRank = { mythic: 0, rare: 1, uncommon: 2, common: 3 };
   const sorted = [...packState.cards].sort((a, b) => {
+    if (a._isBasicLand && !b._isBasicLand) return 1;
+    if (!a._isBasicLand && b._isBasicLand) return -1;
+    if (isDFC(a) && !isDFC(b)) return -1;
+    if (!isDFC(a) && isDFC(b)) return 1;
     const rd = (rarityRank[a.rarity] ?? 4) - (rarityRank[b.rarity] ?? 4);
     return rd !== 0 ? rd : parseInt(a.collector_number) - parseInt(b.collector_number);
   });
@@ -695,6 +733,16 @@ function renderPack() {
   </div>`);
 
   for (const c of sorted) {
+    if (c._isBasicLand) {
+      const img = c.image_uris?.normal ?? c.card_faces?.[0]?.image_uris?.normal ?? '';
+      const safeName = c.name.replace(/"/g, '&quot;');
+      items.push(`<div class="card basic-land" data-name="${safeName}">
+        <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+        <div class="card-footer"><span class="card-num">Basic Land</span></div>
+        <div class="card-name">${c.name}</div>
+      </div>`);
+      continue;
+    }
     const isPicked    = c.name === pick;
     const isPassed    = pick && !isPicked;
     const img         = cardImage(c);
@@ -726,14 +774,7 @@ function cardHTML(c, cube, owned) {
   const lblCls    = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
   const label     = `${n}/${target}`;
   const img       = cardImage(c);
-  const matches   = getErrataMatches(c.name);
-  const severity  = topSeverity(matches);
   const safeName  = c.name.replace(/"/g, '&quot;');
-
-  let badge = '';
-  if (severity === 'high') badge = `<button class="errata-badge errata-high">⚠ ERRATA</button>`;
-  else if (severity === 'low') badge = `<button class="errata-badge errata-low">ℹ minor</button>`;
-
   const isFlipped   = flippedCards.has(c.name);
   const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
   const exclBtn     = n >= target
@@ -741,7 +782,6 @@ function cardHTML(c, cube, owned) {
     : '';
   return `<div class="card ${cls}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
-    ${badge ? `<div class="badge-row">${badge}</div>` : ''}
     ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
@@ -756,7 +796,10 @@ function cardHTML(c, cube, owned) {
 async function init() {
   await loadCollection();
   document.getElementById('grid').innerHTML = '<div class="loading">Fetching Innistrad cards from Scryfall…</div>';
-  cardCache[activeCube] = await fetchSetCards(CUBES[activeCube].setCode);
+  [cardCache[activeCube], basicLandPool] = await Promise.all([
+    fetchSetCards(CUBES[activeCube].setCode),
+    fetchBasicLands(CUBES[activeCube].setCode),
+  ]);
 
   // Establish oracle snapshot baseline on first load — used to detect future oracle changes
   if (!oracleSnapshot[activeCube]) {
