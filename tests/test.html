@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Card Tracker Tests</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #eee; padding: 1.5rem; }
+    h1 { color: #9f7aea; margin-bottom: 1rem; }
+    .suite { margin-bottom: 1.5rem; }
+    .suite-name { font-weight: 700; color: #ccc; margin-bottom: 0.4rem; font-size: 0.95rem; }
+    .test { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.82rem; margin: 2px 0; }
+    .pass { color: #52b788; }
+    .fail { color: #e05555; background: #2a0808; }
+    .summary { margin-top: 1.5rem; font-size: 1rem; font-weight: 700; }
+    .ok   { color: #52b788; }
+    .bad  { color: #e05555; }
+  </style>
+</head>
+<body>
+<h1>Card Tracker — Tests</h1>
+<div id="output"></div>
+
+<script>
+// ─── Test harness ────────────────────────────────────────────────────────────
+const results = [];
+let currentSuite = '';
+
+function describe(name, fn) {
+  currentSuite = name;
+  fn();
+}
+
+function test(name, fn) {
+  try {
+    fn();
+    results.push({ suite: currentSuite, name, ok: true });
+  } catch (e) {
+    results.push({ suite: currentSuite, name, ok: false, err: e.message });
+  }
+}
+
+function expect(actual) {
+  return {
+    toBe: expected => {
+      if (actual !== expected) throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+    },
+    toBeTruthy: () => {
+      if (!actual) throw new Error(`Expected truthy, got ${JSON.stringify(actual)}`);
+    },
+    toBeFalsy: () => {
+      if (actual) throw new Error(`Expected falsy, got ${JSON.stringify(actual)}`);
+    },
+    toBeNull: () => {
+      if (actual !== null) throw new Error(`Expected null, got ${JSON.stringify(actual)}`);
+    },
+    toHaveLength: n => {
+      if (!actual || actual.length !== n) throw new Error(`Expected length ${n}, got ${actual?.length}`);
+    },
+    toBeGreaterThanOrEqual: n => {
+      if (actual < n) throw new Error(`Expected >= ${n}, got ${actual}`);
+    },
+  };
+}
+
+// ─── Functions under test (copied from cube-tracker.html) ────────────────────
+
+function colorKey(card) {
+  let c = card.colors ?? [];
+  if (c.length === 0 && card.card_faces?.length > 0) {
+    const all = new Set();
+    card.card_faces.forEach(f => (f.colors ?? []).forEach(x => all.add(x)));
+    c = [...all];
+  }
+  if (c.length > 1) return 'M';
+  if (c.length === 1) return c[0];
+  if (card.type_line?.includes('Land')) return 'L';
+  return 'A';
+}
+
+function isDFC(card) {
+  return card.card_faces?.length > 1;
+}
+
+function topSeverity(matches) {
+  if (!matches.length) return null;
+  return matches.some(m => m.severity === 'high') ? 'high' : 'low';
+}
+
+const ERRATA_CATEGORIES = [
+  { id: 'any-target', severity: 'high',
+    test: t => t.includes('any target') },
+  { id: 'target-planeswalker', severity: 'high',
+    test: t => t.includes('target player or planeswalker') },
+  { id: 'etb-ltb', severity: 'low',
+    test: t => (/\benters\b/.test(t) && !t.includes('enters the battlefield'))
+            || (/\bleaves\b/.test(t) && !t.includes('leaves the battlefield')) },
+  { id: 'create-token', severity: 'low',
+    test: t => t.includes('create') && t.includes('token') },
+];
+
+function getErrataMatches(cardName, oracleMap) {
+  const text = oracleMap[cardName] ?? '';
+  return ERRATA_CATEGORIES.filter(cat => cat.test(text));
+}
+
+function hasUncategorizedChange(cardName, oracleMap, oracleSnapshot, activeCube) {
+  const snap = oracleSnapshot[activeCube]?.[cardName];
+  if (snap === undefined) return false;
+  if (snap === (oracleMap[cardName] ?? '')) return false;
+  return getErrataMatches(cardName, oracleMap).length === 0;
+}
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+describe('colorKey', () => {
+  test('single color card', () => {
+    expect(colorKey({ colors: ['U'] })).toBe('U');
+    expect(colorKey({ colors: ['G'] })).toBe('G');
+  });
+  test('multicolor goes to M', () => {
+    expect(colorKey({ colors: ['U', 'R'] })).toBe('M');
+  });
+  test('land (no colors)', () => {
+    expect(colorKey({ colors: [], type_line: 'Basic Land — Forest' })).toBe('L');
+  });
+  test('colorless non-land becomes A', () => {
+    expect(colorKey({ colors: [], type_line: 'Artifact Creature — Golem' })).toBe('A');
+  });
+  test('DFC colors on card_faces only — regression fix', () => {
+    expect(colorKey({
+      colors: [],
+      card_faces: [{ colors: ['G'] }, { colors: ['G'] }],
+      type_line: 'Creature — Werewolf',
+    })).toBe('G');
+  });
+  test('DFC multicolor across faces', () => {
+    expect(colorKey({
+      colors: [],
+      card_faces: [{ colors: ['U'] }, { colors: ['R'] }],
+    })).toBe('M');
+  });
+  test('DFC with top-level colors uses top-level', () => {
+    expect(colorKey({ colors: ['W'], card_faces: [{ colors: [] }, { colors: ['R'] }] })).toBe('W');
+  });
+});
+
+describe('isDFC', () => {
+  test('single-face card is not DFC', () => {
+    expect(isDFC({ name: 'Forest' })).toBeFalsy();
+    expect(isDFC({ card_faces: [{ name: 'Front' }] })).toBeFalsy();
+  });
+  test('two-faced card is DFC', () => {
+    expect(isDFC({ card_faces: [{ name: 'Front' }, { name: 'Back' }] })).toBe(true);
+  });
+});
+
+describe('topSeverity', () => {
+  test('no matches → null', () => expect(topSeverity([])).toBeNull());
+  test('all low → low', () => expect(topSeverity([{ severity: 'low' }])).toBe('low'));
+  test('any high → high', () => expect(topSeverity([{ severity: 'low' }, { severity: 'high' }])).toBe('high'));
+});
+
+describe('getErrataMatches', () => {
+  test('clean text has no matches', () => {
+    expect(getErrataMatches('Forest', { Forest: '' })).toHaveLength(0);
+  });
+  test('detects any-target (high)', () => {
+    const m = getErrataMatches('Bolt', { Bolt: 'deals 3 damage to any target.' });
+    expect(m.some(x => x.id === 'any-target')).toBeTruthy();
+  });
+  test('detects target-planeswalker (high)', () => {
+    const m = getErrataMatches('Shock', { Shock: 'damage to target player or planeswalker.' });
+    expect(m.some(x => x.id === 'target-planeswalker')).toBeTruthy();
+  });
+  test('detects ETB shortening — "enters" alone', () => {
+    const m = getErrataMatches('X', { X: 'When X enters, draw a card.' });
+    expect(m.some(x => x.id === 'etb-ltb')).toBeTruthy();
+  });
+  test('does NOT flag "enters the battlefield" as errata', () => {
+    const m = getErrataMatches('X', { X: 'When X enters the battlefield, draw a card.' });
+    expect(m.some(x => x.id === 'etb-ltb')).toBeFalsy();
+  });
+  test('detects LTB shortening — "leaves" alone', () => {
+    const m = getErrataMatches('X', { X: 'When X leaves, untap.' });
+    expect(m.some(x => x.id === 'etb-ltb')).toBeTruthy();
+  });
+  test('does NOT flag "leaves the battlefield"', () => {
+    const m = getErrataMatches('X', { X: 'When X leaves the battlefield, do something.' });
+    expect(m.some(x => x.id === 'etb-ltb')).toBeFalsy();
+  });
+  test('detects create-token (low)', () => {
+    const m = getErrataMatches('Soul', { Soul: 'Create two 1/1 Spirit tokens.' });
+    expect(m.some(x => x.id === 'create-token')).toBeTruthy();
+  });
+  test('missing card name returns empty', () => {
+    expect(getErrataMatches('???', {})).toHaveLength(0);
+  });
+  test('card can match multiple categories', () => {
+    const m = getErrataMatches('Multi', { Multi: 'deals 1 damage to any target. Create a token.' });
+    expect(m.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('hasUncategorizedChange', () => {
+  const cube = 'isd';
+  test('no snapshot → false', () => {
+    expect(hasUncategorizedChange('X', {}, {}, cube)).toBeFalsy();
+  });
+  test('text matches snapshot → false', () => {
+    expect(hasUncategorizedChange('X',
+      { X: 'same text' }, { isd: { X: 'same text' } }, cube)).toBeFalsy();
+  });
+  test('text changed but matches known category → false', () => {
+    expect(hasUncategorizedChange('X',
+      { X: 'deals 2 damage to any target.' },
+      { isd: { X: 'deals 2 damage to target creature or player.' } },
+      cube)).toBeFalsy();
+  });
+  test('text changed with no category match → true', () => {
+    expect(hasUncategorizedChange('X',
+      { X: 'Brand new mysterious oracle text.' },
+      { isd: { X: 'Old text.' } },
+      cube)).toBeTruthy();
+  });
+});
+
+// ─── Render results ───────────────────────────────────────────────────────────
+const out = document.getElementById('output');
+const suites = [...new Set(results.map(r => r.suite))];
+let totalPass = 0, totalFail = 0;
+
+for (const suite of suites) {
+  const div = document.createElement('div');
+  div.className = 'suite';
+  div.innerHTML = `<div class="suite-name">${suite}</div>`;
+  for (const r of results.filter(x => x.suite === suite)) {
+    const cls = r.ok ? 'pass' : 'fail';
+    const icon = r.ok ? '✓' : '✗';
+    const err = r.ok ? '' : ` — ${r.err}`;
+    div.innerHTML += `<div class="test ${cls}">${icon} ${r.name}${err}</div>`;
+    r.ok ? totalPass++ : totalFail++;
+  }
+  out.appendChild(div);
+}
+
+const summary = document.createElement('div');
+summary.className = 'summary';
+if (totalFail === 0) {
+  summary.innerHTML = `<span class="ok">All ${totalPass} tests passed ✓</span>`;
+} else {
+  summary.innerHTML = `<span class="bad">${totalFail} failed</span> / <span class="ok">${totalPass} passed</span>`;
+}
+out.appendChild(summary);
+</script>
+</body>
+</html>

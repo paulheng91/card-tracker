@@ -58,12 +58,17 @@
     .btn.active { background: #ffd700; color: #1a1a2e; }
     .btn-token { background: #1a1a2e; color: #555; border: 1px solid #333; }
 
+    :root { --card-min: 170px; }
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr));
       gap: 0.6rem;
       padding: 0.75rem;
     }
+
+    .size-row { display: flex; gap: 0.3rem; justify-content: center; margin-bottom: 0.4rem; }
+    .size-btn { padding: 0.18rem 0.55rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 800; background: #0f3460; color: #666; transition: all 0.15s; }
+    .size-btn.active { background: #ffd700; color: #1a1a2e; }
 
     .card {
       border-radius: 10px;
@@ -212,6 +217,11 @@
   <div class="progress-wrap">
     <div class="progress-bar" id="bar" style="width:0%"></div>
   </div>
+  <div class="size-row">
+    <button class="size-btn" data-size="s">S</button>
+    <button class="size-btn active" data-size="m">M</button>
+    <button class="size-btn" data-size="l">L</button>
+  </div>
   <div class="stats-row">
     <span class="stats" id="stats">Loading...</span>
     <span class="save-status" id="saveStatus"></span>
@@ -242,6 +252,16 @@
 </div>
 
 <script>
+// ── Card size preference ──────────────────────────────────────────────────────
+const CARD_SIZES = { s: 130, m: 170, l: 220 };
+function applySize(key) {
+  document.documentElement.style.setProperty('--card-min', CARD_SIZES[key] + 'px');
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === key));
+  localStorage.setItem('cardSize', key);
+}
+document.querySelectorAll('.size-btn').forEach(btn => btn.addEventListener('click', () => applySize(btn.dataset.size)));
+applySize(localStorage.getItem('cardSize') ?? 'm');
+
 const GIST_ID   = '39ef6aa0cfaa1b98874f0d9e60ae7f53';
 const GIST_USER = 'paulheng91';
 const GIST_FILE = 'collection.json';

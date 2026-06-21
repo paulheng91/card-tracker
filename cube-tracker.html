@@ -52,7 +52,12 @@
     .btn:hover { background: #4c2889; }
 
     /* ── Card grid ── */
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.6rem; padding: 0.75rem; }
+    :root { --card-min: 170px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); gap: 0.6rem; padding: 0.75rem; }
+
+    .size-row { display: flex; gap: 0.3rem; justify-content: center; margin-bottom: 0.4rem; }
+    .size-btn { padding: 0.18rem 0.55rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 800; background: #2d1b69; color: #666; transition: all 0.15s; }
+    .size-btn.active { background: #9f7aea; color: #1a1a2e; }
 
     .section-header {
       grid-column: 1 / -1; background: #2d1b69; color: #9f7aea;
@@ -77,7 +82,7 @@
     .card.basic-land:hover  { transform: none; }
     .card.basic-land:active { transform: none; }
 
-    .card-img-wrap { aspect-ratio: 63/88; overflow: hidden; background: #0a0a1a; border-radius: 6px 6px 0 0; }
+    .card-img-wrap { aspect-ratio: 63/88; overflow: hidden; background: #0a0a1a; border-radius: 4.5% / 3.2%; }
     .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.2s; }
     .card.missing .card-img-wrap img { opacity: 0.2; filter: grayscale(80%); }
     .card.partial  .card-img-wrap img { opacity: 0.65; }
@@ -187,6 +192,11 @@
   <div class="progress-wrap" id="progressWrap">
     <div class="progress-bar" id="bar" style="width:0%"></div>
   </div>
+  <div class="size-row">
+    <button class="size-btn" data-size="s">S</button>
+    <button class="size-btn active" data-size="m">M</button>
+    <button class="size-btn" data-size="l">L</button>
+  </div>
   <div class="stats-row">
     <span class="stats" id="stats">Loading…</span>
     <span class="save-status" id="saveStatus"></span>
@@ -209,6 +219,16 @@
 </div>
 
 <script>
+// ── Card size preference ──────────────────────────────────────────────────────
+const CARD_SIZES = { s: 130, m: 170, l: 220 };
+function applySize(key) {
+  document.documentElement.style.setProperty('--card-min', CARD_SIZES[key] + 'px');
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === key));
+  localStorage.setItem('cardSize', key);
+}
+document.querySelectorAll('.size-btn').forEach(btn => btn.addEventListener('click', () => applySize(btn.dataset.size)));
+applySize(localStorage.getItem('cardSize') ?? 'm');
+
 const GIST_ID   = '39ef6aa0cfaa1b98874f0d9e60ae7f53';
 const GIST_USER = 'paulheng91';
 const GIST_FILE = 'cube.json';
