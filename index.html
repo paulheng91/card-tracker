@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pokemon Base Set Tracker</title>
+  <title>Pokemon Card Tracker</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
@@ -17,7 +17,21 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.5);
     }
 
-    h1 { font-size: 1.3rem; text-align: center; color: #ffd700; margin-bottom: 0.5rem; }
+    h1 { font-size: 1.3rem; text-align: center; color: #ffd700; margin-bottom: 0.6rem; }
+
+    .set-tabs { display: flex; gap: 0.4rem; justify-content: center; margin-bottom: 0.6rem; }
+    .set-tab {
+      padding: 0.35rem 0.9rem;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: #0f3460;
+      color: #aaa;
+      transition: all 0.15s;
+    }
+    .set-tab.active { background: #ffd700; color: #1a1a2e; }
 
     .progress-wrap { background: #0f3460; border-radius: 4px; height: 6px; margin-bottom: 0.5rem; }
     .progress-bar { background: #ffd700; height: 6px; border-radius: 4px; transition: width 0.3s; }
@@ -99,7 +113,7 @@
       color: rgba(255,255,255,0.5);
     }
 
-    .card-name  { font-size: 0.68rem; font-weight: 700; margin-top: 0.3rem; line-height: 1.2; }
+    .card-name   { font-size: 0.68rem; font-weight: 700; margin-top: 0.3rem; line-height: 1.2; }
     .card-rarity { font-size: 0.58rem; margin-top: 0.1rem; }
 
     .r-holo     { color: #ffd700; }
@@ -154,7 +168,12 @@
 <body>
 
 <header>
-  <h1>Pokemon Base Set</h1>
+  <h1>Pokemon Card Tracker</h1>
+  <div class="set-tabs">
+    <button class="set-tab active" data-set="base1">Base Set</button>
+    <button class="set-tab" data-set="jungle">Jungle</button>
+    <button class="set-tab" data-set="fossil">Fossil</button>
+  </div>
   <div class="progress-wrap">
     <div class="progress-bar" id="bar" style="width:0%"></div>
   </div>
@@ -178,7 +197,7 @@
 <div class="modal-backdrop" id="tokenModal">
   <div class="modal">
     <h2>GitHub Token</h2>
-    <p>Enter a GitHub personal access token with <strong>gist</strong> scope. Your collection is stored in a secret gist — no commit history. The token is saved only in this browser.</p>
+    <p>Enter a GitHub personal access token with <strong>gist</strong> scope. Your collection is stored in a secret gist. The token is saved only in this browser.</p>
     <input type="password" id="tokenInput" placeholder="ghp_..." />
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeTokenModal()">Cancel</button>
@@ -194,137 +213,290 @@ const GIST_FILE = 'collection.json';
 const GIST_RAW  = `https://gist.githubusercontent.com/${GIST_USER}/${GIST_ID}/raw/${GIST_FILE}`;
 const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
 
-const CARDS = [
-  // Holo Rares
-  {n:1,  name:"Alakazam",             r:"Holo Rare", cat:"pokemon"},
-  {n:2,  name:"Blastoise",            r:"Holo Rare", cat:"pokemon"},
-  {n:3,  name:"Chansey",              r:"Holo Rare", cat:"pokemon"},
-  {n:4,  name:"Charizard",            r:"Holo Rare", cat:"pokemon"},
-  {n:5,  name:"Clefairy",             r:"Holo Rare", cat:"pokemon"},
-  {n:6,  name:"Gyarados",             r:"Holo Rare", cat:"pokemon"},
-  {n:7,  name:"Hitmonchan",           r:"Holo Rare", cat:"pokemon"},
-  {n:8,  name:"Machamp",              r:"Holo Rare", cat:"pokemon"},
-  {n:9,  name:"Magneton",             r:"Holo Rare", cat:"pokemon"},
-  {n:10, name:"Mewtwo",               r:"Holo Rare", cat:"pokemon"},
-  {n:11, name:"Nidoking",             r:"Holo Rare", cat:"pokemon"},
-  {n:12, name:"Ninetales",            r:"Holo Rare", cat:"pokemon"},
-  {n:13, name:"Poliwrath",            r:"Holo Rare", cat:"pokemon"},
-  {n:14, name:"Raichu",               r:"Holo Rare", cat:"pokemon"},
-  {n:15, name:"Venusaur",             r:"Holo Rare", cat:"pokemon"},
-  {n:16, name:"Zapdos",               r:"Holo Rare", cat:"pokemon"},
-  // Rare
-  {n:17, name:"Beedrill",             r:"Rare",      cat:"pokemon"},
-  {n:18, name:"Dragonair",            r:"Rare",      cat:"pokemon"},
-  {n:19, name:"Dugtrio",              r:"Rare",      cat:"pokemon"},
-  {n:20, name:"Electabuzz",           r:"Rare",      cat:"pokemon"},
-  {n:21, name:"Electrode",            r:"Rare",      cat:"pokemon"},
-  {n:22, name:"Pidgeotto",            r:"Rare",      cat:"pokemon"},
-  // Uncommon Pokemon
-  {n:23, name:"Arcanine",             r:"Uncommon",  cat:"pokemon"},
-  {n:24, name:"Charmeleon",           r:"Uncommon",  cat:"pokemon"},
-  {n:25, name:"Dewgong",              r:"Uncommon",  cat:"pokemon"},
-  {n:26, name:"Dratini",              r:"Uncommon",  cat:"pokemon"},
-  {n:27, name:"Farfetch'd",           r:"Uncommon",  cat:"pokemon"},
-  {n:28, name:"Growlithe",            r:"Uncommon",  cat:"pokemon"},
-  {n:29, name:"Haunter",              r:"Uncommon",  cat:"pokemon"},
-  {n:30, name:"Ivysaur",              r:"Uncommon",  cat:"pokemon"},
-  {n:31, name:"Jynx",                 r:"Uncommon",  cat:"pokemon"},
-  {n:32, name:"Kadabra",              r:"Uncommon",  cat:"pokemon"},
-  {n:33, name:"Kakuna",               r:"Uncommon",  cat:"pokemon"},
-  {n:34, name:"Machoke",              r:"Uncommon",  cat:"pokemon"},
-  {n:35, name:"Magikarp",             r:"Uncommon",  cat:"pokemon"},
-  {n:36, name:"Magmar",               r:"Uncommon",  cat:"pokemon"},
-  {n:37, name:"Nidorino",             r:"Uncommon",  cat:"pokemon"},
-  {n:38, name:"Poliwhirl",            r:"Uncommon",  cat:"pokemon"},
-  {n:39, name:"Porygon",              r:"Uncommon",  cat:"pokemon"},
-  {n:40, name:"Raticate",             r:"Uncommon",  cat:"pokemon"},
-  {n:41, name:"Seel",                 r:"Uncommon",  cat:"pokemon"},
-  {n:42, name:"Wartortle",            r:"Uncommon",  cat:"pokemon"},
-  // Common Pokemon
-  {n:43, name:"Abra",                 r:"Common",    cat:"pokemon"},
-  {n:44, name:"Bulbasaur",            r:"Common",    cat:"pokemon"},
-  {n:45, name:"Caterpie",             r:"Common",    cat:"pokemon"},
-  {n:46, name:"Charmander",           r:"Common",    cat:"pokemon"},
-  {n:47, name:"Diglett",              r:"Common",    cat:"pokemon"},
-  {n:48, name:"Doduo",                r:"Common",    cat:"pokemon"},
-  {n:49, name:"Drowzee",              r:"Common",    cat:"pokemon"},
-  {n:50, name:"Gastly",               r:"Common",    cat:"pokemon"},
-  {n:51, name:"Koffing",              r:"Common",    cat:"pokemon"},
-  {n:52, name:"Machop",               r:"Common",    cat:"pokemon"},
-  {n:53, name:"Magnemite",            r:"Common",    cat:"pokemon"},
-  {n:54, name:"Metapod",              r:"Common",    cat:"pokemon"},
-  {n:55, name:"Nidoran M",            r:"Common",    cat:"pokemon"},
-  {n:56, name:"Onix",                 r:"Common",    cat:"pokemon"},
-  {n:57, name:"Pidgey",               r:"Common",    cat:"pokemon"},
-  {n:58, name:"Pikachu",              r:"Common",    cat:"pokemon"},
-  {n:59, name:"Poliwag",              r:"Common",    cat:"pokemon"},
-  {n:60, name:"Ponyta",               r:"Common",    cat:"pokemon"},
-  {n:61, name:"Rattata",              r:"Common",    cat:"pokemon"},
-  {n:62, name:"Sandshrew",            r:"Common",    cat:"pokemon"},
-  {n:63, name:"Squirtle",             r:"Common",    cat:"pokemon"},
-  {n:64, name:"Starmie",              r:"Common",    cat:"pokemon"},
-  {n:65, name:"Staryu",               r:"Common",    cat:"pokemon"},
-  {n:66, name:"Tangela",              r:"Common",    cat:"pokemon"},
-  {n:67, name:"Voltorb",              r:"Common",    cat:"pokemon"},
-  {n:68, name:"Vulpix",               r:"Common",    cat:"pokemon"},
-  {n:69, name:"Weedle",               r:"Common",    cat:"pokemon"},
-  // Rare Trainers
-  {n:70, name:"Clefairy Doll",        r:"Rare",      cat:"trainer"},
-  {n:71, name:"Computer Search",      r:"Rare",      cat:"trainer"},
-  {n:72, name:"Devolution Spray",     r:"Rare",      cat:"trainer"},
-  {n:73, name:"Imposter Prof. Oak",   r:"Rare",      cat:"trainer"},
-  {n:74, name:"Item Finder",          r:"Rare",      cat:"trainer"},
-  {n:75, name:"Lass",                 r:"Rare",      cat:"trainer"},
-  {n:76, name:"Pokemon Breeder",      r:"Rare",      cat:"trainer"},
-  {n:77, name:"Pokemon Trader",       r:"Rare",      cat:"trainer"},
-  {n:78, name:"Scoop Up",             r:"Rare",      cat:"trainer"},
-  {n:79, name:"Super Energy Removal", r:"Rare",      cat:"trainer"},
-  // Uncommon Trainers
-  {n:80, name:"Defender",             r:"Uncommon",  cat:"trainer"},
-  {n:81, name:"Energy Retrieval",     r:"Uncommon",  cat:"trainer"},
-  {n:82, name:"Full Heal",            r:"Uncommon",  cat:"trainer"},
-  {n:83, name:"Maintenance",          r:"Uncommon",  cat:"trainer"},
-  {n:84, name:"PlusPower",            r:"Uncommon",  cat:"trainer"},
-  {n:85, name:"Pokemon Center",       r:"Uncommon",  cat:"trainer"},
-  {n:86, name:"Pokemon Flute",        r:"Uncommon",  cat:"trainer"},
-  {n:87, name:"Pokedex",              r:"Uncommon",  cat:"trainer"},
-  {n:88, name:"Professor Oak",        r:"Uncommon",  cat:"trainer"},
-  {n:89, name:"Revive",               r:"Uncommon",  cat:"trainer"},
-  {n:90, name:"Super Potion",         r:"Uncommon",  cat:"trainer"},
-  // Common Trainers
-  {n:91, name:"Bill",                 r:"Common",    cat:"trainer"},
-  {n:92, name:"Energy Removal",       r:"Common",    cat:"trainer"},
-  {n:93, name:"Gust of Wind",         r:"Common",    cat:"trainer"},
-  {n:94, name:"Potion",               r:"Common",    cat:"trainer"},
-  {n:95, name:"Switch",               r:"Common",    cat:"trainer"},
-  // Energy
-  {n:96,  name:"Double Colorless",    r:"Uncommon",  cat:"energy"},
-  {n:97,  name:"Fighting Energy",     r:"Common",    cat:"energy"},
-  {n:98,  name:"Fire Energy",         r:"Common",    cat:"energy"},
-  {n:99,  name:"Grass Energy",        r:"Common",    cat:"energy"},
-  {n:100, name:"Lightning Energy",    r:"Common",    cat:"energy"},
-  {n:101, name:"Psychic Energy",      r:"Common",    cat:"energy"},
-  {n:102, name:"Water Energy",        r:"Common",    cat:"energy"},
-];
+const SETS = {
+  base1: {
+    name: 'Base Set',
+    cdn: 'base1',
+    cards: [
+      {n:1,  name:"Alakazam",             r:"Holo Rare", cat:"pokemon"},
+      {n:2,  name:"Blastoise",            r:"Holo Rare", cat:"pokemon"},
+      {n:3,  name:"Chansey",              r:"Holo Rare", cat:"pokemon"},
+      {n:4,  name:"Charizard",            r:"Holo Rare", cat:"pokemon"},
+      {n:5,  name:"Clefairy",             r:"Holo Rare", cat:"pokemon"},
+      {n:6,  name:"Gyarados",             r:"Holo Rare", cat:"pokemon"},
+      {n:7,  name:"Hitmonchan",           r:"Holo Rare", cat:"pokemon"},
+      {n:8,  name:"Machamp",              r:"Holo Rare", cat:"pokemon"},
+      {n:9,  name:"Magneton",             r:"Holo Rare", cat:"pokemon"},
+      {n:10, name:"Mewtwo",               r:"Holo Rare", cat:"pokemon"},
+      {n:11, name:"Nidoking",             r:"Holo Rare", cat:"pokemon"},
+      {n:12, name:"Ninetales",            r:"Holo Rare", cat:"pokemon"},
+      {n:13, name:"Poliwrath",            r:"Holo Rare", cat:"pokemon"},
+      {n:14, name:"Raichu",               r:"Holo Rare", cat:"pokemon"},
+      {n:15, name:"Venusaur",             r:"Holo Rare", cat:"pokemon"},
+      {n:16, name:"Zapdos",               r:"Holo Rare", cat:"pokemon"},
+      {n:17, name:"Beedrill",             r:"Rare",      cat:"pokemon"},
+      {n:18, name:"Dragonair",            r:"Rare",      cat:"pokemon"},
+      {n:19, name:"Dugtrio",              r:"Rare",      cat:"pokemon"},
+      {n:20, name:"Electabuzz",           r:"Rare",      cat:"pokemon"},
+      {n:21, name:"Electrode",            r:"Rare",      cat:"pokemon"},
+      {n:22, name:"Pidgeotto",            r:"Rare",      cat:"pokemon"},
+      {n:23, name:"Arcanine",             r:"Uncommon",  cat:"pokemon"},
+      {n:24, name:"Charmeleon",           r:"Uncommon",  cat:"pokemon"},
+      {n:25, name:"Dewgong",              r:"Uncommon",  cat:"pokemon"},
+      {n:26, name:"Dratini",              r:"Uncommon",  cat:"pokemon"},
+      {n:27, name:"Farfetch'd",           r:"Uncommon",  cat:"pokemon"},
+      {n:28, name:"Growlithe",            r:"Uncommon",  cat:"pokemon"},
+      {n:29, name:"Haunter",              r:"Uncommon",  cat:"pokemon"},
+      {n:30, name:"Ivysaur",              r:"Uncommon",  cat:"pokemon"},
+      {n:31, name:"Jynx",                 r:"Uncommon",  cat:"pokemon"},
+      {n:32, name:"Kadabra",              r:"Uncommon",  cat:"pokemon"},
+      {n:33, name:"Kakuna",               r:"Uncommon",  cat:"pokemon"},
+      {n:34, name:"Machoke",              r:"Uncommon",  cat:"pokemon"},
+      {n:35, name:"Magikarp",             r:"Uncommon",  cat:"pokemon"},
+      {n:36, name:"Magmar",               r:"Uncommon",  cat:"pokemon"},
+      {n:37, name:"Nidorino",             r:"Uncommon",  cat:"pokemon"},
+      {n:38, name:"Poliwhirl",            r:"Uncommon",  cat:"pokemon"},
+      {n:39, name:"Porygon",              r:"Uncommon",  cat:"pokemon"},
+      {n:40, name:"Raticate",             r:"Uncommon",  cat:"pokemon"},
+      {n:41, name:"Seel",                 r:"Uncommon",  cat:"pokemon"},
+      {n:42, name:"Wartortle",            r:"Uncommon",  cat:"pokemon"},
+      {n:43, name:"Abra",                 r:"Common",    cat:"pokemon"},
+      {n:44, name:"Bulbasaur",            r:"Common",    cat:"pokemon"},
+      {n:45, name:"Caterpie",             r:"Common",    cat:"pokemon"},
+      {n:46, name:"Charmander",           r:"Common",    cat:"pokemon"},
+      {n:47, name:"Diglett",              r:"Common",    cat:"pokemon"},
+      {n:48, name:"Doduo",                r:"Common",    cat:"pokemon"},
+      {n:49, name:"Drowzee",              r:"Common",    cat:"pokemon"},
+      {n:50, name:"Gastly",               r:"Common",    cat:"pokemon"},
+      {n:51, name:"Koffing",              r:"Common",    cat:"pokemon"},
+      {n:52, name:"Machop",               r:"Common",    cat:"pokemon"},
+      {n:53, name:"Magnemite",            r:"Common",    cat:"pokemon"},
+      {n:54, name:"Metapod",              r:"Common",    cat:"pokemon"},
+      {n:55, name:"Nidoran M",            r:"Common",    cat:"pokemon"},
+      {n:56, name:"Onix",                 r:"Common",    cat:"pokemon"},
+      {n:57, name:"Pidgey",               r:"Common",    cat:"pokemon"},
+      {n:58, name:"Pikachu",              r:"Common",    cat:"pokemon"},
+      {n:59, name:"Poliwag",              r:"Common",    cat:"pokemon"},
+      {n:60, name:"Ponyta",               r:"Common",    cat:"pokemon"},
+      {n:61, name:"Rattata",              r:"Common",    cat:"pokemon"},
+      {n:62, name:"Sandshrew",            r:"Common",    cat:"pokemon"},
+      {n:63, name:"Squirtle",             r:"Common",    cat:"pokemon"},
+      {n:64, name:"Starmie",              r:"Common",    cat:"pokemon"},
+      {n:65, name:"Staryu",               r:"Common",    cat:"pokemon"},
+      {n:66, name:"Tangela",              r:"Common",    cat:"pokemon"},
+      {n:67, name:"Voltorb",              r:"Common",    cat:"pokemon"},
+      {n:68, name:"Vulpix",               r:"Common",    cat:"pokemon"},
+      {n:69, name:"Weedle",               r:"Common",    cat:"pokemon"},
+      {n:70, name:"Clefairy Doll",        r:"Rare",      cat:"trainer"},
+      {n:71, name:"Computer Search",      r:"Rare",      cat:"trainer"},
+      {n:72, name:"Devolution Spray",     r:"Rare",      cat:"trainer"},
+      {n:73, name:"Imposter Prof. Oak",   r:"Rare",      cat:"trainer"},
+      {n:74, name:"Item Finder",          r:"Rare",      cat:"trainer"},
+      {n:75, name:"Lass",                 r:"Rare",      cat:"trainer"},
+      {n:76, name:"Pokemon Breeder",      r:"Rare",      cat:"trainer"},
+      {n:77, name:"Pokemon Trader",       r:"Rare",      cat:"trainer"},
+      {n:78, name:"Scoop Up",             r:"Rare",      cat:"trainer"},
+      {n:79, name:"Super Energy Removal", r:"Rare",      cat:"trainer"},
+      {n:80, name:"Defender",             r:"Uncommon",  cat:"trainer"},
+      {n:81, name:"Energy Retrieval",     r:"Uncommon",  cat:"trainer"},
+      {n:82, name:"Full Heal",            r:"Uncommon",  cat:"trainer"},
+      {n:83, name:"Maintenance",          r:"Uncommon",  cat:"trainer"},
+      {n:84, name:"PlusPower",            r:"Uncommon",  cat:"trainer"},
+      {n:85, name:"Pokemon Center",       r:"Uncommon",  cat:"trainer"},
+      {n:86, name:"Pokemon Flute",        r:"Uncommon",  cat:"trainer"},
+      {n:87, name:"Pokedex",              r:"Uncommon",  cat:"trainer"},
+      {n:88, name:"Professor Oak",        r:"Uncommon",  cat:"trainer"},
+      {n:89, name:"Revive",               r:"Uncommon",  cat:"trainer"},
+      {n:90, name:"Super Potion",         r:"Uncommon",  cat:"trainer"},
+      {n:91, name:"Bill",                 r:"Common",    cat:"trainer"},
+      {n:92, name:"Energy Removal",       r:"Common",    cat:"trainer"},
+      {n:93, name:"Gust of Wind",         r:"Common",    cat:"trainer"},
+      {n:94, name:"Potion",               r:"Common",    cat:"trainer"},
+      {n:95, name:"Switch",               r:"Common",    cat:"trainer"},
+      {n:96,  name:"Double Colorless",    r:"Uncommon",  cat:"energy"},
+      {n:97,  name:"Fighting Energy",     r:"Common",    cat:"energy"},
+      {n:98,  name:"Fire Energy",         r:"Common",    cat:"energy"},
+      {n:99,  name:"Grass Energy",        r:"Common",    cat:"energy"},
+      {n:100, name:"Lightning Energy",    r:"Common",    cat:"energy"},
+      {n:101, name:"Psychic Energy",      r:"Common",    cat:"energy"},
+      {n:102, name:"Water Energy",        r:"Common",    cat:"energy"},
+    ]
+  },
+  jungle: {
+    name: 'Jungle',
+    cdn: 'jungle',
+    cards: [
+      {n:1,  name:"Clefable",    r:"Holo Rare", cat:"pokemon"},
+      {n:2,  name:"Electrode",   r:"Holo Rare", cat:"pokemon"},
+      {n:3,  name:"Flareon",     r:"Holo Rare", cat:"pokemon"},
+      {n:4,  name:"Jolteon",     r:"Holo Rare", cat:"pokemon"},
+      {n:5,  name:"Kangaskhan",  r:"Holo Rare", cat:"pokemon"},
+      {n:6,  name:"Mr. Mime",    r:"Holo Rare", cat:"pokemon"},
+      {n:7,  name:"Nidoqueen",   r:"Holo Rare", cat:"pokemon"},
+      {n:8,  name:"Pidgeot",     r:"Holo Rare", cat:"pokemon"},
+      {n:9,  name:"Pinsir",      r:"Holo Rare", cat:"pokemon"},
+      {n:10, name:"Scyther",     r:"Holo Rare", cat:"pokemon"},
+      {n:11, name:"Snorlax",     r:"Holo Rare", cat:"pokemon"},
+      {n:12, name:"Vaporeon",    r:"Holo Rare", cat:"pokemon"},
+      {n:13, name:"Venomoth",    r:"Holo Rare", cat:"pokemon"},
+      {n:14, name:"Victreebel",  r:"Holo Rare", cat:"pokemon"},
+      {n:15, name:"Vileplume",   r:"Holo Rare", cat:"pokemon"},
+      {n:16, name:"Wigglytuff",  r:"Holo Rare", cat:"pokemon"},
+      {n:17, name:"Clefable",    r:"Rare",      cat:"pokemon"},
+      {n:18, name:"Electrode",   r:"Rare",      cat:"pokemon"},
+      {n:19, name:"Flareon",     r:"Rare",      cat:"pokemon"},
+      {n:20, name:"Jolteon",     r:"Rare",      cat:"pokemon"},
+      {n:21, name:"Kangaskhan",  r:"Rare",      cat:"pokemon"},
+      {n:22, name:"Mr. Mime",    r:"Rare",      cat:"pokemon"},
+      {n:23, name:"Nidoqueen",   r:"Rare",      cat:"pokemon"},
+      {n:24, name:"Pidgeot",     r:"Rare",      cat:"pokemon"},
+      {n:25, name:"Pinsir",      r:"Rare",      cat:"pokemon"},
+      {n:26, name:"Scyther",     r:"Rare",      cat:"pokemon"},
+      {n:27, name:"Snorlax",     r:"Rare",      cat:"pokemon"},
+      {n:28, name:"Vaporeon",    r:"Rare",      cat:"pokemon"},
+      {n:29, name:"Venomoth",    r:"Rare",      cat:"pokemon"},
+      {n:30, name:"Victreebel",  r:"Rare",      cat:"pokemon"},
+      {n:31, name:"Vileplume",   r:"Rare",      cat:"pokemon"},
+      {n:32, name:"Wigglytuff",  r:"Rare",      cat:"pokemon"},
+      {n:33, name:"Butterfree",  r:"Uncommon",  cat:"pokemon"},
+      {n:34, name:"Dodrio",      r:"Uncommon",  cat:"pokemon"},
+      {n:35, name:"Exeggutor",   r:"Uncommon",  cat:"pokemon"},
+      {n:36, name:"Fearow",      r:"Uncommon",  cat:"pokemon"},
+      {n:37, name:"Gloom",       r:"Uncommon",  cat:"pokemon"},
+      {n:38, name:"Lickitung",   r:"Uncommon",  cat:"pokemon"},
+      {n:39, name:"Marowak",     r:"Uncommon",  cat:"pokemon"},
+      {n:40, name:"Nidorina",    r:"Uncommon",  cat:"pokemon"},
+      {n:41, name:"Parasect",    r:"Uncommon",  cat:"pokemon"},
+      {n:42, name:"Persian",     r:"Uncommon",  cat:"pokemon"},
+      {n:43, name:"Primeape",    r:"Uncommon",  cat:"pokemon"},
+      {n:44, name:"Rapidash",    r:"Uncommon",  cat:"pokemon"},
+      {n:45, name:"Rhydon",      r:"Uncommon",  cat:"pokemon"},
+      {n:46, name:"Seaking",     r:"Uncommon",  cat:"pokemon"},
+      {n:47, name:"Tauros",      r:"Uncommon",  cat:"pokemon"},
+      {n:48, name:"Weepinbell",  r:"Uncommon",  cat:"pokemon"},
+      {n:49, name:"Bellsprout",  r:"Common",    cat:"pokemon"},
+      {n:50, name:"Cubone",      r:"Common",    cat:"pokemon"},
+      {n:51, name:"Eevee",       r:"Common",    cat:"pokemon"},
+      {n:52, name:"Exeggcute",   r:"Common",    cat:"pokemon"},
+      {n:53, name:"Goldeen",     r:"Common",    cat:"pokemon"},
+      {n:54, name:"Jigglypuff",  r:"Common",    cat:"pokemon"},
+      {n:55, name:"Mankey",      r:"Common",    cat:"pokemon"},
+      {n:56, name:"Meowth",      r:"Common",    cat:"pokemon"},
+      {n:57, name:"Nidoran F",   r:"Common",    cat:"pokemon"},
+      {n:58, name:"Oddish",      r:"Common",    cat:"pokemon"},
+      {n:59, name:"Paras",       r:"Common",    cat:"pokemon"},
+      {n:60, name:"Pikachu",     r:"Common",    cat:"pokemon"},
+      {n:61, name:"Rhyhorn",     r:"Common",    cat:"pokemon"},
+      {n:62, name:"Spearow",     r:"Common",    cat:"pokemon"},
+      {n:63, name:"Venonat",     r:"Common",    cat:"pokemon"},
+      {n:64, name:"Poke Ball",   r:"Common",    cat:"trainer"},
+    ]
+  },
+  fossil: {
+    name: 'Fossil',
+    cdn: 'fossil',
+    cards: [
+      {n:1,  name:"Aerodactyl",       r:"Holo Rare", cat:"pokemon"},
+      {n:2,  name:"Articuno",         r:"Holo Rare", cat:"pokemon"},
+      {n:3,  name:"Ditto",            r:"Holo Rare", cat:"pokemon"},
+      {n:4,  name:"Dragonite",        r:"Holo Rare", cat:"pokemon"},
+      {n:5,  name:"Gengar",           r:"Holo Rare", cat:"pokemon"},
+      {n:6,  name:"Haunter",          r:"Holo Rare", cat:"pokemon"},
+      {n:7,  name:"Hitmonlee",        r:"Holo Rare", cat:"pokemon"},
+      {n:8,  name:"Hypno",            r:"Holo Rare", cat:"pokemon"},
+      {n:9,  name:"Kabutops",         r:"Holo Rare", cat:"pokemon"},
+      {n:10, name:"Lapras",           r:"Holo Rare", cat:"pokemon"},
+      {n:11, name:"Magneton",         r:"Holo Rare", cat:"pokemon"},
+      {n:12, name:"Moltres",          r:"Holo Rare", cat:"pokemon"},
+      {n:13, name:"Muk",              r:"Holo Rare", cat:"pokemon"},
+      {n:14, name:"Raichu",           r:"Holo Rare", cat:"pokemon"},
+      {n:15, name:"Zapdos",           r:"Holo Rare", cat:"pokemon"},
+      {n:16, name:"Aerodactyl",       r:"Rare",      cat:"pokemon"},
+      {n:17, name:"Articuno",         r:"Rare",      cat:"pokemon"},
+      {n:18, name:"Ditto",            r:"Rare",      cat:"pokemon"},
+      {n:19, name:"Dragonite",        r:"Rare",      cat:"pokemon"},
+      {n:20, name:"Gengar",           r:"Rare",      cat:"pokemon"},
+      {n:21, name:"Haunter",          r:"Rare",      cat:"pokemon"},
+      {n:22, name:"Hitmonlee",        r:"Rare",      cat:"pokemon"},
+      {n:23, name:"Hypno",            r:"Rare",      cat:"pokemon"},
+      {n:24, name:"Kabutops",         r:"Rare",      cat:"pokemon"},
+      {n:25, name:"Lapras",           r:"Rare",      cat:"pokemon"},
+      {n:26, name:"Magneton",         r:"Rare",      cat:"pokemon"},
+      {n:27, name:"Moltres",          r:"Rare",      cat:"pokemon"},
+      {n:28, name:"Muk",              r:"Rare",      cat:"pokemon"},
+      {n:29, name:"Raichu",           r:"Rare",      cat:"pokemon"},
+      {n:30, name:"Zapdos",           r:"Rare",      cat:"pokemon"},
+      {n:31, name:"Arbok",            r:"Uncommon",  cat:"pokemon"},
+      {n:32, name:"Cloyster",         r:"Uncommon",  cat:"pokemon"},
+      {n:33, name:"Gastly",           r:"Uncommon",  cat:"pokemon"},
+      {n:34, name:"Golbat",           r:"Uncommon",  cat:"pokemon"},
+      {n:35, name:"Golduck",          r:"Uncommon",  cat:"pokemon"},
+      {n:36, name:"Golem",            r:"Uncommon",  cat:"pokemon"},
+      {n:37, name:"Graveler",         r:"Uncommon",  cat:"pokemon"},
+      {n:38, name:"Kingler",          r:"Uncommon",  cat:"pokemon"},
+      {n:39, name:"Magmar",           r:"Uncommon",  cat:"pokemon"},
+      {n:40, name:"Omastar",          r:"Uncommon",  cat:"pokemon"},
+      {n:41, name:"Sandslash",        r:"Uncommon",  cat:"pokemon"},
+      {n:42, name:"Seadra",           r:"Uncommon",  cat:"pokemon"},
+      {n:43, name:"Slowbro",          r:"Uncommon",  cat:"pokemon"},
+      {n:44, name:"Tentacruel",       r:"Uncommon",  cat:"pokemon"},
+      {n:45, name:"Weezing",          r:"Uncommon",  cat:"pokemon"},
+      {n:46, name:"Ekans",            r:"Common",    cat:"pokemon"},
+      {n:47, name:"Geodude",          r:"Common",    cat:"pokemon"},
+      {n:48, name:"Grimer",           r:"Common",    cat:"pokemon"},
+      {n:49, name:"Horsea",           r:"Common",    cat:"pokemon"},
+      {n:50, name:"Kabuto",           r:"Common",    cat:"pokemon"},
+      {n:51, name:"Krabby",           r:"Common",    cat:"pokemon"},
+      {n:52, name:"Omanyte",          r:"Common",    cat:"pokemon"},
+      {n:53, name:"Psyduck",          r:"Common",    cat:"pokemon"},
+      {n:54, name:"Shellder",         r:"Common",    cat:"pokemon"},
+      {n:55, name:"Slowpoke",         r:"Common",    cat:"pokemon"},
+      {n:56, name:"Tentacool",        r:"Common",    cat:"pokemon"},
+      {n:57, name:"Zubat",            r:"Common",    cat:"pokemon"},
+      {n:58, name:"Mr. Fuji",         r:"Uncommon",  cat:"trainer"},
+      {n:59, name:"Energy Search",    r:"Common",    cat:"trainer"},
+      {n:60, name:"Gambler",          r:"Common",    cat:"trainer"},
+      {n:61, name:"Recycle",          r:"Common",    cat:"trainer"},
+      {n:62, name:"Mysterious Fossil",r:"Common",    cat:"trainer"},
+    ]
+  }
+};
 
 const RARITY_SYMBOL = {"Holo Rare":"★★","Rare":"★","Uncommon":"◆","Common":"●"};
 const RARITY_CLASS  = {"Holo Rare":"r-holo","Rare":"r-rare","Uncommon":"r-uncommon","Common":"r-common"};
-const TOTAL = CARDS.length;
 
-let owned = new Set();
+let ownedMap = { base1: new Set(), jungle: new Set(), fossil: new Set() };
+let activeSet = 'base1';
 let filter = 'all';
 let saveTimer = null;
 
 function token() { return localStorage.getItem('gh-token'); }
+
+function allNums(setKey) {
+  return SETS[setKey].cards.map(c => c.n);
+}
 
 async function loadCollection() {
   setStatus('loading...', '');
   try {
     const res = await fetch(GIST_RAW + '?t=' + Date.now());
     if (!res.ok) throw new Error();
-    owned = new Set(await res.json());
+    const data = await res.json();
+
+    // Migrate old format (plain array) → new format (object)
+    if (Array.isArray(data)) {
+      ownedMap.base1  = new Set(data);
+      ownedMap.jungle = new Set(allNums('jungle'));
+      ownedMap.fossil = new Set(allNums('fossil'));
+    } else {
+      ownedMap.base1  = new Set(data.base1  ?? []);
+      ownedMap.jungle = new Set(data.jungle ?? allNums('jungle'));
+      ownedMap.fossil = new Set(data.fossil ?? allNums('fossil'));
+    }
     setStatus('', '');
   } catch {
+    ownedMap.jungle = new Set(allNums('jungle'));
+    ownedMap.fossil = new Set(allNums('fossil'));
     setStatus('load failed', 'error');
     setTimeout(() => setStatus('', ''), 3000);
   }
@@ -335,11 +507,15 @@ async function pushCollection() {
   if (!token()) { openTokenModal(); return; }
   setStatus('saving...', 'saving');
   try {
-    const sorted = [...owned].sort((a, b) => a - b);
+    const payload = {
+      base1:  [...ownedMap.base1].sort((a,b) => a-b),
+      jungle: [...ownedMap.jungle].sort((a,b) => a-b),
+      fossil: [...ownedMap.fossil].sort((a,b) => a-b),
+    };
     const res = await fetch(GIST_API, {
       method: 'PATCH',
       headers: { Authorization: `token ${token()}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(sorted) } } })
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(payload) } } })
     });
     if (!res.ok) throw new Error();
     setStatus('saved', 'saved');
@@ -373,6 +549,15 @@ function saveToken() {
   closeTokenModal();
 }
 
+document.querySelectorAll('.set-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeSet = btn.dataset.set;
+    document.querySelectorAll('.set-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+});
+
 document.querySelectorAll('.btn[data-filter]').forEach(btn => {
   btn.addEventListener('click', () => {
     filter = btn.dataset.filter;
@@ -383,13 +568,17 @@ document.querySelectorAll('.btn[data-filter]').forEach(btn => {
 });
 
 function toggle(n) {
-  owned.has(n) ? owned.delete(n) : owned.add(n);
+  const s = ownedMap[activeSet];
+  s.has(n) ? s.delete(n) : s.add(n);
   render();
   scheduleSave();
 }
 
 function render() {
-  const visible = CARDS.filter(c => {
+  const set = SETS[activeSet];
+  const owned = ownedMap[activeSet];
+
+  const visible = set.cards.filter(c => {
     if (filter === 'owned')   return owned.has(c.n);
     if (filter === 'missing') return !owned.has(c.n);
     if (filter === 'pokemon') return c.cat === 'pokemon';
@@ -398,9 +587,10 @@ function render() {
     return true;
   });
 
+  const total = set.cards.length;
   const count = owned.size;
-  const pct = Math.round((count / TOTAL) * 100);
-  document.getElementById('stats').textContent = `${count} / ${TOTAL} collected (${pct}%)`;
+  const pct = Math.round((count / total) * 100);
+  document.getElementById('stats').textContent = `${count} / ${total} collected (${pct}%)`;
   document.getElementById('bar').style.width = pct + '%';
 
   const grid = document.getElementById('grid');
@@ -411,12 +601,12 @@ function render() {
 
   grid.innerHTML = visible.map(c => {
     const isOwned = owned.has(c.n);
-    const img = `https://images.pokemontcg.io/base1/${c.n}.png`;
+    const img = `https://images.pokemontcg.io/${set.cdn}/${c.n}.png`;
     return `<div class="card ${isOwned ? 'owned' : 'missing'}" onclick="toggle(${c.n})">
       <div class="card-img-wrap">
         <img src="${img}" loading="lazy" alt="${c.name}">
         ${isOwned ? '<div class="card-badge">&#10003;</div>' : ''}
-        <div class="card-num-overlay">${c.n}/102</div>
+        <div class="card-num-overlay">${c.n}/${total}</div>
       </div>
       <div class="card-name">${c.name}</div>
       <div class="card-rarity ${RARITY_CLASS[c.r]}">${RARITY_SYMBOL[c.r]} ${c.r}</div>
