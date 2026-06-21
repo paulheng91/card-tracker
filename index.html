@@ -116,6 +116,17 @@
 
     .empty { text-align: center; color: #444; padding: 3rem 1rem; grid-column: 1/-1; font-size: 0.9rem; }
 
+    .section-header {
+      grid-column: 1 / -1;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #ffd700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.75rem 0.25rem 0.3rem;
+      border-bottom: 1px solid #2a2a4a;
+    }
+
     .modal-backdrop {
       display: none;
       position: fixed; inset: 0;
@@ -687,10 +698,26 @@ function render() {
     return;
   }
 
-  grid.innerHTML = visible.map(c => {
+  function getSection(c) {
+    if (c.cat === 'trainer') return 'Trainers';
+    if (c.cat === 'energy')  return 'Energy';
+    if (c.r === 'Holo Rare') return 'Holo Rares';
+    if (c.r === 'Rare')      return 'Rares';
+    if (c.r === 'Uncommon')  return 'Uncommons';
+    return 'Commons';
+  }
+
+  let lastSection = null;
+  const items = [];
+  visible.forEach(c => {
+    const section = getSection(c);
+    if (section !== lastSection) {
+      items.push(`<div class="section-header">${section}</div>`);
+      lastSection = section;
+    }
     const isOwned = owned.has(c.n);
     const img = `https://images.pokemontcg.io/${set.cdn}/${c.n}.png`;
-    return `<div class="card ${isOwned ? 'owned' : 'missing'}" onclick="toggle(${c.n})">
+    items.push(`<div class="card ${isOwned ? 'owned' : 'missing'}" onclick="toggle(${c.n})">
       <div class="card-img-wrap">
         <img src="${img}" loading="lazy" alt="${c.name}">
       </div>
@@ -700,8 +727,9 @@ function render() {
       </div>
       <div class="card-name">${c.name}</div>
       <div class="card-rarity ${RARITY_CLASS[c.r]}">${RARITY_SYMBOL[c.r]} ${c.r}</div>
-    </div>`;
-  }).join('');
+    </div>`);
+  });
+  grid.innerHTML = items.join('');
 }
 
 loadCollection();
