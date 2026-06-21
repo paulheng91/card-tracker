@@ -122,11 +122,10 @@
       letter-spacing: 0.04em;
       line-height: 1.2;
     }
-    .errata-badge {
-      background: #c05c00;
-      color: #fff;
-    }
-    .errata-badge:hover { background: #e06e00; }
+    .errata-high { background: #c05c00; color: #fff; }
+    .errata-high:hover { background: #e06e00; }
+    .errata-low  { background: #1e3040; color: #7ab4c8; border: 1px solid #7ab4c8; }
+    .errata-low:hover { background: #2a4050; }
     .flag-btn {
       background: #3a1a6e;
       color: #9f7aea;
@@ -180,7 +179,7 @@
       margin: 2rem auto;
     }
     .modal-title { font-size: 1rem; font-weight: 800; color: #9f7aea; margin-bottom: 0.4rem; }
-    .modal-reason { font-size: 0.75rem; color: #c05c00; font-weight: 700; margin-bottom: 0.75rem; }
+    .modal-reason { margin-bottom: 0.75rem; }
     .modal-label { font-size: 0.68rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
     .modal-text { font-size: 0.8rem; color: #eee; line-height: 1.6; white-space: pre-wrap; background: #1a1a3e; border-radius: 6px; padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
     .modal-close { background: #2d1b69; color: #9f7aea; border: none; padding: 0.4rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
@@ -236,20 +235,51 @@ const GIST_RAW  = `https://gist.githubusercontent.com/${GIST_USER}/${GIST_ID}/ra
 const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
 
 const CUBES = {
-  isd: { name: 'Innistrad', setCode: 'isd', releaseYear: 2011, counts: { mythic: 1, rare: 1, uncommon: 2, common: 3 } }
+  isd: { name: 'Innistrad', setCode: 'isd', counts: { mythic: 1, rare: 1, uncommon: 2, common: 3 } }
 };
 
-const RARITY_ORDER = ['mythic','rare','uncommon','common'];
-const RARITY_LABEL = { mythic: 'Mythic Rares', rare: 'Rares', uncommon: 'Uncommons', common: 'Commons' };
+// Color groups in display order
+const COLOR_ORDER = ['W','U','B','R','G','M','A','L'];
+const COLOR_LABEL = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', M:'Multicolored', A:'Artifact', L:'Land' };
+const COLOR_ICON  = { W:'☀', U:'💧', B:'💀', R:'🔥', G:'🌿', M:'◆', A:'⚙', L:'🏔' };
 
-// Patterns used to auto-detect errata on pre-2020 cards.
-// "any target" was introduced in Magic 2020; any older card with it in oracle text was updated.
-// "target player or planeswalker" replaces old "target player" wording post-planeswalker rules change.
+function colorKey(card) {
+  const colors = card.colors ?? [];
+  if (colors.length > 1) return 'M';
+  if (colors.length === 1) return colors[0];
+  if (card.type_line?.includes('Land')) return 'L';
+  return 'A';
+}
+
+// Errata patterns with severity.
+// HIGH  = changes card behavior (new legal targets, etc.)
+// LOW   = cosmetic/templating only, no gameplay change
 const ERRATA_PATTERNS = [
-  { test: t => t.includes('any target'),
-    reason: 'Printed: "target creature or player" — Oracle updated to "any target" (2020)' },
-  { test: t => t.includes('target player or planeswalker'),
-    reason: 'Printed: "target player" — Oracle updated to include planeswalkers' },
+  {
+    severity: 'high',
+    test: t => t.includes('any target'),
+    reason: '"any target" — printed as "target creature or player". Now also hits planeswalkers.'
+  },
+  {
+    severity: 'high',
+    test: t => t.includes('target player or planeswalker'),
+    reason: '"target player or planeswalker" — printed as "target player". Now also hits planeswalkers.'
+  },
+  {
+    severity: 'low',
+    test: t => /\benters\b/.test(t) && !t.includes('enters the battlefield'),
+    reason: '"enters" — printed as "enters the battlefield". Cosmetic shortening (2024 Oracle update).'
+  },
+  {
+    severity: 'low',
+    test: t => /\bleaves\b/.test(t) && !t.includes('leaves the battlefield'),
+    reason: '"leaves" — printed as "leaves the battlefield". Cosmetic shortening (2024 Oracle update).'
+  },
+  {
+    severity: 'low',
+    test: t => t.includes('create') && t.includes('token'),
+    reason: '"create a token" — printed as "put a ... token onto the battlefield" (templating changed ~2015).'
+  },
 ];
 
 let activeCube   = 'isd';
@@ -364,11 +394,14 @@ function getOracleText(card) {
 
 // ── Errata detection ──────────────────────────────────────────────────────────
 
-function autoErrataReason(cardName) {
+function getErrataList(cardName) {
   const t = oracleMap[cardName] ?? '';
-  for (const p of ERRATA_PATTERNS) {
-    if (p.test(t)) return p.reason;
-  }
+  return ERRATA_PATTERNS.filter(p => p.test(t));
+}
+
+function topSeverity(errataList) {
+  if (errataList.some(e => e.severity === 'high')) return 'high';
+  if (errataList.length) return 'low';
   return null;
 }
 
@@ -377,7 +410,7 @@ function isManualFlagged(cardName) {
 }
 
 function hasAnyErrata(cardName) {
-  return !!(autoErrataReason(cardName) || isManualFlagged(cardName));
+  return getErrataList(cardName).length > 0 || isManualFlagged(cardName);
 }
 
 function toggleFlag(cardName) {
@@ -391,13 +424,22 @@ function toggleFlag(cardName) {
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
 function showErrataModal(cardName) {
-  const autoReason = autoErrataReason(cardName);
-  const manualFlag = isManualFlagged(cardName);
-  const oracle     = oracleMap[cardName] ?? '(no oracle text)';
+  const list     = getErrataList(cardName);
+  const manual   = isManualFlagged(cardName);
+  const oracle   = oracleMap[cardName] ?? '(no oracle text)';
 
   document.getElementById('modal-title').textContent = cardName;
-  document.getElementById('modal-reason').textContent =
-    autoReason ?? (manualFlag ? 'Manually flagged as having errata' : '');
+
+  let reasonHtml = '';
+  list.forEach(e => {
+    const color = e.severity === 'high' ? '#c05c00' : '#7ab4c8';
+    const label = e.severity === 'high' ? '⚠ HIGH' : 'ℹ LOW';
+    reasonHtml += `<div style="margin-bottom:0.4rem;font-size:0.75rem;font-weight:700;color:${color}">${label} — ${e.reason}</div>`;
+  });
+  if (manual && !list.length) {
+    reasonHtml = `<div style="color:#9f7aea;font-size:0.75rem;font-weight:700">⚑ Manually flagged</div>`;
+  }
+  document.getElementById('modal-reason').innerHTML = reasonHtml;
   document.getElementById('modal-oracle').textContent = oracle;
   document.getElementById('modal').style.display = 'block';
 }
@@ -454,7 +496,7 @@ function render() {
   const cards = cardCache[activeCube] ?? [];
   const owned = ownedMap[activeCube]  ?? {};
 
-  // Stats always over full set
+  // Stats over full set regardless of filter
   let totalNeeded = 0, totalOwned = 0;
   cards.forEach(c => {
     const t = cube.counts[c.rarity] ?? 1;
@@ -465,50 +507,53 @@ function render() {
   document.getElementById('stats').textContent = `${totalOwned} / ${totalNeeded} copies collected (${pct}%)`;
   document.getElementById('bar').style.width = pct + '%';
 
-  // Group by rarity; cards already come from Scryfall in collector-number order
+  // Group by color, sorted by collector number within each group
   const groups = {};
-  RARITY_ORDER.forEach(r => { groups[r] = []; });
+  COLOR_ORDER.forEach(k => { groups[k] = []; });
 
   for (const c of cards) {
-    // Apply filter
-    if (activeFilter === 'missing' && (owned[c.name] ?? 0) >= (cube.counts[c.rarity] ?? 1)) continue;
+    const target = cube.counts[c.rarity] ?? 1;
+    if (activeFilter === 'missing' && (owned[c.name] ?? 0) >= target) continue;
     if (activeFilter === 'errata'  && !hasAnyErrata(c.name)) continue;
-    if (groups[c.rarity]) groups[c.rarity].push(c);
+    const key = colorKey(c);
+    if (groups[key]) groups[key].push(c);
   }
 
-  // Sort within each rarity by collector number (numeric, ascending)
-  for (const r of RARITY_ORDER) {
-    groups[r].sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
+  for (const key of COLOR_ORDER) {
+    groups[key].sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
   }
 
   const items = [];
-  for (const rarity of RARITY_ORDER) {
-    const group = groups[rarity];
+  for (const key of COLOR_ORDER) {
+    const group = groups[key];
     if (!group.length) continue;
-    const want = cube.counts[rarity] ?? 1;
-    items.push(`<div class="section-header">${RARITY_LABEL[rarity]} — ${want} of each</div>`);
+    items.push(`<div class="section-header">${COLOR_ICON[key]} ${COLOR_LABEL[key]}</div>`);
 
     for (const c of group) {
-      const target   = want;
+      const target   = cube.counts[c.rarity] ?? 1;
       const n        = owned[c.name] ?? 0;
       const cls      = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
       const lblCls   = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
       const label    = n >= target ? '✓ owned'  : n > 0 ? `${n} / ${target}` : 'NEED';
       const img      = cardImage(c);
-      const autoErr  = autoErrataReason(c.name);
+      const errList  = getErrataList(c.name);
+      const severity = topSeverity(errList);
       const manFlag  = isManualFlagged(c.name);
       const safeName = c.name.replace(/"/g, '&quot;');
 
-      const badges = [
-        autoErr || manFlag
-          ? `<button class="errata-badge">⚠ ERRATA</button>`
-          : '',
-        `<button class="flag-btn${manFlag ? ' flagged' : ''}" title="${manFlag ? 'Remove flag' : 'Flag as errata'}">⚑</button>`,
-      ].join('');
+      let errataBadge = '';
+      if (severity === 'high') {
+        errataBadge = `<button class="errata-badge errata-high">⚠ ERRATA</button>`;
+      } else if (severity === 'low' || manFlag) {
+        errataBadge = `<button class="errata-badge errata-low">ℹ minor</button>`;
+      }
 
       items.push(`<div class="card ${cls}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
         <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
-        <div class="badge-row">${badges}</div>
+        <div class="badge-row">
+          ${errataBadge}
+          <button class="flag-btn${manFlag ? ' flagged' : ''}" title="${manFlag ? 'Remove flag' : 'Flag as errata'}">⚑</button>
+        </div>
         <div class="card-footer">
           <span class="card-num">#${c.collector_number}</span>
           <span class="${lblCls}">${label}</span>
