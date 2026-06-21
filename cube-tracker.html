@@ -8,181 +8,130 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
 
-    header {
-      background: #16213e;
-      padding: 1rem;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-    }
+    header { background: #16213e; padding: 0.75rem 1rem; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
 
-    .nav-link { display: block; text-align: center; font-size: 0.7rem; color: #666; text-decoration: none; margin-bottom: 0.4rem; }
+    .nav-link { display: block; text-align: center; font-size: 0.7rem; color: #666; text-decoration: none; margin-bottom: 0.35rem; }
     .nav-link:hover { color: #9f7aea; }
 
-    h1 { font-size: 1.3rem; text-align: center; color: #9f7aea; margin-bottom: 0.6rem; }
+    h1 { font-size: 1.3rem; text-align: center; color: #9f7aea; margin-bottom: 0.5rem; }
 
-    .cube-tabs { display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.6rem; }
+    .tab-row { display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.45rem; }
+
     .cube-tab {
-      padding: 0.35rem 0.9rem;
-      border: none;
-      border-radius: 999px;
-      cursor: pointer;
-      font-size: 0.78rem;
-      font-weight: 700;
-      background: #2d1b69;
-      color: #aaa;
-      transition: all 0.15s;
+      padding: 0.3rem 0.85rem; border: none; border-radius: 999px; cursor: pointer;
+      font-size: 0.78rem; font-weight: 700; background: #2d1b69; color: #aaa; transition: all 0.15s;
     }
     .cube-tab.active { background: #9f7aea; color: #1a1a2e; }
 
-    .progress-wrap { background: #2d1b69; border-radius: 4px; height: 6px; margin-bottom: 0.5rem; }
-    .progress-bar  { background: #9f7aea; height: 6px; border-radius: 4px; transition: width 0.3s; }
+    .view-tab {
+      padding: 0.28rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
+      font-size: 0.73rem; font-weight: 700; background: #1e1e3a; color: #666; transition: all 0.15s;
+    }
+    .view-tab.active { background: #3a3a60; color: #ccc; }
 
-    .stats-row { display: flex; justify-content: center; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
-    .stats       { font-size: 0.82rem; color: #aaa; }
-    .save-status { font-size: 0.75rem; color: #555; }
+    .progress-wrap { background: #2d1b69; border-radius: 4px; height: 5px; margin-bottom: 0.4rem; }
+    .progress-bar  { background: #9f7aea; height: 5px; border-radius: 4px; transition: width 0.3s; }
+
+    .stats-row { display: flex; justify-content: center; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
+    .stats       { font-size: 0.8rem; color: #aaa; }
+    .save-status { font-size: 0.73rem; color: #555; }
     .save-status.saving { color: #9f7aea; }
     .save-status.saved  { color: #52b788; }
     .save-status.error  { color: #e05; }
 
-    .filter-row { display: flex; gap: 0.4rem; justify-content: center; margin-bottom: 0.5rem; }
+    .filter-row { display: flex; gap: 0.4rem; justify-content: center; margin-bottom: 0.4rem; }
     .filter-btn {
-      padding: 0.28rem 0.8rem;
-      border: none;
-      border-radius: 999px;
-      cursor: pointer;
-      font-size: 0.73rem;
-      font-weight: 700;
-      background: #2d1b69;
-      color: #aaa;
-      transition: all 0.15s;
+      padding: 0.25rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
+      font-size: 0.73rem; font-weight: 700; background: #2d1b69; color: #aaa; transition: all 0.15s;
     }
     .filter-btn.active { background: #9f7aea; color: #1a1a2e; }
-    .filter-btn.errata-filter.active { background: #c05c00; color: #fff; }
 
     .token-section { display: flex; gap: 0.4rem; justify-content: center; align-items: center; flex-wrap: wrap; }
-    .token-input { background: #0f0f2a; border: 1px solid #444; color: #eee; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; width: 200px; }
-    .btn { padding: 0.3rem 0.7rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 700; background: #2d1b69; color: #9f7aea; transition: background 0.15s; }
+    .token-input { background: #0f0f2a; border: 1px solid #444; color: #eee; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.73rem; width: 190px; }
+    .btn { padding: 0.3rem 0.7rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.73rem; font-weight: 700; background: #2d1b69; color: #9f7aea; transition: background 0.15s; }
     .btn:hover { background: #4c2889; }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 0.6rem;
-      padding: 0.75rem;
-    }
+    /* ── Card grid ── */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem; padding: 0.75rem; }
 
     .section-header {
-      grid-column: 1 / -1;
-      background: #2d1b69;
-      color: #9f7aea;
-      font-weight: 700;
-      font-size: 0.78rem;
-      padding: 0.4rem 0.8rem;
-      border-radius: 6px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
+      grid-column: 1 / -1; background: #2d1b69; color: #9f7aea;
+      font-weight: 700; font-size: 0.78rem; padding: 0.4rem 0.8rem;
+      border-radius: 6px; letter-spacing: 0.05em; text-transform: uppercase;
     }
+    .section-header.errata-high { background: #3d1800; color: #e07020; border: 1px solid #c05c00; }
+    .section-header.errata-low  { background: #0e2030; color: #7ab4c8; border: 1px solid #2a5060; }
 
     .card {
-      background: #12122a;
-      border: 2px solid #2d2d5e;
-      border-radius: 10px;
-      overflow: hidden;
-      cursor: pointer;
-      transition: transform 0.15s, border-color 0.15s;
-      position: relative;
+      background: #12122a; border: 2px solid #2d2d5e; border-radius: 10px;
+      overflow: hidden; cursor: pointer; transition: transform 0.15s, border-color 0.15s; position: relative;
     }
     .card:hover { transform: scale(1.03); }
     .card.complete { border-color: #2d6a4f; }
     .card.partial  { border-color: #b7791f; }
     .card.missing  { border-color: #6b1a1a; }
+    .card.picked   { border-color: #9f7aea; box-shadow: 0 0 12px rgba(159,122,234,0.6); }
+    .card.passed   { opacity: 0.45; }
 
     .card-img-wrap img { width: 100%; display: block; border-radius: 6px 6px 0 0; }
     .card.missing .card-img-wrap img { opacity: 0.2; filter: grayscale(80%); }
     .card.partial  .card-img-wrap img { opacity: 0.65; }
 
-    /* Errata badge — top-left corner overlay */
-    .badge-row {
-      position: absolute;
-      top: 4px;
-      left: 4px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-    .errata-badge, .flag-btn {
-      border: none;
-      border-radius: 4px;
-      font-size: 0.55rem;
-      font-weight: 800;
-      padding: 2px 4px;
-      cursor: pointer;
-      letter-spacing: 0.04em;
-      line-height: 1.2;
+    .badge-row { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; gap: 3px; }
+    .errata-badge {
+      border: none; border-radius: 4px; font-size: 0.55rem; font-weight: 800;
+      padding: 2px 4px; cursor: pointer; letter-spacing: 0.04em; line-height: 1.2;
     }
     .errata-high { background: #c05c00; color: #fff; }
     .errata-high:hover { background: #e06e00; }
-    .errata-low  { background: #1e3040; color: #7ab4c8; border: 1px solid #7ab4c8; }
+    .errata-low  { background: #1e3040; color: #7ab4c8; border: 1px solid #3a6070; }
     .errata-low:hover { background: #2a4050; }
-    .flag-btn {
-      background: #3a1a6e;
-      color: #9f7aea;
-    }
-    .flag-btn.flagged {
-      background: #6a2d9e;
-      color: #fff;
-    }
-    .flag-btn:hover { background: #4c2889; }
 
-    .card-footer {
-      padding: 0.3rem 0.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.7rem;
-    }
+    .card-footer { padding: 0.3rem 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
     .card-num  { color: #666; }
     .lbl-own   { color: #52b788; font-weight: 700; }
     .lbl-part  { color: #ffd700; font-weight: 700; }
     .lbl-need  { color: #e05555; font-weight: 700; }
 
-    .card-name {
-      padding: 0 0.5rem 0.35rem;
-      font-size: 0.65rem;
-      color: #ccc;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .card-name { padding: 0 0.5rem 0.35rem; font-size: 0.65rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── Pack opener ── */
+    .pack-splash {
+      grid-column: 1 / -1; display: flex; flex-direction: column;
+      align-items: center; gap: 1rem; padding: 3rem 1rem; text-align: center;
     }
+    .pack-splash h2 { color: #9f7aea; font-size: 1.2rem; }
+    .pack-splash p  { color: #aaa; font-size: 0.85rem; }
+    .btn-lg { padding: 0.6rem 1.8rem; font-size: 0.9rem; border-radius: 8px; }
+
+    .pack-banner {
+      grid-column: 1 / -1; background: #1e1e3a; border: 1px solid #9f7aea;
+      border-radius: 8px; padding: 0.5rem 1rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .pack-banner span { font-size: 0.85rem; color: #ccc; }
+    .pack-banner strong { color: #9f7aea; }
+
+    .pick-label {
+      position: absolute; bottom: 2.4rem; left: 0; right: 0;
+      text-align: center; font-size: 0.65rem; font-weight: 800;
+      color: #9f7aea; text-shadow: 0 0 6px rgba(159,122,234,0.9);
+      pointer-events: none;
+    }
+
+    .pack-actions { grid-column: 1 / -1; display: flex; justify-content: center; padding: 0.5rem 0; }
 
     .loading { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #666; font-size: 0.9rem; }
     .empty   { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; }
 
-    /* Modal */
-    #modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.85);
-      z-index: 200;
-      overflow-y: auto;
-      padding: 1rem;
-    }
-    .modal-box {
-      background: #12122a;
-      border: 1px solid #9f7aea;
-      border-radius: 12px;
-      padding: 1.25rem;
-      max-width: 420px;
-      margin: 2rem auto;
-    }
-    .modal-title { font-size: 1rem; font-weight: 800; color: #9f7aea; margin-bottom: 0.4rem; }
-    .modal-reason { margin-bottom: 0.75rem; }
-    .modal-label { font-size: 0.68rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
-    .modal-text { font-size: 0.8rem; color: #eee; line-height: 1.6; white-space: pre-wrap; background: #1a1a3e; border-radius: 6px; padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
-    .modal-close { background: #2d1b69; color: #9f7aea; border: none; padding: 0.4rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
+    /* ── Modal ── */
+    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; overflow-y: auto; padding: 1rem; }
+    .modal-box { background: #12122a; border: 1px solid #9f7aea; border-radius: 12px; padding: 1.25rem; max-width: 420px; margin: 2rem auto; }
+    .modal-title  { font-size: 1rem; font-weight: 800; color: #9f7aea; margin-bottom: 0.5rem; }
+    .modal-reasons { margin-bottom: 0.75rem; }
+    .modal-label  { font-size: 0.68rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
+    .modal-text   { font-size: 0.8rem; color: #eee; line-height: 1.6; white-space: pre-wrap; background: #1a1a3e; border-radius: 6px; padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
+    .modal-close  { background: #2d1b69; color: #9f7aea; border: none; padding: 0.4rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
     .modal-close:hover { background: #4c2889; }
   </style>
 </head>
@@ -191,7 +140,7 @@
 <div id="modal">
   <div class="modal-box">
     <div class="modal-title" id="modal-title"></div>
-    <div class="modal-reason" id="modal-reason"></div>
+    <div class="modal-reasons" id="modal-reasons"></div>
     <div class="modal-label">Current Oracle Text</div>
     <div class="modal-text" id="modal-oracle"></div>
     <button class="modal-close" onclick="document.getElementById('modal').style.display='none'">Close</button>
@@ -201,21 +150,30 @@
 <header>
   <a class="nav-link" href="index.html">← Pokemon Card Tracker</a>
   <h1>MTG Cube Tracker</h1>
-  <div class="cube-tabs">
+
+  <div class="tab-row">
     <button class="cube-tab active" data-cube="isd">Innistrad</button>
   </div>
-  <div class="progress-wrap">
+
+  <div class="tab-row" id="viewTabs">
+    <button class="view-tab active" data-view="cards">Cards</button>
+    <button class="view-tab" data-view="errata">Errata</button>
+    <button class="view-tab" data-view="pack">Pack Opener</button>
+  </div>
+
+  <div class="progress-wrap" id="progressWrap">
     <div class="progress-bar" id="bar" style="width:0%"></div>
   </div>
   <div class="stats-row">
     <span class="stats" id="stats">Loading…</span>
     <span class="save-status" id="saveStatus"></span>
   </div>
-  <div class="filter-row">
+
+  <div class="filter-row" id="filterRow">
     <button class="filter-btn active" data-filter="all">All</button>
     <button class="filter-btn" data-filter="missing">Missing</button>
-    <button class="filter-btn errata-filter" data-filter="errata">⚠ Errata</button>
   </div>
+
   <div class="token-section">
     <input class="token-input" id="tokenInput" type="password" placeholder="GitHub token (for saving)">
     <button class="btn" id="btnSaveToken">Save Token</button>
@@ -238,60 +196,75 @@ const CUBES = {
   isd: { name: 'Innistrad', setCode: 'isd', counts: { mythic: 1, rare: 1, uncommon: 2, common: 3 } }
 };
 
-// Color groups in display order
+// ── Color grouping ────────────────────────────────────────────────────────────
 const COLOR_ORDER = ['W','U','B','R','G','M','A','L'];
 const COLOR_LABEL = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', M:'Multicolored', A:'Artifact', L:'Land' };
 const COLOR_ICON  = { W:'☀', U:'💧', B:'💀', R:'🔥', G:'🌿', M:'◆', A:'⚙', L:'🏔' };
 
 function colorKey(card) {
-  const colors = card.colors ?? [];
-  if (colors.length > 1) return 'M';
-  if (colors.length === 1) return colors[0];
+  const c = card.colors ?? [];
+  if (c.length > 1) return 'M';
+  if (c.length === 1) return c[0];
   if (card.type_line?.includes('Land')) return 'L';
   return 'A';
 }
 
-// Errata patterns with severity.
-// HIGH  = changes card behavior (new legal targets, etc.)
-// LOW   = cosmetic/templating only, no gameplay change
-const ERRATA_PATTERNS = [
+// ── Errata patterns ───────────────────────────────────────────────────────────
+// severity: 'high' = affects gameplay  |  'low' = cosmetic wording only
+const ERRATA_CATEGORIES = [
   {
+    id: 'any-target',
     severity: 'high',
+    label: 'Targeting — "any target"',
+    detail: 'Printed as "target creature or player". Oracle updated to "any target" (2020), now also hits planeswalkers.',
     test: t => t.includes('any target'),
-    reason: '"any target" — printed as "target creature or player". Now also hits planeswalkers.'
   },
   {
+    id: 'target-planeswalker',
     severity: 'high',
+    label: 'Targeting — "target player or planeswalker"',
+    detail: 'Printed as "target player". Oracle now includes planeswalkers as valid targets.',
     test: t => t.includes('target player or planeswalker'),
-    reason: '"target player or planeswalker" — printed as "target player". Now also hits planeswalkers.'
   },
   {
+    id: 'etb-ltb',
     severity: 'low',
-    test: t => /\benters\b/.test(t) && !t.includes('enters the battlefield'),
-    reason: '"enters" — printed as "enters the battlefield". Cosmetic shortening (2024 Oracle update).'
+    label: 'ETB/LTB text shortened',
+    detail: 'Printed as "enters the battlefield" / "leaves the battlefield". Cosmetic shortening in 2024 Oracle update.',
+    test: t => (/\benters\b/.test(t) && !t.includes('enters the battlefield'))
+            || (/\bleaves\b/.test(t) && !t.includes('leaves the battlefield')),
   },
   {
+    id: 'create-token',
     severity: 'low',
-    test: t => /\bleaves\b/.test(t) && !t.includes('leaves the battlefield'),
-    reason: '"leaves" — printed as "leaves the battlefield". Cosmetic shortening (2024 Oracle update).'
-  },
-  {
-    severity: 'low',
+    label: 'Token creation wording',
+    detail: 'Printed as "put a … token onto the battlefield". Oracle now reads "create a … token" (~2015 template change).',
     test: t => t.includes('create') && t.includes('token'),
-    reason: '"create a token" — printed as "put a ... token onto the battlefield" (templating changed ~2015).'
   },
 ];
 
+function getErrataMatches(cardName) {
+  const t = oracleMap[cardName] ?? '';
+  return ERRATA_CATEGORIES.filter(cat => cat.test(t));
+}
+
+function topSeverity(matches) {
+  if (matches.some(m => m.severity === 'high')) return 'high';
+  if (matches.length) return 'low';
+  return null;
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
 let activeCube   = 'isd';
+let activeView   = 'cards';
 let activeFilter = 'all';
-let cardCache    = {};  // { isd: [scryfall card objects] }
-let oracleMap    = {};  // { 'Card Name': oracle text string }
-let ownedMap     = {};  // { isd: { 'Card Name': count } }
-let flagsMap     = {};  // { isd: { 'Card Name': true } } — manual errata flags
+let cardCache    = {};
+let oracleMap    = {};
+let ownedMap     = {};
 let saveTimer    = null;
+let packState    = { cards: [], pick: null, packNum: 1 };
 
 // ── Token UI ──────────────────────────────────────────────────────────────────
-
 function getToken() { return localStorage.getItem('ghtoken') ?? ''; }
 document.getElementById('tokenInput').value = getToken();
 
@@ -304,8 +277,7 @@ document.getElementById('btnCheckGist').addEventListener('click', async () => {
   const token = getToken();
   if (!token) { setStatus('no token saved', 'error'); return; }
   try {
-    const res = await fetch(GIST_API, { headers: { Authorization: `token ${token}` } });
-    const d   = await res.json();
+    const d = await (await fetch(GIST_API, { headers: { Authorization: `token ${token}` } })).json();
     setStatus(d.id ? 'gist OK ✓' : 'gist error', d.id ? 'saved' : 'error');
   } catch (e) { setStatus('network error', 'error'); }
 });
@@ -317,20 +289,13 @@ function setStatus(msg, cls = '') {
 }
 
 // ── Gist I/O ──────────────────────────────────────────────────────────────────
-
 async function loadCollection() {
   try {
     const res = await fetch(GIST_RAW + '?t=' + Date.now());
-    if (res.ok) {
-      const data = await res.json();
-      flagsMap = data._flags ?? {};
-      delete data._flags;
-      ownedMap = data;
-    }
-  } catch (e) { /* first run */ }
+    if (res.ok) ownedMap = await res.json();
+  } catch (e) {}
   for (const key of Object.keys(CUBES)) {
     if (!ownedMap[key]) ownedMap[key] = {};
-    if (!flagsMap[key]) flagsMap[key] = {};
   }
 }
 
@@ -339,11 +304,10 @@ async function pushCollection() {
   if (!token) { setStatus('no token', 'error'); return; }
   setStatus('saving…', 'saving');
   try {
-    const payload = { ...ownedMap, _flags: flagsMap };
     const res = await fetch(GIST_API, {
       method: 'PATCH',
       headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(payload, null, 2) } } })
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(ownedMap, null, 2) } } })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -361,18 +325,16 @@ function scheduleSave() {
 }
 
 // ── Scryfall fetch ─────────────────────────────────────────────────────────────
-
 async function fetchSetCards(setCode) {
   const cards = [];
   let url = `https://api.scryfall.com/cards/search?q=set:${setCode}+not:extra&order=collector&unique=cards`;
   while (url) {
-    const res  = await fetch(url);
-    const data = await res.json();
+    const data = await (await fetch(url)).json();
     if (!data.data) break;
     for (const c of data.data) {
       if (c.type_line?.includes('Basic Land')) continue;
       cards.push(c);
-      oracleMap[c.name] = getOracleText(c);
+      oracleMap[c.name] = c.oracle_text ?? c.card_faces?.map(f => f.oracle_text || '').join('\n\n──\n\n') ?? '';
     }
     url = data.has_more ? data.next_page : null;
     if (data.has_more) await new Promise(r => setTimeout(r, 100));
@@ -381,105 +343,97 @@ async function fetchSetCards(setCode) {
 }
 
 function cardImage(card) {
-  return card.image_uris?.normal
-      ?? card.card_faces?.[0]?.image_uris?.normal
-      ?? '';
+  return card.image_uris?.normal ?? card.card_faces?.[0]?.image_uris?.normal ?? '';
 }
 
-function getOracleText(card) {
-  if (card.oracle_text) return card.oracle_text;
-  if (card.card_faces)  return card.card_faces.map(f => f.oracle_text || '').join('\n\n──\n\n');
-  return '';
+// ── Pack generation ────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
-// ── Errata detection ──────────────────────────────────────────────────────────
+function openNewPack() {
+  const cards = cardCache[activeCube] ?? [];
+  const pool  = { common: [], uncommon: [], rare: [], mythic: [] };
+  for (const c of cards) { if (pool[c.rarity]) pool[c.rarity].push(c); }
 
-function getErrataList(cardName) {
-  const t = oracleMap[cardName] ?? '';
-  return ERRATA_PATTERNS.filter(p => p.test(t));
-}
+  const pack = [];
+  // 1 rare slot — 1-in-8 chance of mythic
+  const useMythic = pool.mythic.length && Math.random() < 0.125;
+  const rareSlot  = shuffle(useMythic ? pool.mythic : pool.rare);
+  if (rareSlot.length) pack.push(rareSlot[0]);
+  // 3 uncommons
+  pack.push(...shuffle(pool.uncommon).slice(0, 3));
+  // 10 commons
+  pack.push(...shuffle(pool.common).slice(0, 10));
 
-function topSeverity(errataList) {
-  if (errataList.some(e => e.severity === 'high')) return 'high';
-  if (errataList.length) return 'low';
-  return null;
-}
-
-function isManualFlagged(cardName) {
-  return !!(flagsMap[activeCube]?.[cardName]);
-}
-
-function hasAnyErrata(cardName) {
-  return getErrataList(cardName).length > 0 || isManualFlagged(cardName);
-}
-
-function toggleFlag(cardName) {
-  if (!flagsMap[activeCube]) flagsMap[activeCube] = {};
-  if (flagsMap[activeCube][cardName]) delete flagsMap[activeCube][cardName];
-  else flagsMap[activeCube][cardName] = true;
+  packState = { cards: pack, pick: null, packNum: packState.packNum + (packState.pick ? 1 : 0) };
   render();
-  scheduleSave();
 }
 
-// ── Modal ─────────────────────────────────────────────────────────────────────
-
+// ── Errata modal ──────────────────────────────────────────────────────────────
 function showErrataModal(cardName) {
-  const list     = getErrataList(cardName);
-  const manual   = isManualFlagged(cardName);
-  const oracle   = oracleMap[cardName] ?? '(no oracle text)';
+  const matches = getErrataMatches(cardName);
+  const oracle  = oracleMap[cardName] ?? '(no oracle text)';
 
   document.getElementById('modal-title').textContent = cardName;
-
-  let reasonHtml = '';
-  list.forEach(e => {
-    const color = e.severity === 'high' ? '#c05c00' : '#7ab4c8';
-    const label = e.severity === 'high' ? '⚠ HIGH' : 'ℹ LOW';
-    reasonHtml += `<div style="margin-bottom:0.4rem;font-size:0.75rem;font-weight:700;color:${color}">${label} — ${e.reason}</div>`;
-  });
-  if (manual && !list.length) {
-    reasonHtml = `<div style="color:#9f7aea;font-size:0.75rem;font-weight:700">⚑ Manually flagged</div>`;
-  }
-  document.getElementById('modal-reason').innerHTML = reasonHtml;
+  document.getElementById('modal-reasons').innerHTML = matches.map(m => {
+    const color = m.severity === 'high' ? '#e07020' : '#7ab4c8';
+    const label = m.severity === 'high' ? '⚠ HIGH' : 'ℹ LOW';
+    return `<div style="margin-bottom:0.4rem;font-size:0.75rem;font-weight:700;color:${color}">${label} — ${m.detail}</div>`;
+  }).join('');
   document.getElementById('modal-oracle').textContent = oracle;
   document.getElementById('modal').style.display = 'block';
 }
 
 document.getElementById('modal').addEventListener('click', e => {
-  if (e.target === document.getElementById('modal')) {
+  if (e.target === document.getElementById('modal'))
     document.getElementById('modal').style.display = 'none';
-  }
 });
 
-// ── Interaction ────────────────────────────────────────────────────────────────
-
+// ── Grid interaction ──────────────────────────────────────────────────────────
 document.getElementById('grid').addEventListener('click', e => {
-  // Errata badge → show modal
+  // Errata badge → modal
   const badge = e.target.closest('.errata-badge');
-  if (badge) {
-    showErrataModal(badge.closest('.card').dataset.name);
-    return;
-  }
+  if (badge) { showErrataModal(badge.closest('.card').dataset.name); return; }
 
-  // Manual flag button → toggle
-  const flagBtn = e.target.closest('.flag-btn');
-  if (flagBtn) {
-    toggleFlag(flagBtn.closest('.card').dataset.name);
-    return;
-  }
-
-  // Card body → increment owned count
   const card = e.target.closest('.card[data-name]');
   if (!card) return;
+
+  if (activeView === 'pack') {
+    // Pack pick
+    if (!packState.pick) {
+      packState.pick = card.dataset.name;
+      render();
+    }
+    return;
+  }
+
+  // Cards view — toggle owned count
   const name   = card.dataset.name;
   const rarity = card.dataset.rarity;
   const target = CUBES[activeCube].counts[rarity] ?? 1;
   const cur    = ownedMap[activeCube]?.[name] ?? 0;
+  if (!ownedMap[activeCube]) ownedMap[activeCube] = {};
   ownedMap[activeCube][name] = cur >= target ? 0 : cur + 1;
   render();
   scheduleSave();
 });
 
-// ── Filter buttons ─────────────────────────────────────────────────────────────
+// ── View & filter tabs ────────────────────────────────────────────────────────
+document.querySelectorAll('.view-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeView = btn.dataset.view;
+    document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b === btn));
+    document.getElementById('filterRow').style.display    = activeView === 'cards'  ? 'flex' : 'none';
+    document.getElementById('progressWrap').style.display = activeView === 'pack'   ? 'none' : 'block';
+    render();
+  });
+});
 
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -488,87 +442,6 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     render();
   });
 });
-
-// ── Render ─────────────────────────────────────────────────────────────────────
-
-function render() {
-  const cube  = CUBES[activeCube];
-  const cards = cardCache[activeCube] ?? [];
-  const owned = ownedMap[activeCube]  ?? {};
-
-  // Stats over full set regardless of filter
-  let totalNeeded = 0, totalOwned = 0;
-  cards.forEach(c => {
-    const t = cube.counts[c.rarity] ?? 1;
-    totalNeeded += t;
-    totalOwned  += Math.min(owned[c.name] ?? 0, t);
-  });
-  const pct = totalNeeded ? Math.round((totalOwned / totalNeeded) * 100) : 0;
-  document.getElementById('stats').textContent = `${totalOwned} / ${totalNeeded} copies collected (${pct}%)`;
-  document.getElementById('bar').style.width = pct + '%';
-
-  // Group by color, sorted by collector number within each group
-  const groups = {};
-  COLOR_ORDER.forEach(k => { groups[k] = []; });
-
-  for (const c of cards) {
-    const target = cube.counts[c.rarity] ?? 1;
-    if (activeFilter === 'missing' && (owned[c.name] ?? 0) >= target) continue;
-    if (activeFilter === 'errata'  && !hasAnyErrata(c.name)) continue;
-    const key = colorKey(c);
-    if (groups[key]) groups[key].push(c);
-  }
-
-  for (const key of COLOR_ORDER) {
-    groups[key].sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
-  }
-
-  const items = [];
-  for (const key of COLOR_ORDER) {
-    const group = groups[key];
-    if (!group.length) continue;
-    items.push(`<div class="section-header">${COLOR_ICON[key]} ${COLOR_LABEL[key]}</div>`);
-
-    for (const c of group) {
-      const target   = cube.counts[c.rarity] ?? 1;
-      const n        = owned[c.name] ?? 0;
-      const cls      = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
-      const lblCls   = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
-      const label    = n >= target ? '✓ owned'  : n > 0 ? `${n} / ${target}` : 'NEED';
-      const img      = cardImage(c);
-      const errList  = getErrataList(c.name);
-      const severity = topSeverity(errList);
-      const manFlag  = isManualFlagged(c.name);
-      const safeName = c.name.replace(/"/g, '&quot;');
-
-      let errataBadge = '';
-      if (severity === 'high') {
-        errataBadge = `<button class="errata-badge errata-high">⚠ ERRATA</button>`;
-      } else if (severity === 'low' || manFlag) {
-        errataBadge = `<button class="errata-badge errata-low">ℹ minor</button>`;
-      }
-
-      items.push(`<div class="card ${cls}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
-        <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
-        <div class="badge-row">
-          ${errataBadge}
-          <button class="flag-btn${manFlag ? ' flagged' : ''}" title="${manFlag ? 'Remove flag' : 'Flag as errata'}">⚑</button>
-        </div>
-        <div class="card-footer">
-          <span class="card-num">#${c.collector_number}</span>
-          <span class="${lblCls}">${label}</span>
-        </div>
-        <div class="card-name">${c.name}</div>
-      </div>`);
-    }
-  }
-
-  document.getElementById('grid').innerHTML = items.length
-    ? items.join('')
-    : '<div class="empty">No cards match this filter.</div>';
-}
-
-// ── Cube tabs ─────────────────────────────────────────────────────────────────
 
 document.querySelectorAll('.cube-tab').forEach(btn => {
   btn.addEventListener('click', async () => {
@@ -582,10 +455,177 @@ document.querySelectorAll('.cube-tab').forEach(btn => {
   });
 });
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Render dispatcher ─────────────────────────────────────────────────────────
+function render() {
+  if (activeView === 'cards')  renderCards();
+  else if (activeView === 'errata') renderErrata();
+  else if (activeView === 'pack')   renderPack();
+}
 
+// ── Cards view ────────────────────────────────────────────────────────────────
+function renderCards() {
+  const cube  = CUBES[activeCube];
+  const cards = cardCache[activeCube] ?? [];
+  const owned = ownedMap[activeCube]  ?? {};
+
+  let totalNeeded = 0, totalOwned = 0;
+  cards.forEach(c => {
+    const t = cube.counts[c.rarity] ?? 1;
+    totalNeeded += t;
+    totalOwned  += Math.min(owned[c.name] ?? 0, t);
+  });
+  const pct = totalNeeded ? Math.round((totalOwned / totalNeeded) * 100) : 0;
+  document.getElementById('stats').textContent = `${totalOwned} / ${totalNeeded} copies collected (${pct}%)`;
+  document.getElementById('bar').style.width = pct + '%';
+
+  const groups = {};
+  COLOR_ORDER.forEach(k => { groups[k] = []; });
+  for (const c of cards) {
+    const target = cube.counts[c.rarity] ?? 1;
+    if (activeFilter === 'missing' && (owned[c.name] ?? 0) >= target) continue;
+    const key = colorKey(c);
+    if (groups[key]) groups[key].push(c);
+  }
+  for (const k of COLOR_ORDER) groups[k].sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
+
+  const items = [];
+  for (const key of COLOR_ORDER) {
+    const group = groups[key];
+    if (!group.length) continue;
+    items.push(`<div class="section-header">${COLOR_ICON[key]} ${COLOR_LABEL[key]}</div>`);
+    for (const c of group) {
+      items.push(cardHTML(c, cube, owned));
+    }
+  }
+
+  document.getElementById('grid').innerHTML = items.length ? items.join('') : '<div class="empty">No cards match this filter.</div>';
+}
+
+// ── Errata view ───────────────────────────────────────────────────────────────
+function renderErrata() {
+  const cards = cardCache[activeCube] ?? [];
+
+  // Group cards per category (a card can appear in multiple categories)
+  const byCategory = {};
+  ERRATA_CATEGORIES.forEach(cat => { byCategory[cat.id] = []; });
+  for (const c of cards) {
+    const matches = getErrataMatches(c.name);
+    matches.forEach(cat => byCategory[cat.id].push(c));
+  }
+  for (const cat of ERRATA_CATEGORIES) {
+    byCategory[cat.id].sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
+  }
+
+  const total = new Set(cards.filter(c => getErrataMatches(c.name).length).map(c => c.name)).size;
+  document.getElementById('stats').textContent = `${total} cards with detected errata`;
+  document.getElementById('bar').style.width = '0%';
+
+  const items = [];
+  for (const cat of ERRATA_CATEGORIES) {
+    const group = byCategory[cat.id];
+    if (!group.length) continue;
+    const cls = cat.severity === 'high' ? 'errata-high' : 'errata-low';
+    const icon = cat.severity === 'high' ? '⚠' : 'ℹ';
+    items.push(`<div class="section-header ${cls}">${icon} ${cat.label} (${group.length} cards)</div>`);
+    for (const c of group) {
+      const matches  = getErrataMatches(c.name);
+      const severity = topSeverity(matches);
+      const safeName = c.name.replace(/"/g, '&quot;');
+      const img      = cardImage(c);
+      const badgeCls = severity === 'high' ? 'errata-high' : 'errata-low';
+      const badgeTxt = severity === 'high' ? '⚠ ERRATA' : 'ℹ minor';
+      items.push(`<div class="card" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
+        <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+        <div class="badge-row"><button class="errata-badge ${badgeCls}">${badgeTxt}</button></div>
+        <div class="card-footer"><span class="card-num">#${c.collector_number}</span></div>
+        <div class="card-name">${c.name}</div>
+      </div>`);
+    }
+  }
+
+  document.getElementById('grid').innerHTML = items.length ? items.join('') : '<div class="empty">No errata detected.</div>';
+}
+
+// ── Pack opener view ──────────────────────────────────────────────────────────
+function renderPack() {
+  const grid = document.getElementById('grid');
+  document.getElementById('stats').textContent = `Pack ${packState.packNum}`;
+
+  if (!packState.cards.length) {
+    grid.innerHTML = `<div class="pack-splash">
+      <h2>Innistrad Draft Simulator</h2>
+      <p>14 cards per pack · 1 rare/mythic · 3 uncommons · 10 commons</p>
+      <button class="btn btn-lg" onclick="openNewPack()">Open Pack 1</button>
+    </div>`;
+    return;
+  }
+
+  // Sort pack: rare first, then uncommon, then common; within each by collector number
+  const rarityRank = { mythic: 0, rare: 1, uncommon: 2, common: 3 };
+  const sorted = [...packState.cards].sort((a, b) => {
+    const rd = (rarityRank[a.rarity] ?? 4) - (rarityRank[b.rarity] ?? 4);
+    return rd !== 0 ? rd : parseInt(a.collector_number) - parseInt(b.collector_number);
+  });
+
+  const { pick } = packState;
+  const items = [];
+
+  items.push(`<div class="pack-banner">
+    <span>Pack ${packState.packNum} · Pick 1</span>
+    ${pick ? `<strong>✓ ${pick}</strong>` : '<span style="color:#aaa">Tap a card to pick</span>'}
+  </div>`);
+
+  for (const c of sorted) {
+    const isPicked = c.name === pick;
+    const isPassed = pick && !isPicked;
+    const img = cardImage(c);
+    const safeName = c.name.replace(/"/g, '&quot;');
+    items.push(`<div class="card ${isPicked ? 'picked' : isPassed ? 'passed' : ''}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
+      <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+      ${isPicked ? '<div class="pick-label">P1P1</div>' : ''}
+      <div class="card-footer"><span class="card-num">${c.rarity[0].toUpperCase()} · #${c.collector_number}</span></div>
+      <div class="card-name">${c.name}</div>
+    </div>`);
+  }
+
+  if (pick) {
+    items.push(`<div class="pack-actions"><button class="btn btn-lg" onclick="openNewPack()">Open Next Pack</button></div>`);
+  }
+
+  grid.innerHTML = items.join('');
+}
+
+// ── Shared card HTML (cards view) ─────────────────────────────────────────────
+function cardHTML(c, cube, owned) {
+  const target   = cube.counts[c.rarity] ?? 1;
+  const n        = owned[c.name] ?? 0;
+  const cls      = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
+  const lblCls   = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
+  const label    = n >= target ? '✓ owned'  : n > 0 ? `${n} / ${target}` : 'NEED';
+  const img      = cardImage(c);
+  const matches  = getErrataMatches(c.name);
+  const severity = topSeverity(matches);
+  const safeName = c.name.replace(/"/g, '&quot;');
+
+  let badge = '';
+  if (severity === 'high') badge = `<button class="errata-badge errata-high">⚠ ERRATA</button>`;
+  else if (severity === 'low') badge = `<button class="errata-badge errata-low">ℹ minor</button>`;
+
+  return `<div class="card ${cls}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
+    <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+    ${badge ? `<div class="badge-row">${badge}</div>` : ''}
+    <div class="card-footer">
+      <span class="card-num">#${c.collector_number}</span>
+      <span class="${lblCls}">${label}</span>
+    </div>
+    <div class="card-name">${c.name}</div>
+  </div>`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
   await loadCollection();
+  document.getElementById('grid').innerHTML = '<div class="loading">Fetching Innistrad cards from Scryfall…</div>';
   cardCache[activeCube] = await fetchSetCards(CUBES[activeCube].setCode);
   render();
 }
