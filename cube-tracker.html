@@ -39,12 +39,27 @@
     .progress-wrap { background: #2d1b69; border-radius: 4px; height: 6px; margin-bottom: 0.5rem; }
     .progress-bar  { background: #9f7aea; height: 6px; border-radius: 4px; transition: width 0.3s; }
 
-    .stats-row { display: flex; justify-content: center; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+    .stats-row { display: flex; justify-content: center; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
     .stats       { font-size: 0.82rem; color: #aaa; }
     .save-status { font-size: 0.75rem; color: #555; }
     .save-status.saving { color: #9f7aea; }
     .save-status.saved  { color: #52b788; }
     .save-status.error  { color: #e05; }
+
+    .filter-row { display: flex; gap: 0.4rem; justify-content: center; margin-bottom: 0.5rem; }
+    .filter-btn {
+      padding: 0.28rem 0.8rem;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.73rem;
+      font-weight: 700;
+      background: #2d1b69;
+      color: #aaa;
+      transition: all 0.15s;
+    }
+    .filter-btn.active { background: #9f7aea; color: #1a1a2e; }
+    .filter-btn.errata-filter.active { background: #c05c00; color: #fff; }
 
     .token-section { display: flex; gap: 0.4rem; justify-content: center; align-items: center; flex-wrap: wrap; }
     .token-input { background: #0f0f2a; border: 1px solid #444; color: #eee; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; width: 200px; }
@@ -77,16 +92,50 @@
       overflow: hidden;
       cursor: pointer;
       transition: transform 0.15s, border-color 0.15s;
+      position: relative;
     }
     .card:hover { transform: scale(1.03); }
     .card.complete { border-color: #2d6a4f; }
     .card.partial  { border-color: #b7791f; }
     .card.missing  { border-color: #6b1a1a; }
 
-    .card-img-wrap { position: relative; }
     .card-img-wrap img { width: 100%; display: block; border-radius: 6px 6px 0 0; }
     .card.missing .card-img-wrap img { opacity: 0.2; filter: grayscale(80%); }
-    .card.partial .card-img-wrap img { opacity: 0.65; }
+    .card.partial  .card-img-wrap img { opacity: 0.65; }
+
+    /* Errata badge — top-left corner overlay */
+    .badge-row {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .errata-badge, .flag-btn {
+      border: none;
+      border-radius: 4px;
+      font-size: 0.55rem;
+      font-weight: 800;
+      padding: 2px 4px;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      line-height: 1.2;
+    }
+    .errata-badge {
+      background: #c05c00;
+      color: #fff;
+    }
+    .errata-badge:hover { background: #e06e00; }
+    .flag-btn {
+      background: #3a1a6e;
+      color: #9f7aea;
+    }
+    .flag-btn.flagged {
+      background: #6a2d9e;
+      color: #fff;
+    }
+    .flag-btn:hover { background: #4c2889; }
 
     .card-footer {
       padding: 0.3rem 0.5rem;
@@ -111,9 +160,44 @@
 
     .loading { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #666; font-size: 0.9rem; }
     .empty   { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; }
+
+    /* Modal */
+    #modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 200;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+    .modal-box {
+      background: #12122a;
+      border: 1px solid #9f7aea;
+      border-radius: 12px;
+      padding: 1.25rem;
+      max-width: 420px;
+      margin: 2rem auto;
+    }
+    .modal-title { font-size: 1rem; font-weight: 800; color: #9f7aea; margin-bottom: 0.4rem; }
+    .modal-reason { font-size: 0.75rem; color: #c05c00; font-weight: 700; margin-bottom: 0.75rem; }
+    .modal-label { font-size: 0.68rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
+    .modal-text { font-size: 0.8rem; color: #eee; line-height: 1.6; white-space: pre-wrap; background: #1a1a3e; border-radius: 6px; padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
+    .modal-close { background: #2d1b69; color: #9f7aea; border: none; padding: 0.4rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
+    .modal-close:hover { background: #4c2889; }
   </style>
 </head>
 <body>
+
+<div id="modal">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-reason" id="modal-reason"></div>
+    <div class="modal-label">Current Oracle Text</div>
+    <div class="modal-text" id="modal-oracle"></div>
+    <button class="modal-close" onclick="document.getElementById('modal').style.display='none'">Close</button>
+  </div>
+</div>
 
 <header>
   <a class="nav-link" href="index.html">← Pokemon Card Tracker</a>
@@ -125,8 +209,13 @@
     <div class="progress-bar" id="bar" style="width:0%"></div>
   </div>
   <div class="stats-row">
-    <span class="stats" id="stats">Loading...</span>
+    <span class="stats" id="stats">Loading…</span>
     <span class="save-status" id="saveStatus"></span>
+  </div>
+  <div class="filter-row">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="missing">Missing</button>
+    <button class="filter-btn errata-filter" data-filter="errata">⚠ Errata</button>
   </div>
   <div class="token-section">
     <input class="token-input" id="tokenInput" type="password" placeholder="GitHub token (for saving)">
@@ -146,23 +235,34 @@ const GIST_FILE = 'cube.json';
 const GIST_RAW  = `https://gist.githubusercontent.com/${GIST_USER}/${GIST_ID}/raw/${GIST_FILE}`;
 const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
 
-// Each cube: scryfall set code + how many copies of each rarity belong in the cube
 const CUBES = {
-  isd: { name: 'Innistrad', setCode: 'isd', counts: { mythic: 1, rare: 1, uncommon: 2, common: 3 } }
+  isd: { name: 'Innistrad', setCode: 'isd', releaseYear: 2011, counts: { mythic: 1, rare: 1, uncommon: 2, common: 3 } }
 };
 
 const RARITY_ORDER = ['mythic','rare','uncommon','common'];
 const RARITY_LABEL = { mythic: 'Mythic Rares', rare: 'Rares', uncommon: 'Uncommons', common: 'Commons' };
 
-let activeCube = 'isd';
-let cardCache  = {};   // { isd: [ ...scryfall card objects ] }
-let ownedMap   = {};   // { isd: { 'Card Name': count } }
-let saveTimer  = null;
+// Patterns used to auto-detect errata on pre-2020 cards.
+// "any target" was introduced in Magic 2020; any older card with it in oracle text was updated.
+// "target player or planeswalker" replaces old "target player" wording post-planeswalker rules change.
+const ERRATA_PATTERNS = [
+  { test: t => t.includes('any target'),
+    reason: 'Printed: "target creature or player" — Oracle updated to "any target" (2020)' },
+  { test: t => t.includes('target player or planeswalker'),
+    reason: 'Printed: "target player" — Oracle updated to include planeswalkers' },
+];
 
-// ── Token UI ─────────────────────────────────────────────────────────────────
+let activeCube   = 'isd';
+let activeFilter = 'all';
+let cardCache    = {};  // { isd: [scryfall card objects] }
+let oracleMap    = {};  // { 'Card Name': oracle text string }
+let ownedMap     = {};  // { isd: { 'Card Name': count } }
+let flagsMap     = {};  // { isd: { 'Card Name': true } } — manual errata flags
+let saveTimer    = null;
+
+// ── Token UI ──────────────────────────────────────────────────────────────────
 
 function getToken() { return localStorage.getItem('ghtoken') ?? ''; }
-
 document.getElementById('tokenInput').value = getToken();
 
 document.getElementById('btnSaveToken').addEventListener('click', () => {
@@ -174,9 +274,9 @@ document.getElementById('btnCheckGist').addEventListener('click', async () => {
   const token = getToken();
   if (!token) { setStatus('no token saved', 'error'); return; }
   try {
-    const res  = await fetch(GIST_API, { headers: { Authorization: `token ${token}` } });
-    const data = await res.json();
-    setStatus(data.id ? 'gist OK ✓' : 'gist error', data.id ? 'saved' : 'error');
+    const res = await fetch(GIST_API, { headers: { Authorization: `token ${token}` } });
+    const d   = await res.json();
+    setStatus(d.id ? 'gist OK ✓' : 'gist error', d.id ? 'saved' : 'error');
   } catch (e) { setStatus('network error', 'error'); }
 });
 
@@ -186,15 +286,21 @@ function setStatus(msg, cls = '') {
   el.className = 'save-status ' + cls;
 }
 
-// ── Gist I/O ─────────────────────────────────────────────────────────────────
+// ── Gist I/O ──────────────────────────────────────────────────────────────────
 
 async function loadCollection() {
   try {
     const res = await fetch(GIST_RAW + '?t=' + Date.now());
-    if (res.ok) ownedMap = await res.json();
-  } catch (e) { /* first run, no file yet */ }
+    if (res.ok) {
+      const data = await res.json();
+      flagsMap = data._flags ?? {};
+      delete data._flags;
+      ownedMap = data;
+    }
+  } catch (e) { /* first run */ }
   for (const key of Object.keys(CUBES)) {
     if (!ownedMap[key]) ownedMap[key] = {};
+    if (!flagsMap[key]) flagsMap[key] = {};
   }
 }
 
@@ -203,10 +309,11 @@ async function pushCollection() {
   if (!token) { setStatus('no token', 'error'); return; }
   setStatus('saving…', 'saving');
   try {
+    const payload = { ...ownedMap, _flags: flagsMap };
     const res = await fetch(GIST_API, {
       method: 'PATCH',
       headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(ownedMap, null, 2) } } })
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(payload, null, 2) } } })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -223,16 +330,20 @@ function scheduleSave() {
   saveTimer = setTimeout(pushCollection, 1500);
 }
 
-// ── Scryfall fetch ────────────────────────────────────────────────────────────
+// ── Scryfall fetch ─────────────────────────────────────────────────────────────
 
 async function fetchSetCards(setCode) {
   const cards = [];
-  let url = `https://api.scryfall.com/cards/search?q=set:${setCode}+not:extra&order=set&unique=cards`;
+  let url = `https://api.scryfall.com/cards/search?q=set:${setCode}+not:extra&order=collector&unique=cards`;
   while (url) {
     const res  = await fetch(url);
     const data = await res.json();
     if (!data.data) break;
-    cards.push(...data.data.filter(c => !c.type_line?.includes('Basic Land')));
+    for (const c of data.data) {
+      if (c.type_line?.includes('Basic Land')) continue;
+      cards.push(c);
+      oracleMap[c.name] = getOracleText(c);
+    }
     url = data.has_more ? data.next_page : null;
     if (data.has_more) await new Promise(r => setTimeout(r, 100));
   }
@@ -245,29 +356,105 @@ function cardImage(card) {
       ?? '';
 }
 
-// ── Interaction ───────────────────────────────────────────────────────────────
+function getOracleText(card) {
+  if (card.oracle_text) return card.oracle_text;
+  if (card.card_faces)  return card.card_faces.map(f => f.oracle_text || '').join('\n\n──\n\n');
+  return '';
+}
+
+// ── Errata detection ──────────────────────────────────────────────────────────
+
+function autoErrataReason(cardName) {
+  const t = oracleMap[cardName] ?? '';
+  for (const p of ERRATA_PATTERNS) {
+    if (p.test(t)) return p.reason;
+  }
+  return null;
+}
+
+function isManualFlagged(cardName) {
+  return !!(flagsMap[activeCube]?.[cardName]);
+}
+
+function hasAnyErrata(cardName) {
+  return !!(autoErrataReason(cardName) || isManualFlagged(cardName));
+}
+
+function toggleFlag(cardName) {
+  if (!flagsMap[activeCube]) flagsMap[activeCube] = {};
+  if (flagsMap[activeCube][cardName]) delete flagsMap[activeCube][cardName];
+  else flagsMap[activeCube][cardName] = true;
+  render();
+  scheduleSave();
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+
+function showErrataModal(cardName) {
+  const autoReason = autoErrataReason(cardName);
+  const manualFlag = isManualFlagged(cardName);
+  const oracle     = oracleMap[cardName] ?? '(no oracle text)';
+
+  document.getElementById('modal-title').textContent = cardName;
+  document.getElementById('modal-reason').textContent =
+    autoReason ?? (manualFlag ? 'Manually flagged as having errata' : '');
+  document.getElementById('modal-oracle').textContent = oracle;
+  document.getElementById('modal').style.display = 'block';
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) {
+    document.getElementById('modal').style.display = 'none';
+  }
+});
+
+// ── Interaction ────────────────────────────────────────────────────────────────
 
 document.getElementById('grid').addEventListener('click', e => {
-  const el = e.target.closest('.card[data-name]');
-  if (!el) return;
-  const cube   = el.dataset.cube;
-  const name   = el.dataset.name;
-  const rarity = el.dataset.rarity;
-  const target = CUBES[cube].counts[rarity] ?? 1;
-  const cur    = ownedMap[cube]?.[name] ?? 0;
-  if (!ownedMap[cube]) ownedMap[cube] = {};
-  ownedMap[cube][name] = cur >= target ? 0 : cur + 1;
+  // Errata badge → show modal
+  const badge = e.target.closest('.errata-badge');
+  if (badge) {
+    showErrataModal(badge.closest('.card').dataset.name);
+    return;
+  }
+
+  // Manual flag button → toggle
+  const flagBtn = e.target.closest('.flag-btn');
+  if (flagBtn) {
+    toggleFlag(flagBtn.closest('.card').dataset.name);
+    return;
+  }
+
+  // Card body → increment owned count
+  const card = e.target.closest('.card[data-name]');
+  if (!card) return;
+  const name   = card.dataset.name;
+  const rarity = card.dataset.rarity;
+  const target = CUBES[activeCube].counts[rarity] ?? 1;
+  const cur    = ownedMap[activeCube]?.[name] ?? 0;
+  ownedMap[activeCube][name] = cur >= target ? 0 : cur + 1;
   render();
   scheduleSave();
 });
 
-// ── Render ────────────────────────────────────────────────────────────────────
+// ── Filter buttons ─────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeFilter = btn.dataset.filter;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+    render();
+  });
+});
+
+// ── Render ─────────────────────────────────────────────────────────────────────
 
 function render() {
   const cube  = CUBES[activeCube];
   const cards = cardCache[activeCube] ?? [];
   const owned = ownedMap[activeCube]  ?? {};
 
+  // Stats always over full set
   let totalNeeded = 0, totalOwned = 0;
   cards.forEach(c => {
     const t = cube.counts[c.rarity] ?? 1;
@@ -278,46 +465,65 @@ function render() {
   document.getElementById('stats').textContent = `${totalOwned} / ${totalNeeded} copies collected (${pct}%)`;
   document.getElementById('bar').style.width = pct + '%';
 
+  // Group by rarity; cards already come from Scryfall in collector-number order
   const groups = {};
   RARITY_ORDER.forEach(r => { groups[r] = []; });
-  cards.forEach(c => { if (groups[c.rarity]) groups[c.rarity].push(c); });
+
+  for (const c of cards) {
+    // Apply filter
+    if (activeFilter === 'missing' && (owned[c.name] ?? 0) >= (cube.counts[c.rarity] ?? 1)) continue;
+    if (activeFilter === 'errata'  && !hasAnyErrata(c.name)) continue;
+    if (groups[c.rarity]) groups[c.rarity].push(c);
+  }
+
+  // Sort within each rarity by collector number (numeric, ascending)
+  for (const r of RARITY_ORDER) {
+    groups[r].sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
+  }
 
   const items = [];
-  RARITY_ORDER.forEach(rarity => {
+  for (const rarity of RARITY_ORDER) {
     const group = groups[rarity];
-    if (!group.length) return;
+    if (!group.length) continue;
     const want = cube.counts[rarity] ?? 1;
     items.push(`<div class="section-header">${RARITY_LABEL[rarity]} — ${want} of each</div>`);
-    group.forEach(c => {
-      const target  = want;
-      const n       = owned[c.name] ?? 0;
-      const cls     = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
-      const lblCls  = n >= target ? 'lbl-own' : n > 0 ? 'lbl-part' : 'lbl-need';
-      const label   = n >= target ? '✓ owned' : n > 0 ? `${n} / ${target}` : 'NEED';
-      const img     = cardImage(c);
-      items.push(`<div class="card ${cls}" data-cube="${activeCube}" data-name="${c.name.replace(/"/g,'&quot;')}" data-rarity="${c.rarity}">
+
+    for (const c of group) {
+      const target   = want;
+      const n        = owned[c.name] ?? 0;
+      const cls      = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
+      const lblCls   = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
+      const label    = n >= target ? '✓ owned'  : n > 0 ? `${n} / ${target}` : 'NEED';
+      const img      = cardImage(c);
+      const autoErr  = autoErrataReason(c.name);
+      const manFlag  = isManualFlagged(c.name);
+      const safeName = c.name.replace(/"/g, '&quot;');
+
+      const badges = [
+        autoErr || manFlag
+          ? `<button class="errata-badge">⚠ ERRATA</button>`
+          : '',
+        `<button class="flag-btn${manFlag ? ' flagged' : ''}" title="${manFlag ? 'Remove flag' : 'Flag as errata'}">⚑</button>`,
+      ].join('');
+
+      items.push(`<div class="card ${cls}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
         <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+        <div class="badge-row">${badges}</div>
         <div class="card-footer">
           <span class="card-num">#${c.collector_number}</span>
           <span class="${lblCls}">${label}</span>
         </div>
         <div class="card-name">${c.name}</div>
       </div>`);
-    });
-  });
+    }
+  }
 
-  document.getElementById('grid').innerHTML = items.length ? items.join('') : '<div class="empty">No cards loaded.</div>';
+  document.getElementById('grid').innerHTML = items.length
+    ? items.join('')
+    : '<div class="empty">No cards match this filter.</div>';
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-
-async function init() {
-  await loadCollection();
-  const cube = CUBES[activeCube];
-  document.getElementById('grid').innerHTML = '<div class="loading">Fetching Innistrad cards from Scryfall…</div>';
-  cardCache[activeCube] = await fetchSetCards(cube.setCode);
-  render();
-}
+// ── Cube tabs ─────────────────────────────────────────────────────────────────
 
 document.querySelectorAll('.cube-tab').forEach(btn => {
   btn.addEventListener('click', async () => {
@@ -330,6 +536,14 @@ document.querySelectorAll('.cube-tab').forEach(btn => {
     render();
   });
 });
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+async function init() {
+  await loadCollection();
+  cardCache[activeCube] = await fetchSetCards(CUBES[activeCube].setCode);
+  render();
+}
 
 init();
 </script>
