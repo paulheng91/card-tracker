@@ -22,7 +22,12 @@
     .progress-wrap { background: #0f3460; border-radius: 4px; height: 6px; margin-bottom: 0.5rem; }
     .progress-bar { background: #ffd700; height: 6px; border-radius: 4px; transition: width 0.3s; }
 
-    .stats { text-align: center; font-size: 0.82rem; color: #aaa; margin-bottom: 0.6rem; }
+    .stats-row { display: flex; justify-content: center; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+    .stats { font-size: 0.82rem; color: #aaa; }
+    .save-status { font-size: 0.75rem; color: #555; }
+    .save-status.saving { color: #ffd700; }
+    .save-status.saved  { color: #52b788; }
+    .save-status.error  { color: #e05; }
 
     .filters { display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap; }
     .btn {
@@ -37,6 +42,7 @@
       transition: all 0.15s;
     }
     .btn.active { background: #ffd700; color: #1a1a2e; }
+    .btn-token { margin-left: auto; background: #1a1a2e; color: #555; border: 1px solid #333; }
 
     .grid {
       display: grid;
@@ -70,6 +76,47 @@
     .owned .r-common { color: #52b788; }
 
     .empty { text-align: center; color: #444; padding: 3rem 1rem; grid-column: 1/-1; font-size: 0.9rem; }
+
+    /* Token modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 12px;
+      padding: 1.5rem;
+      width: min(360px, 90vw);
+    }
+    .modal h2 { font-size: 1rem; margin-bottom: 0.5rem; color: #ffd700; }
+    .modal p  { font-size: 0.8rem; color: #aaa; margin-bottom: 1rem; line-height: 1.5; }
+    .modal input {
+      width: 100%;
+      background: #0f3460;
+      border: 1px solid #1a4a80;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      color: #eee;
+      font-size: 0.85rem;
+      margin-bottom: 0.75rem;
+    }
+    .modal-btns { display: flex; gap: 0.5rem; justify-content: flex-end; }
+    .modal-btns button {
+      padding: 0.4rem 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .btn-cancel { background: #0f3460; color: #aaa; }
+    .btn-save   { background: #ffd700; color: #1a1a2e; }
   </style>
 </head>
 <body>
@@ -79,7 +126,10 @@
   <div class="progress-wrap">
     <div class="progress-bar" id="bar" style="width:0%"></div>
   </div>
-  <div class="stats" id="stats">Loading...</div>
+  <div class="stats-row">
+    <span class="stats" id="stats">Loading...</span>
+    <span class="save-status" id="saveStatus"></span>
+  </div>
   <div class="filters">
     <button class="btn active" data-filter="all">All</button>
     <button class="btn" data-filter="owned">Owned</button>
@@ -87,12 +137,31 @@
     <button class="btn" data-filter="pokemon">Pokemon</button>
     <button class="btn" data-filter="trainer">Trainers</button>
     <button class="btn" data-filter="energy">Energy</button>
+    <button class="btn btn-token" onclick="openTokenModal()">Token</button>
   </div>
 </header>
 
 <div class="grid" id="grid"></div>
 
+<!-- Token modal -->
+<div class="modal-backdrop" id="tokenModal">
+  <div class="modal">
+    <h2>GitHub Token</h2>
+    <p>Enter a GitHub personal access token with <strong>public_repo</strong> scope. It's stored only in this browser and used to save your collection back to the repo.</p>
+    <input type="password" id="tokenInput" placeholder="ghp_..." />
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeTokenModal()">Cancel</button>
+      <button class="btn-save" onclick="saveToken()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
+const REPO  = 'paulheng91/card-tracker';
+const FILE  = 'collection.json';
+const RAW   = `https://raw.githubusercontent.com/${REPO}/main/${FILE}`;
+const API   = `https://api.github.com/repos/${REPO}/contents/${FILE}`;
+
 const CARDS = [
   // Holo Rares
   {n:1,  name:"Alakazam",             r:"Holo Rare", cat:"pokemon"},
@@ -208,15 +277,92 @@ const CARDS = [
 
 const RARITY_SYMBOL = {"Holo Rare":"★★","Rare":"★","Uncommon":"◆","Common":"●"};
 const RARITY_CLASS  = {"Holo Rare":"r-holo","Rare":"r-rare","Uncommon":"r-uncommon","Common":"r-common"};
-
 const TOTAL = CARDS.length;
-let owned = new Set(JSON.parse(localStorage.getItem('owned-baseset') || '[]'));
-let filter = 'all';
 
-document.querySelectorAll('.btn').forEach(btn => {
+let owned = new Set();
+let filter = 'all';
+let saveTimer = null;
+let currentSha = null;
+
+// --- GitHub API ---
+
+async function loadCollection() {
+  setStatus('loading...', '');
+  try {
+    const res = await fetch(RAW + '?t=' + Date.now());
+    if (!res.ok) throw new Error('not found');
+    const data = await res.json();
+    owned = new Set(data);
+    setStatus('', '');
+  } catch {
+    owned = new Set();
+    setStatus('', '');
+  }
+  render();
+}
+
+async function pushCollection() {
+  const token = localStorage.getItem('gh-token');
+  if (!token) { openTokenModal(); return; }
+
+  setStatus('saving...', 'saving');
+  try {
+    // Get current SHA
+    const meta = await fetch(API, {
+      headers: { Authorization: `token ${token}` }
+    });
+    if (!meta.ok) throw new Error('auth failed');
+    const metaJson = await meta.json();
+    currentSha = metaJson.sha;
+
+    const sorted = [...owned].sort((a, b) => a - b);
+    const content = btoa(JSON.stringify(sorted));
+
+    const put = await fetch(API, {
+      method: 'PUT',
+      headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'Update collection', content, sha: currentSha })
+    });
+    if (!put.ok) throw new Error('save failed');
+    setStatus('saved', 'saved');
+    setTimeout(() => setStatus('', ''), 2000);
+  } catch (e) {
+    setStatus('save failed — check token', 'error');
+  }
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(pushCollection, 1500);
+}
+
+function setStatus(text, cls) {
+  const el = document.getElementById('saveStatus');
+  el.textContent = text;
+  el.className = 'save-status' + (cls ? ' ' + cls : '');
+}
+
+// --- Token modal ---
+
+function openTokenModal() {
+  document.getElementById('tokenInput').value = localStorage.getItem('gh-token') || '';
+  document.getElementById('tokenModal').classList.add('open');
+}
+function closeTokenModal() {
+  document.getElementById('tokenModal').classList.remove('open');
+}
+function saveToken() {
+  const val = document.getElementById('tokenInput').value.trim();
+  if (val) localStorage.setItem('gh-token', val);
+  closeTokenModal();
+}
+
+// --- UI ---
+
+document.querySelectorAll('.btn[data-filter]').forEach(btn => {
   btn.addEventListener('click', () => {
     filter = btn.dataset.filter;
-    document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.btn[data-filter]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     render();
   });
@@ -224,8 +370,8 @@ document.querySelectorAll('.btn').forEach(btn => {
 
 function toggle(n) {
   owned.has(n) ? owned.delete(n) : owned.add(n);
-  localStorage.setItem('owned-baseset', JSON.stringify([...owned]));
   render();
+  scheduleSave();
 }
 
 function render() {
@@ -260,7 +406,7 @@ function render() {
   }).join('');
 }
 
-render();
+loadCollection();
 </script>
 </body>
 </html>
