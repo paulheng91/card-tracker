@@ -52,7 +52,7 @@
     .btn:hover { background: #4c2889; }
 
     /* ── Card grid ── */
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem; padding: 0.75rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.6rem; padding: 0.75rem; }
 
     .section-header {
       grid-column: 1 / -1; background: #2d1b69; color: #9f7aea;
@@ -86,6 +86,16 @@
     .errata-high:hover { background: #e06e00; }
     .errata-low  { background: #1e3040; color: #7ab4c8; border: 1px solid #3a6070; }
     .errata-low:hover { background: #2a4050; }
+    .section-header.errata-unknown { background: #1a2a1a; color: #7ab47a; border: 1px solid #3a603a; }
+
+    .flip-btn {
+      position: absolute; top: 4px; right: 4px; z-index: 2;
+      background: rgba(0,0,0,0.65); color: #fff; border: none;
+      border-radius: 50%; width: 22px; height: 22px;
+      font-size: 0.8rem; cursor: pointer; line-height: 22px; text-align: center;
+      transition: background 0.15s;
+    }
+    .flip-btn:hover { background: rgba(0,0,0,0.85); }
 
     .card-footer { padding: 0.3rem 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
     .card-num  { color: #666; }
@@ -248,6 +258,14 @@ function getErrataMatches(cardName) {
   return ERRATA_CATEGORIES.filter(cat => cat.test(t));
 }
 
+// Returns true if oracle text changed since snapshot was taken AND no category covers it
+function hasUncategorizedChange(cardName) {
+  const snap = oracleSnapshot[activeCube]?.[cardName];
+  if (snap === undefined) return false;
+  if (snap === (oracleMap[cardName] ?? '')) return false;
+  return getErrataMatches(cardName).length === 0;
+}
+
 function topSeverity(matches) {
   if (matches.some(m => m.severity === 'high')) return 'high';
   if (matches.length) return 'low';
@@ -255,14 +273,17 @@ function topSeverity(matches) {
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let activeCube   = 'isd';
-let activeView   = 'cards';
-let activeFilter = 'all';
-let cardCache    = {};
-let oracleMap    = {};
-let ownedMap     = {};
-let saveTimer    = null;
-let packState    = { cards: [], pick: null, packNum: 1 };
+let activeCube      = 'isd';
+let activeView      = 'cards';
+let activeFilter    = 'all';
+let cardCache       = {};
+let cardByName      = {};  // flat lookup: cardName → scryfall object
+let oracleMap       = {};
+let oracleSnapshot  = {};  // { isd: { cardName: text } } — baseline for detecting future changes
+let ownedMap        = {};
+let saveTimer       = null;
+let packState       = { cards: [], pick: null, packNum: 1 };
+let flippedCards    = new Set();  // card names currently showing back face
 
 // ── Token UI ──────────────────────────────────────────────────────────────────
 function getToken() { return localStorage.getItem('ghtoken') ?? ''; }
@@ -292,7 +313,12 @@ function setStatus(msg, cls = '') {
 async function loadCollection() {
   try {
     const res = await fetch(GIST_RAW + '?t=' + Date.now());
-    if (res.ok) ownedMap = await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      oracleSnapshot = data._oracle ?? {};
+      delete data._oracle;
+      ownedMap = data;
+    }
   } catch (e) {}
   for (const key of Object.keys(CUBES)) {
     if (!ownedMap[key]) ownedMap[key] = {};
@@ -307,7 +333,7 @@ async function pushCollection() {
     const res = await fetch(GIST_API, {
       method: 'PATCH',
       headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(ownedMap, null, 2) } } })
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify({ ...ownedMap, _oracle: oracleSnapshot }, null, 2) } } })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -334,7 +360,8 @@ async function fetchSetCards(setCode) {
     for (const c of data.data) {
       if (c.type_line?.includes('Basic Land')) continue;
       cards.push(c);
-      oracleMap[c.name] = c.oracle_text ?? c.card_faces?.map(f => f.oracle_text || '').join('\n\n──\n\n') ?? '';
+      cardByName[c.name] = c;
+      oracleMap[c.name]  = c.oracle_text ?? c.card_faces?.map(f => f.oracle_text || '').join('\n\n──\n\n') ?? '';
     }
     url = data.has_more ? data.next_page : null;
     if (data.has_more) await new Promise(r => setTimeout(r, 100));
@@ -343,7 +370,13 @@ async function fetchSetCards(setCode) {
 }
 
 function cardImage(card) {
-  return card.image_uris?.normal ?? card.card_faces?.[0]?.image_uris?.normal ?? '';
+  const faceIdx = flippedCards.has(card.name) ? 1 : 0;
+  if (card.card_faces?.length > 1) return card.card_faces[faceIdx]?.image_uris?.normal ?? '';
+  return card.image_uris?.normal ?? '';
+}
+
+function isDFC(card) {
+  return card.card_faces?.length > 1;
 }
 
 // ── Pack generation ────────────────────────────────────────────────────────────
@@ -377,16 +410,35 @@ function openNewPack() {
 
 // ── Errata modal ──────────────────────────────────────────────────────────────
 function showErrataModal(cardName) {
-  const matches = getErrataMatches(cardName);
-  const oracle  = oracleMap[cardName] ?? '(no oracle text)';
+  const matches  = getErrataMatches(cardName);
+  const oracle   = oracleMap[cardName] ?? '(no oracle text)';
+  const snap     = oracleSnapshot[activeCube]?.[cardName];
+  const isUncategorized = snap !== undefined && snap !== oracle && matches.length === 0;
 
   document.getElementById('modal-title').textContent = cardName;
-  document.getElementById('modal-reasons').innerHTML = matches.map(m => {
+
+  let reasonsHtml = matches.map(m => {
     const color = m.severity === 'high' ? '#e07020' : '#7ab4c8';
     const label = m.severity === 'high' ? '⚠ HIGH' : 'ℹ LOW';
     return `<div style="margin-bottom:0.4rem;font-size:0.75rem;font-weight:700;color:${color}">${label} — ${m.detail}</div>`;
   }).join('');
-  document.getElementById('modal-oracle').textContent = oracle;
+  if (isUncategorized) {
+    reasonsHtml += `<div style="color:#7ab47a;font-size:0.75rem;font-weight:700;margin-bottom:0.4rem">? Oracle text changed since baseline — no category matched yet</div>`;
+  }
+  document.getElementById('modal-reasons').innerHTML = reasonsHtml;
+
+  const oracleEl = document.getElementById('modal-oracle');
+  oracleEl.textContent = oracle;
+  // Show snapshot diff for uncategorized changes
+  if (isUncategorized && snap) {
+    oracleEl.insertAdjacentHTML('afterend',
+      `<div class="modal-label" style="margin-top:0.5rem;color:#7ab47a">Previous text (baseline)</div>
+       <div class="modal-text" id="modal-oracle-snap" style="opacity:0.55">${snap}</div>`);
+    // Remove old snapshot element to avoid duplicates on repeated opens
+  } else {
+    document.getElementById('modal-oracle-snap')?.remove();
+  }
+
   document.getElementById('modal').style.display = 'block';
 }
 
@@ -400,6 +452,23 @@ document.getElementById('grid').addEventListener('click', e => {
   // Errata badge → modal
   const badge = e.target.closest('.errata-badge');
   if (badge) { showErrataModal(badge.closest('.card').dataset.name); return; }
+
+  // Flip button → swap DFC image without re-rendering
+  const flipBtn = e.target.closest('.flip-btn');
+  if (flipBtn) {
+    const cardEl = flipBtn.closest('.card');
+    const name   = cardEl.dataset.name;
+    const cardObj = cardByName[name];
+    if (cardObj?.card_faces?.length > 1) {
+      if (flippedCards.has(name)) flippedCards.delete(name);
+      else flippedCards.add(name);
+      const face = cardObj.card_faces[flippedCards.has(name) ? 1 : 0];
+      cardEl.querySelector('.card-img-wrap img').src = face?.image_uris?.normal ?? '';
+      cardEl.querySelector('.card-name').textContent  = face?.name ?? name;
+      flipBtn.textContent = flippedCards.has(name) ? '↺' : '↻';
+    }
+    return;
+  }
 
   const card = e.target.closest('.card[data-name]');
   if (!card) return;
@@ -516,9 +585,28 @@ function renderErrata() {
     byCategory[cat.id].sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
   }
 
-  const total = new Set(cards.filter(c => getErrataMatches(c.name).length).map(c => c.name)).size;
+  const uncategorized = cards
+    .filter(c => hasUncategorizedChange(c.name))
+    .sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
+
+  const knownCount = new Set(cards.filter(c => getErrataMatches(c.name).length).map(c => c.name)).size;
+  const total = knownCount + uncategorized.length;
   document.getElementById('stats').textContent = `${total} cards with detected errata`;
   document.getElementById('bar').style.width = '0%';
+
+  function errataCardHTML(c, badgeCls, badgeTxt) {
+    const safeName = c.name.replace(/"/g, '&quot;');
+    const img      = cardImage(c);
+    const isFlipped = flippedCards.has(c.name);
+    const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
+    return `<div class="card" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
+      <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+      <div class="badge-row"><button class="errata-badge ${badgeCls}">${badgeTxt}</button></div>
+      ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
+      <div class="card-footer"><span class="card-num">#${c.collector_number}</span></div>
+      <div class="card-name">${displayName}</div>
+    </div>`;
+  }
 
   const items = [];
   for (const cat of ERRATA_CATEGORIES) {
@@ -526,21 +614,15 @@ function renderErrata() {
     if (!group.length) continue;
     const cls = cat.severity === 'high' ? 'errata-high' : 'errata-low';
     const icon = cat.severity === 'high' ? '⚠' : 'ℹ';
+    const badgeCls = cat.severity === 'high' ? 'errata-high' : 'errata-low';
+    const badgeTxt = cat.severity === 'high' ? '⚠ ERRATA' : 'ℹ minor';
     items.push(`<div class="section-header ${cls}">${icon} ${cat.label} (${group.length} cards)</div>`);
-    for (const c of group) {
-      const matches  = getErrataMatches(c.name);
-      const severity = topSeverity(matches);
-      const safeName = c.name.replace(/"/g, '&quot;');
-      const img      = cardImage(c);
-      const badgeCls = severity === 'high' ? 'errata-high' : 'errata-low';
-      const badgeTxt = severity === 'high' ? '⚠ ERRATA' : 'ℹ minor';
-      items.push(`<div class="card" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
-        <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
-        <div class="badge-row"><button class="errata-badge ${badgeCls}">${badgeTxt}</button></div>
-        <div class="card-footer"><span class="card-num">#${c.collector_number}</span></div>
-        <div class="card-name">${c.name}</div>
-      </div>`);
-    }
+    for (const c of group) items.push(errataCardHTML(c, badgeCls, badgeTxt));
+  }
+
+  if (uncategorized.length) {
+    items.push(`<div class="section-header errata-unknown">? Uncategorized Oracle Changes (${uncategorized.length} cards)</div>`);
+    for (const c of uncategorized) items.push(errataCardHTML(c, 'errata-low', '? changed'));
   }
 
   document.getElementById('grid').innerHTML = items.length ? items.join('') : '<div class="empty">No errata detected.</div>';
@@ -576,15 +658,18 @@ function renderPack() {
   </div>`);
 
   for (const c of sorted) {
-    const isPicked = c.name === pick;
-    const isPassed = pick && !isPicked;
-    const img = cardImage(c);
-    const safeName = c.name.replace(/"/g, '&quot;');
+    const isPicked    = c.name === pick;
+    const isPassed    = pick && !isPicked;
+    const img         = cardImage(c);
+    const isFlipped   = flippedCards.has(c.name);
+    const safeName    = c.name.replace(/"/g, '&quot;');
+    const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
     items.push(`<div class="card ${isPicked ? 'picked' : isPassed ? 'passed' : ''}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
       <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
       ${isPicked ? '<div class="pick-label">P1P1</div>' : ''}
+      ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
       <div class="card-footer"><span class="card-num">${c.rarity[0].toUpperCase()} · #${c.collector_number}</span></div>
-      <div class="card-name">${c.name}</div>
+      <div class="card-name">${displayName}</div>
     </div>`);
   }
 
@@ -611,14 +696,17 @@ function cardHTML(c, cube, owned) {
   if (severity === 'high') badge = `<button class="errata-badge errata-high">⚠ ERRATA</button>`;
   else if (severity === 'low') badge = `<button class="errata-badge errata-low">ℹ minor</button>`;
 
+  const isFlipped = flippedCards.has(c.name);
+  const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
   return `<div class="card ${cls}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
     ${badge ? `<div class="badge-row">${badge}</div>` : ''}
+    ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
       <span class="${lblCls}">${label}</span>
     </div>
-    <div class="card-name">${c.name}</div>
+    <div class="card-name">${displayName}</div>
   </div>`;
 }
 
@@ -627,6 +715,16 @@ async function init() {
   await loadCollection();
   document.getElementById('grid').innerHTML = '<div class="loading">Fetching Innistrad cards from Scryfall…</div>';
   cardCache[activeCube] = await fetchSetCards(CUBES[activeCube].setCode);
+
+  // Establish oracle snapshot baseline on first load — used to detect future oracle changes
+  if (!oracleSnapshot[activeCube]) {
+    oracleSnapshot[activeCube] = {};
+    for (const c of cardCache[activeCube]) {
+      oracleSnapshot[activeCube][c.name] = oracleMap[c.name] ?? '';
+    }
+    scheduleSave();
+  }
+
   render();
 }
 
