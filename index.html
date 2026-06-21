@@ -509,11 +509,15 @@ async function pushCollection() {
       headers: { Authorization: `token ${token()}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(payload) } } })
     });
-    if (!res.ok) throw new Error();
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const reason = body.message || `HTTP ${res.status}`;
+      throw new Error(reason);
+    }
     setStatus('saved', 'saved');
     setTimeout(() => setStatus('', ''), 2000);
-  } catch {
-    setStatus('save failed', 'error');
+  } catch (e) {
+    setStatus(`save failed: ${e.message}`, 'error');
   }
 }
 
