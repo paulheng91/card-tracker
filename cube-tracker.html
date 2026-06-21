@@ -97,6 +97,14 @@
     }
     .flip-btn:hover { background: rgba(0,0,0,0.85); }
 
+    .excl-btn {
+      background: none; border: none; color: #555; font-size: 0.75rem; cursor: pointer;
+      padding: 0 2px; line-height: 1; transition: color 0.15s;
+    }
+    .excl-btn:hover { color: #e07020; }
+    .excl-btn.excl-on { color: #e07020; }
+    .card.excl .card-img-wrap img { opacity: 0.65; }
+
     .card-footer { padding: 0.3rem 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
     .card-num  { color: #666; }
     .lbl-own   { color: #52b788; font-weight: 700; }
@@ -212,7 +220,13 @@ const COLOR_LABEL = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', M:'Mul
 const COLOR_ICON  = { W:'☀', U:'💧', B:'💀', R:'🔥', G:'🌿', M:'◆', A:'⚙', L:'🏔' };
 
 function colorKey(card) {
-  const c = card.colors ?? [];
+  let c = card.colors ?? [];
+  // DFCs sometimes have colors only on card_faces, not at the top level
+  if (c.length === 0 && card.card_faces?.length > 0) {
+    const all = new Set();
+    card.card_faces.forEach(f => (f.colors ?? []).forEach(x => all.add(x)));
+    c = [...all];
+  }
   if (c.length > 1) return 'M';
   if (c.length === 1) return c[0];
   if (card.type_line?.includes('Land')) return 'L';
@@ -284,6 +298,7 @@ let ownedMap        = {};
 let saveTimer       = null;
 let packState       = { cards: [], pick: null, packNum: 1 };
 let flippedCards    = new Set();  // card names currently showing back face
+let excludedFromDraft = {};       // { isd: Set(['Card Name', ...]) } — owned but skip in pack gen
 
 // ── Token UI ──────────────────────────────────────────────────────────────────
 function getToken() { return localStorage.getItem('ghtoken') ?? ''; }
@@ -316,12 +331,17 @@ async function loadCollection() {
     if (res.ok) {
       const data = await res.json();
       oracleSnapshot = data._oracle ?? {};
+      const exclRaw  = data._excl ?? {};
+      excludedFromDraft = {};
+      for (const [k, arr] of Object.entries(exclRaw)) excludedFromDraft[k] = new Set(arr);
       delete data._oracle;
+      delete data._excl;
       ownedMap = data;
     }
   } catch (e) {}
   for (const key of Object.keys(CUBES)) {
     if (!ownedMap[key]) ownedMap[key] = {};
+    if (!excludedFromDraft[key]) excludedFromDraft[key] = new Set();
   }
 }
 
@@ -333,7 +353,11 @@ async function pushCollection() {
     const res = await fetch(GIST_API, {
       method: 'PATCH',
       headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify({ ...ownedMap, _oracle: oracleSnapshot }, null, 2) } } })
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify({
+        ...ownedMap,
+        _oracle: oracleSnapshot,
+        _excl: Object.fromEntries(Object.entries(excludedFromDraft).map(([k, s]) => [k, [...s].sort()]))
+      }, null, 2) } } })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -389,10 +413,19 @@ function shuffle(arr) {
   return a;
 }
 
+function toggleExcluded(cardName) {
+  if (!excludedFromDraft[activeCube]) excludedFromDraft[activeCube] = new Set();
+  if (excludedFromDraft[activeCube].has(cardName)) excludedFromDraft[activeCube].delete(cardName);
+  else excludedFromDraft[activeCube].add(cardName);
+  render();
+  scheduleSave();
+}
+
 function openNewPack() {
-  const cards = cardCache[activeCube] ?? [];
-  const pool  = { common: [], uncommon: [], rare: [], mythic: [] };
-  for (const c of cards) { if (pool[c.rarity]) pool[c.rarity].push(c); }
+  const cards   = cardCache[activeCube] ?? [];
+  const excl    = excludedFromDraft[activeCube] ?? new Set();
+  const pool    = { common: [], uncommon: [], rare: [], mythic: [] };
+  for (const c of cards) { if (pool[c.rarity] && !excl.has(c.name)) pool[c.rarity].push(c); }
 
   const pack = [];
   // 1 rare slot — 1-in-8 chance of mythic
@@ -452,6 +485,10 @@ document.getElementById('grid').addEventListener('click', e => {
   // Errata badge → modal
   const badge = e.target.closest('.errata-badge');
   if (badge) { showErrataModal(badge.closest('.card').dataset.name); return; }
+
+  // Exclude from draft button
+  const exclBtn = e.target.closest('.excl-btn');
+  if (exclBtn) { toggleExcluded(exclBtn.closest('.card').dataset.name); return; }
 
   // Flip button → swap DFC image without re-rendering
   const flipBtn = e.target.closest('.flip-btn');
@@ -682,28 +719,33 @@ function renderPack() {
 
 // ── Shared card HTML (cards view) ─────────────────────────────────────────────
 function cardHTML(c, cube, owned) {
-  const target   = cube.counts[c.rarity] ?? 1;
-  const n        = owned[c.name] ?? 0;
-  const cls      = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
-  const lblCls   = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
-  const label    = n >= target ? '✓ owned'  : n > 0 ? `${n} / ${target}` : 'NEED';
-  const img      = cardImage(c);
-  const matches  = getErrataMatches(c.name);
-  const severity = topSeverity(matches);
-  const safeName = c.name.replace(/"/g, '&quot;');
+  const target    = cube.counts[c.rarity] ?? 1;
+  const n         = owned[c.name] ?? 0;
+  const isExcl    = (excludedFromDraft[activeCube] ?? new Set()).has(c.name);
+  const cls       = (n >= target ? 'complete' : n > 0 ? 'partial' : 'missing') + (isExcl ? ' excl' : '');
+  const lblCls    = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
+  const label     = `${n}/${target}`;
+  const img       = cardImage(c);
+  const matches   = getErrataMatches(c.name);
+  const severity  = topSeverity(matches);
+  const safeName  = c.name.replace(/"/g, '&quot;');
 
   let badge = '';
   if (severity === 'high') badge = `<button class="errata-badge errata-high">⚠ ERRATA</button>`;
   else if (severity === 'low') badge = `<button class="errata-badge errata-low">ℹ minor</button>`;
 
-  const isFlipped = flippedCards.has(c.name);
+  const isFlipped   = flippedCards.has(c.name);
   const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
+  const exclBtn     = n >= target
+    ? `<button class="excl-btn${isExcl ? ' excl-on' : ''}" title="${isExcl ? 'Add back to draft pool' : 'Remove from draft pool'}">${isExcl ? '⊕' : '⊗'}</button>`
+    : '';
   return `<div class="card ${cls}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
     ${badge ? `<div class="badge-row">${badge}</div>` : ''}
     ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
+      ${exclBtn}
       <span class="${lblCls}">${label}</span>
     </div>
     <div class="card-name">${displayName}</div>
