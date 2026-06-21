@@ -77,7 +77,7 @@
     }
     .card:active { transform: scale(0.93); }
     .card.owned   { border-color: #2d6a4f; }
-    .card.missing { border-color: #2a2a3a; }
+    .card.missing { border-color: #6b1a1a; background: #180808; }
 
     .card-img-wrap {
       position: relative;
@@ -93,7 +93,7 @@
       display: block;
       transition: opacity 0.2s;
     }
-    .card.missing .card-img-wrap img { opacity: 0.3; filter: grayscale(50%); }
+    .card.missing .card-img-wrap img { opacity: 0.2; filter: grayscale(80%); }
 
     .card-footer {
       display: flex;
@@ -104,6 +104,7 @@
     }
     .card-num  { font-size: 0.58rem; color: #555; }
     .card-check { font-size: 0.7rem; color: #52b788; font-weight: 700; }
+    .card-need  { font-size: 0.7rem; color: #e05555; font-weight: 700; }
 
     .card-name   { font-size: 0.68rem; font-weight: 700; margin-top: 0.1rem; line-height: 1.2; }
     .card-rarity { font-size: 0.58rem; margin-top: 0.1rem; }
@@ -699,8 +700,6 @@ function render() {
   }
 
   function getSection(c) {
-    if (c.cat === 'trainer') return 'Trainers';
-    if (c.cat === 'energy')  return 'Energy';
     if (c.r === 'Holo Rare') return 'Holo Rares';
     if (c.r === 'Rare')      return 'Rares';
     if (c.r === 'Uncommon')  return 'Uncommons';
@@ -723,7 +722,7 @@ function render() {
       </div>
       <div class="card-footer">
         <span class="card-num">${c.n}/${total}</span>
-        ${isOwned ? '<span class="card-check">&#10003; owned</span>' : ''}
+        ${isOwned ? '<span class="card-check">&#10003; owned</span>' : '<span class="card-need">NEED</span>'}
       </div>
       <div class="card-name">${c.name}</div>
       <div class="card-rarity ${RARITY_CLASS[c.r]}">${RARITY_SYMBOL[c.r]} ${c.r}</div>
