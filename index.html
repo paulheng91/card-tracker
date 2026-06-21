@@ -155,9 +155,11 @@
 </div>
 
 <script>
-const GIST_DESC = 'card-tracker-collection';
+const GIST_ID   = '39ef6aa0cfaa1b98874f0d9e60ae7f53';
+const GIST_USER = 'paulheng91';
 const GIST_FILE = 'collection.json';
-const GISTS_API = 'https://api.github.com/gists';
+const GIST_RAW  = `https://gist.githubusercontent.com/${GIST_USER}/${GIST_ID}/raw/${GIST_FILE}`;
+const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
 
 const CARDS = [
   // Holo Rares
@@ -279,49 +281,18 @@ const TOTAL = CARDS.length;
 let owned = new Set();
 let filter = 'all';
 let saveTimer = null;
-let gistId = localStorage.getItem('gist-id') || null;
 
 function token() { return localStorage.getItem('gh-token'); }
-function authHeaders() { return { Authorization: `token ${token()}`, 'Content-Type': 'application/json' }; }
-
-async function resolveGistId() {
-  if (gistId) return gistId;
-  if (!token()) { openTokenModal(); return null; }
-
-  const res = await fetch(GISTS_API, { headers: authHeaders() });
-  if (!res.ok) throw new Error('auth failed');
-  const list = await res.json();
-  const existing = list.find(g => g.description === GIST_DESC && g.files[GIST_FILE]);
-
-  if (existing) {
-    gistId = existing.id;
-  } else {
-    const create = await fetch(GISTS_API, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ description: GIST_DESC, public: false, files: { [GIST_FILE]: { content: '[]' } } })
-    });
-    if (!create.ok) throw new Error('create failed');
-    gistId = (await create.json()).id;
-  }
-
-  localStorage.setItem('gist-id', gistId);
-  return gistId;
-}
 
 async function loadCollection() {
-  if (!token()) { render(); return; }
   setStatus('loading...', '');
   try {
-    const id = await resolveGistId();
-    if (!id) { render(); return; }
-    const res = await fetch(`${GISTS_API}/${id}`, { headers: authHeaders() });
-    if (!res.ok) throw new Error('load failed');
-    const data = await res.json();
-    owned = new Set(JSON.parse(data.files[GIST_FILE].content));
+    const res = await fetch(GIST_RAW + '?t=' + Date.now());
+    if (!res.ok) throw new Error();
+    owned = new Set(await res.json());
     setStatus('', '');
-  } catch (e) {
-    setStatus(e.message === 'auth failed' ? 'bad token' : 'load failed', 'error');
+  } catch {
+    setStatus('load failed', 'error');
     setTimeout(() => setStatus('', ''), 3000);
   }
   render();
@@ -331,15 +302,13 @@ async function pushCollection() {
   if (!token()) { openTokenModal(); return; }
   setStatus('saving...', 'saving');
   try {
-    const id = await resolveGistId();
-    if (!id) return;
     const sorted = [...owned].sort((a, b) => a - b);
-    const res = await fetch(`${GISTS_API}/${id}`, {
+    const res = await fetch(GIST_API, {
       method: 'PATCH',
-      headers: authHeaders(),
+      headers: { Authorization: `token ${token()}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(sorted) } } })
     });
-    if (!res.ok) throw new Error('save failed');
+    if (!res.ok) throw new Error();
     setStatus('saved', 'saved');
     setTimeout(() => setStatus('', ''), 2000);
   } catch {
@@ -367,13 +336,8 @@ function closeTokenModal() {
 }
 function saveToken() {
   const val = document.getElementById('tokenInput').value.trim();
-  if (val) {
-    localStorage.setItem('gh-token', val);
-    gistId = null;
-    localStorage.removeItem('gist-id');
-  }
+  if (val) localStorage.setItem('gh-token', val);
   closeTokenModal();
-  loadCollection();
 }
 
 document.querySelectorAll('.btn[data-filter]').forEach(btn => {
