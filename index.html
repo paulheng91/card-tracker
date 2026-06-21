@@ -167,6 +167,18 @@
     }
     .btn-cancel { background: #0f3460; color: #aaa; }
     .btn-save   { background: #ffd700; color: #1a1a2e; }
+
+    /* Overview */
+    .overview { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .overview-set { background: #12122a; border-radius: 10px; padding: 0.75rem 1rem; cursor: pointer; transition: background 0.15s; }
+    .overview-set:hover { background: #1a1a3a; }
+    .overview-name { font-size: 0.85rem; font-weight: 700; color: #eee; margin-bottom: 0.4rem; display: flex; justify-content: space-between; }
+    .overview-count { font-size: 0.78rem; color: #aaa; }
+    .overview-bar-wrap { background: #0f3460; border-radius: 4px; height: 6px; }
+    .overview-bar { background: #ffd700; height: 6px; border-radius: 4px; }
+    .overview-total { background: #16213e; border: 1px solid #ffd700; border-radius: 10px; padding: 0.75rem 1rem; }
+    .overview-total .overview-name { color: #ffd700; }
+    .overview-total .overview-bar { background: #ffd700; }
   </style>
 </head>
 <body>
@@ -174,10 +186,12 @@
 <header>
   <h1>Pokemon Card Tracker</h1>
   <div class="set-tabs">
-    <button class="set-tab active" data-set="base1">Base Set</button>
+    <button class="set-tab active" data-set="overview">Overview</button>
+    <button class="set-tab" data-set="base1">Base Set</button>
     <button class="set-tab" data-set="jungle">Jungle</button>
     <button class="set-tab" data-set="fossil">Fossil</button>
     <button class="set-tab" data-set="rocket">Team Rocket</button>
+    <button class="set-tab" data-set="promo">WotC Promos</button>
   </div>
   <div class="progress-wrap">
     <div class="progress-bar" id="bar" style="width:0%"></div>
@@ -186,7 +200,7 @@
     <span class="stats" id="stats">Loading...</span>
     <span class="save-status" id="saveStatus"></span>
   </div>
-  <div class="filters">
+  <div class="filters" id="filters" style="display:none">
     <button class="btn active" data-filter="all">All</button>
     <button class="btn" data-filter="owned">Owned</button>
     <button class="btn" data-filter="missing">Missing</button>
@@ -553,14 +567,75 @@ const SETS = {
       {n:82, name:"Potion Energy",          r:"Uncommon",  cat:"energy"},
       {n:83, name:"Dark Raichu",            r:"Holo Rare", cat:"pokemon"},
     ]
+  },
+  promo: {
+    name: 'WotC Promos',
+    cdn: 'basep',
+    cards: [
+      {n:1,  name:"Pikachu",               r:"Promo", cat:"pokemon"},
+      {n:2,  name:"Electabuzz",            r:"Promo", cat:"pokemon"},
+      {n:3,  name:"Mewtwo",                r:"Promo", cat:"pokemon"},
+      {n:4,  name:"Pikachu",               r:"Promo", cat:"pokemon"},
+      {n:5,  name:"Dragonite",             r:"Promo", cat:"pokemon"},
+      {n:6,  name:"Arcanine",              r:"Promo", cat:"pokemon"},
+      {n:7,  name:"Jigglypuff",            r:"Promo", cat:"pokemon"},
+      {n:8,  name:"Mew",                   r:"Promo", cat:"pokemon"},
+      {n:9,  name:"Mew",                   r:"Promo", cat:"pokemon"},
+      {n:10, name:"Meowth",                r:"Promo", cat:"pokemon"},
+      {n:11, name:"Eevee",                 r:"Promo", cat:"pokemon"},
+      {n:12, name:"Mewtwo",                r:"Promo", cat:"pokemon"},
+      {n:13, name:"Venusaur",              r:"Promo", cat:"pokemon"},
+      {n:14, name:"Mewtwo",                r:"Promo", cat:"pokemon"},
+      {n:15, name:"Cool Porygon",          r:"Promo", cat:"pokemon"},
+      {n:16, name:"Computer Error",        r:"Promo", cat:"trainer"},
+      {n:17, name:"Dark Persian",          r:"Promo", cat:"pokemon"},
+      {n:18, name:"Team Rocket's Meowth",  r:"Promo", cat:"pokemon"},
+      {n:19, name:"Sabrina's Abra",        r:"Promo", cat:"pokemon"},
+      {n:20, name:"Psyduck",               r:"Promo", cat:"pokemon"},
+      {n:21, name:"Moltres",               r:"Promo", cat:"pokemon"},
+      {n:22, name:"Articuno",              r:"Promo", cat:"pokemon"},
+      {n:23, name:"Zapdos",                r:"Promo", cat:"pokemon"},
+      {n:24, name:"____'s Pikachu",        r:"Promo", cat:"pokemon"},
+      {n:25, name:"Flying Pikachu",        r:"Promo", cat:"pokemon"},
+      {n:26, name:"Pikachu",               r:"Promo", cat:"pokemon"},
+      {n:27, name:"Pikachu",               r:"Promo", cat:"pokemon"},
+      {n:28, name:"Surfing Pikachu",       r:"Promo", cat:"pokemon"},
+      {n:29, name:"Marill",                r:"Promo", cat:"pokemon"},
+      {n:30, name:"Togepi",                r:"Promo", cat:"pokemon"},
+      {n:31, name:"Cleffa",                r:"Promo", cat:"pokemon"},
+      {n:32, name:"Smeargle",              r:"Promo", cat:"pokemon"},
+      {n:33, name:"Scizor",                r:"Promo", cat:"pokemon"},
+      {n:34, name:"Entei",                 r:"Promo", cat:"pokemon"},
+      {n:35, name:"Pichu",                 r:"Promo", cat:"pokemon"},
+      {n:36, name:"Igglybuff",             r:"Promo", cat:"pokemon"},
+      {n:37, name:"Hitmontop",             r:"Promo", cat:"pokemon"},
+      {n:38, name:"Unown J",               r:"Promo", cat:"pokemon"},
+      {n:39, name:"Misdreavus",            r:"Promo", cat:"pokemon"},
+      {n:40, name:"Pokemon Center",        r:"Promo", cat:"trainer"},
+      {n:41, name:"Lucky Stadium",         r:"Promo", cat:"trainer"},
+      {n:42, name:"Pokemon Tower",         r:"Promo", cat:"trainer"},
+      {n:43, name:"Machamp",               r:"Promo", cat:"pokemon"},
+      {n:44, name:"Magmar",                r:"Promo", cat:"pokemon"},
+      {n:45, name:"Scyther",               r:"Promo", cat:"pokemon"},
+      {n:46, name:"Electabuzz",            r:"Promo", cat:"pokemon"},
+      {n:47, name:"Mew",                   r:"Promo", cat:"pokemon"},
+      {n:48, name:"Articuno",              r:"Promo", cat:"pokemon"},
+      {n:49, name:"Snorlax",               r:"Promo", cat:"pokemon"},
+      {n:50, name:"Celebi",                r:"Promo", cat:"pokemon"},
+      {n:51, name:"Rapidash",              r:"Promo", cat:"pokemon"},
+      {n:52, name:"Ho-Oh",                 r:"Promo", cat:"pokemon"},
+      {n:53, name:"Suicune",               r:"Promo", cat:"pokemon"},
+    ]
   }
 };
 
-const RARITY_SYMBOL = {"Holo Rare":"★★","Rare":"★","Uncommon":"◆","Common":"●"};
-const RARITY_CLASS  = {"Holo Rare":"r-holo","Rare":"r-rare","Uncommon":"r-uncommon","Common":"r-common"};
+const RARITY_SYMBOL = {"Holo Rare":"★★","Rare":"★","Uncommon":"◆","Common":"●","Promo":"★"};
+const RARITY_CLASS  = {"Holo Rare":"r-holo","Rare":"r-rare","Uncommon":"r-uncommon","Common":"r-common","Promo":"r-holo"};
 
-let ownedMap = { base1: new Set(), jungle: new Set(), fossil: new Set(), rocket: new Set() };
-let activeSet = 'base1';
+const SET_KEYS = ['base1','jungle','fossil','rocket','promo'];
+
+let ownedMap = { base1: new Set(), jungle: new Set(), fossil: new Set(), rocket: new Set(), promo: new Set() };
+let activeSet = 'overview';
 let filter = 'all';
 let saveTimer = null;
 
@@ -587,6 +662,7 @@ async function loadCollection() {
       ownedMap.jungle = new Set(data.jungle ?? allNums('jungle'));
       ownedMap.fossil = new Set(data.fossil ?? allNums('fossil'));
       ownedMap.rocket = new Set(data.rocket ?? []);
+      ownedMap.promo  = new Set(data.promo  ?? []);
     }
     setStatus('', '');
   } catch {
@@ -607,6 +683,7 @@ async function pushCollection() {
       jungle: [...ownedMap.jungle].sort((a,b) => a-b),
       fossil: [...ownedMap.fossil].sort((a,b) => a-b),
       rocket: [...ownedMap.rocket].sort((a,b) => a-b),
+      promo:  [...ownedMap.promo].sort((a,b) => a-b),
     };
     const res = await fetch(GIST_API, {
       method: 'PATCH',
@@ -651,10 +728,8 @@ function saveToken() {
 
 document.querySelectorAll('.set-tab').forEach(btn => {
   btn.addEventListener('click', () => {
-    activeSet = btn.dataset.set;
-    document.querySelectorAll('.set-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    render();
+    switchSet(btn.dataset.set);
+    document.getElementById('filters').style.display = btn.dataset.set === 'overview' ? 'none' : 'flex';
   });
 });
 
@@ -674,9 +749,59 @@ function toggle(n) {
   scheduleSave();
 }
 
+function getSection(c) {
+  if (c.r === 'Promo')     return 'Promos';
+  if (c.r === 'Holo Rare') return 'Holo Rares';
+  if (c.r === 'Rare')      return 'Rares';
+  if (c.r === 'Uncommon')  return 'Uncommons';
+  return 'Commons';
+}
+
 function render() {
-  const set = SETS[activeSet];
+  const grid = document.getElementById('grid');
+
+  if (activeSet === 'overview') {
+    const totalOwned = SET_KEYS.reduce((s,k) => s + ownedMap[k].size, 0);
+    const totalCards = SET_KEYS.reduce((s,k) => s + SETS[k].cards.length, 0);
+    const totalPct   = Math.round((totalOwned / totalCards) * 100);
+
+    document.getElementById('stats').textContent = `${totalOwned} / ${totalCards} total collected (${totalPct}%)`;
+    document.getElementById('bar').style.width = totalPct + '%';
+    grid.innerHTML = '';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'overview';
+
+    SET_KEYS.forEach(key => {
+      const s     = SETS[key];
+      const count = ownedMap[key].size;
+      const total = s.cards.length;
+      const pct   = Math.round((count / total) * 100);
+      wrap.innerHTML += `
+        <div class="overview-set" onclick="switchSet('${key}')">
+          <div class="overview-name">${s.name}<span class="overview-count">${count} / ${total} (${pct}%)</span></div>
+          <div class="overview-bar-wrap"><div class="overview-bar" style="width:${pct}%"></div></div>
+        </div>`;
+    });
+
+    wrap.innerHTML += `
+      <div class="overview-total">
+        <div class="overview-name">Total<span class="overview-count">${totalOwned} / ${totalCards} (${totalPct}%)</span></div>
+        <div class="overview-bar-wrap"><div class="overview-bar" style="width:${totalPct}%"></div></div>
+      </div>`;
+
+    grid.appendChild(wrap);
+    return;
+  }
+
+  const set   = SETS[activeSet];
   const owned = ownedMap[activeSet];
+  const total = set.cards.length;
+  const count = owned.size;
+  const pct   = Math.round((count / total) * 100);
+
+  document.getElementById('stats').textContent = `${count} / ${total} collected (${pct}%)`;
+  document.getElementById('bar').style.width = pct + '%';
 
   const visible = set.cards.filter(c => {
     if (filter === 'owned')   return owned.has(c.n);
@@ -687,23 +812,9 @@ function render() {
     return true;
   });
 
-  const total = set.cards.length;
-  const count = owned.size;
-  const pct = Math.round((count / total) * 100);
-  document.getElementById('stats').textContent = `${count} / ${total} collected (${pct}%)`;
-  document.getElementById('bar').style.width = pct + '%';
-
-  const grid = document.getElementById('grid');
   if (!visible.length) {
     grid.innerHTML = '<p class="empty">Nothing here.</p>';
     return;
-  }
-
-  function getSection(c) {
-    if (c.r === 'Holo Rare') return 'Holo Rares';
-    if (c.r === 'Rare')      return 'Rares';
-    if (c.r === 'Uncommon')  return 'Uncommons';
-    return 'Commons';
   }
 
   let lastSection = null;
@@ -729,6 +840,12 @@ function render() {
     </div>`);
   });
   grid.innerHTML = items.join('');
+}
+
+function switchSet(key) {
+  activeSet = key;
+  document.querySelectorAll('.set-tab').forEach(b => b.classList.toggle('active', b.dataset.set === key));
+  render();
 }
 
 loadCollection();
