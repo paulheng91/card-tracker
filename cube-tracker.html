@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MTG Cube Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+
+    header {
+      background: #16213e;
+      padding: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+
+    .nav-link { display: block; text-align: center; font-size: 0.7rem; color: #666; text-decoration: none; margin-bottom: 0.4rem; }
+    .nav-link:hover { color: #9f7aea; }
+
+    h1 { font-size: 1.3rem; text-align: center; color: #9f7aea; margin-bottom: 0.6rem; }
+
+    .cube-tabs { display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.6rem; }
+    .cube-tab {
+      padding: 0.35rem 0.9rem;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: #2d1b69;
+      color: #aaa;
+      transition: all 0.15s;
+    }
+    .cube-tab.active { background: #9f7aea; color: #1a1a2e; }
+
+    .progress-wrap { background: #2d1b69; border-radius: 4px; height: 6px; margin-bottom: 0.5rem; }
+    .progress-bar  { background: #9f7aea; height: 6px; border-radius: 4px; transition: width 0.3s; }
+
+    .stats-row { display: flex; justify-content: center; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+    .stats       { font-size: 0.82rem; color: #aaa; }
+    .save-status { font-size: 0.75rem; color: #555; }
+    .save-status.saving { color: #9f7aea; }
+    .save-status.saved  { color: #52b788; }
+    .save-status.error  { color: #e05; }
+
+    .token-section { display: flex; gap: 0.4rem; justify-content: center; align-items: center; flex-wrap: wrap; }
+    .token-input { background: #0f0f2a; border: 1px solid #444; color: #eee; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.75rem; width: 200px; }
+    .btn { padding: 0.3rem 0.7rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 700; background: #2d1b69; color: #9f7aea; transition: background 0.15s; }
+    .btn:hover { background: #4c2889; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 0.6rem;
+      padding: 0.75rem;
+    }
+
+    .section-header {
+      grid-column: 1 / -1;
+      background: #2d1b69;
+      color: #9f7aea;
+      font-weight: 700;
+      font-size: 0.78rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .card {
+      background: #12122a;
+      border: 2px solid #2d2d5e;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .card:hover { transform: scale(1.03); }
+    .card.complete { border-color: #2d6a4f; }
+    .card.partial  { border-color: #b7791f; }
+    .card.missing  { border-color: #6b1a1a; }
+
+    .card-img-wrap { position: relative; }
+    .card-img-wrap img { width: 100%; display: block; border-radius: 6px 6px 0 0; }
+    .card.missing .card-img-wrap img { opacity: 0.2; filter: grayscale(80%); }
+    .card.partial .card-img-wrap img { opacity: 0.65; }
+
+    .card-footer {
+      padding: 0.3rem 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.7rem;
+    }
+    .card-num  { color: #666; }
+    .lbl-own   { color: #52b788; font-weight: 700; }
+    .lbl-part  { color: #ffd700; font-weight: 700; }
+    .lbl-need  { color: #e05555; font-weight: 700; }
+
+    .card-name {
+      padding: 0 0.5rem 0.35rem;
+      font-size: 0.65rem;
+      color: #ccc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .loading { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #666; font-size: 0.9rem; }
+    .empty   { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="nav-link" href="index.html">← Pokemon Card Tracker</a>
+  <h1>MTG Cube Tracker</h1>
+  <div class="cube-tabs">
+    <button class="cube-tab active" data-cube="isd">Innistrad</button>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar" id="bar" style="width:0%"></div>
+  </div>
+  <div class="stats-row">
+    <span class="stats" id="stats">Loading...</span>
+    <span class="save-status" id="saveStatus"></span>
+  </div>
+  <div class="token-section">
+    <input class="token-input" id="tokenInput" type="password" placeholder="GitHub token (for saving)">
+    <button class="btn" id="btnSaveToken">Save Token</button>
+    <button class="btn" id="btnCheckGist">Check Gist</button>
+  </div>
+</header>
+
+<div class="grid" id="grid">
+  <div class="loading">Loading cards from Scryfall…</div>
+</div>
+
+<script>
+const GIST_ID   = '39ef6aa0cfaa1b98874f0d9e60ae7f53';
+const GIST_USER = 'paulheng91';
+const GIST_FILE = 'cube.json';
+const GIST_RAW  = `https://gist.githubusercontent.com/${GIST_USER}/${GIST_ID}/raw/${GIST_FILE}`;
+const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
+
+// Each cube: scryfall set code + how many copies of each rarity belong in the cube
+const CUBES = {
+  isd: { name: 'Innistrad', setCode: 'isd', counts: { mythic: 1, rare: 1, uncommon: 2, common: 3 } }
+};
+
+const RARITY_ORDER = ['mythic','rare','uncommon','common'];
+const RARITY_LABEL = { mythic: 'Mythic Rares', rare: 'Rares', uncommon: 'Uncommons', common: 'Commons' };
+
+let activeCube = 'isd';
+let cardCache  = {};   // { isd: [ ...scryfall card objects ] }
+let ownedMap   = {};   // { isd: { 'Card Name': count } }
+let saveTimer  = null;
+
+// ── Token UI ─────────────────────────────────────────────────────────────────
+
+function getToken() { return localStorage.getItem('ghtoken') ?? ''; }
+
+document.getElementById('tokenInput').value = getToken();
+
+document.getElementById('btnSaveToken').addEventListener('click', () => {
+  const t = document.getElementById('tokenInput').value.trim();
+  if (t) { localStorage.setItem('ghtoken', t); setStatus('token saved', 'saved'); }
+});
+
+document.getElementById('btnCheckGist').addEventListener('click', async () => {
+  const token = getToken();
+  if (!token) { setStatus('no token saved', 'error'); return; }
+  try {
+    const res  = await fetch(GIST_API, { headers: { Authorization: `token ${token}` } });
+    const data = await res.json();
+    setStatus(data.id ? 'gist OK ✓' : 'gist error', data.id ? 'saved' : 'error');
+  } catch (e) { setStatus('network error', 'error'); }
+});
+
+function setStatus(msg, cls = '') {
+  const el = document.getElementById('saveStatus');
+  el.textContent = msg;
+  el.className = 'save-status ' + cls;
+}
+
+// ── Gist I/O ─────────────────────────────────────────────────────────────────
+
+async function loadCollection() {
+  try {
+    const res = await fetch(GIST_RAW + '?t=' + Date.now());
+    if (res.ok) ownedMap = await res.json();
+  } catch (e) { /* first run, no file yet */ }
+  for (const key of Object.keys(CUBES)) {
+    if (!ownedMap[key]) ownedMap[key] = {};
+  }
+}
+
+async function pushCollection() {
+  const token = getToken();
+  if (!token) { setStatus('no token', 'error'); return; }
+  setStatus('saving…', 'saving');
+  try {
+    const res = await fetch(GIST_API, {
+      method: 'PATCH',
+      headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(ownedMap, null, 2) } } })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      setStatus(`save failed: ${err.message ?? res.status}`, 'error');
+    } else {
+      setStatus('saved ✓', 'saved');
+      setTimeout(() => setStatus(''), 3000);
+    }
+  } catch (e) { setStatus(`save failed: ${e.message}`, 'error'); }
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(pushCollection, 1500);
+}
+
+// ── Scryfall fetch ────────────────────────────────────────────────────────────
+
+async function fetchSetCards(setCode) {
+  const cards = [];
+  let url = `https://api.scryfall.com/cards/search?q=set:${setCode}+not:extra&order=set&unique=cards`;
+  while (url) {
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (!data.data) break;
+    cards.push(...data.data.filter(c => !c.type_line?.includes('Basic Land')));
+    url = data.has_more ? data.next_page : null;
+    if (data.has_more) await new Promise(r => setTimeout(r, 100));
+  }
+  return cards;
+}
+
+function cardImage(card) {
+  return card.image_uris?.normal
+      ?? card.card_faces?.[0]?.image_uris?.normal
+      ?? '';
+}
+
+// ── Interaction ───────────────────────────────────────────────────────────────
+
+document.getElementById('grid').addEventListener('click', e => {
+  const el = e.target.closest('.card[data-name]');
+  if (!el) return;
+  const cube   = el.dataset.cube;
+  const name   = el.dataset.name;
+  const rarity = el.dataset.rarity;
+  const target = CUBES[cube].counts[rarity] ?? 1;
+  const cur    = ownedMap[cube]?.[name] ?? 0;
+  if (!ownedMap[cube]) ownedMap[cube] = {};
+  ownedMap[cube][name] = cur >= target ? 0 : cur + 1;
+  render();
+  scheduleSave();
+});
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function render() {
+  const cube  = CUBES[activeCube];
+  const cards = cardCache[activeCube] ?? [];
+  const owned = ownedMap[activeCube]  ?? {};
+
+  let totalNeeded = 0, totalOwned = 0;
+  cards.forEach(c => {
+    const t = cube.counts[c.rarity] ?? 1;
+    totalNeeded += t;
+    totalOwned  += Math.min(owned[c.name] ?? 0, t);
+  });
+  const pct = totalNeeded ? Math.round((totalOwned / totalNeeded) * 100) : 0;
+  document.getElementById('stats').textContent = `${totalOwned} / ${totalNeeded} copies collected (${pct}%)`;
+  document.getElementById('bar').style.width = pct + '%';
+
+  const groups = {};
+  RARITY_ORDER.forEach(r => { groups[r] = []; });
+  cards.forEach(c => { if (groups[c.rarity]) groups[c.rarity].push(c); });
+
+  const items = [];
+  RARITY_ORDER.forEach(rarity => {
+    const group = groups[rarity];
+    if (!group.length) return;
+    const want = cube.counts[rarity] ?? 1;
+    items.push(`<div class="section-header">${RARITY_LABEL[rarity]} — ${want} of each</div>`);
+    group.forEach(c => {
+      const target  = want;
+      const n       = owned[c.name] ?? 0;
+      const cls     = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
+      const lblCls  = n >= target ? 'lbl-own' : n > 0 ? 'lbl-part' : 'lbl-need';
+      const label   = n >= target ? '✓ owned' : n > 0 ? `${n} / ${target}` : 'NEED';
+      const img     = cardImage(c);
+      items.push(`<div class="card ${cls}" data-cube="${activeCube}" data-name="${c.name.replace(/"/g,'&quot;')}" data-rarity="${c.rarity}">
+        <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+        <div class="card-footer">
+          <span class="card-num">#${c.collector_number}</span>
+          <span class="${lblCls}">${label}</span>
+        </div>
+        <div class="card-name">${c.name}</div>
+      </div>`);
+    });
+  });
+
+  document.getElementById('grid').innerHTML = items.length ? items.join('') : '<div class="empty">No cards loaded.</div>';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+async function init() {
+  await loadCollection();
+  const cube = CUBES[activeCube];
+  document.getElementById('grid').innerHTML = '<div class="loading">Fetching Innistrad cards from Scryfall…</div>';
+  cardCache[activeCube] = await fetchSetCards(cube.setCode);
+  render();
+}
+
+document.querySelectorAll('.cube-tab').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    activeCube = btn.dataset.cube;
+    document.querySelectorAll('.cube-tab').forEach(b => b.classList.toggle('active', b === btn));
+    if (!cardCache[activeCube]) {
+      document.getElementById('grid').innerHTML = `<div class="loading">Fetching ${CUBES[activeCube].name} cards from Scryfall…</div>`;
+      cardCache[activeCube] = await fetchSetCards(CUBES[activeCube].setCode);
+    }
+    render();
+  });
+});
+
+init();
+</script>
+</body>
+</html>
