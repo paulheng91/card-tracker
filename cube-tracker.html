@@ -216,6 +216,7 @@
     <button class="filter-btn active" data-filter="all">All</button>
     <button class="filter-btn" data-filter="missing">Missing</button>
     <button class="filter-btn errata-filter" data-filter="errata">⚠ Errata</button>
+    <button class="btn" id="btnMarkAll" style="font-size:0.7rem;padding:0.28rem 0.8rem">Mark All Owned</button>
   </div>
   <div class="token-section">
     <input class="token-input" id="tokenInput" type="password" placeholder="GitHub token (for saving)">
@@ -522,6 +523,19 @@ function render() {
     ? items.join('')
     : '<div class="empty">No cards match this filter.</div>';
 }
+
+// ── Mark all owned ────────────────────────────────────────────────────────────
+
+document.getElementById('btnMarkAll').addEventListener('click', () => {
+  const cube  = CUBES[activeCube];
+  const cards = cardCache[activeCube] ?? [];
+  if (!ownedMap[activeCube]) ownedMap[activeCube] = {};
+  for (const c of cards) {
+    ownedMap[activeCube][c.name] = cube.counts[c.rarity] ?? 1;
+  }
+  render();
+  scheduleSave();
+});
 
 // ── Cube tabs ─────────────────────────────────────────────────────────────────
 
