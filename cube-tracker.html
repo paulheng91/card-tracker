@@ -52,23 +52,43 @@
     .gh-panel-label { font-size: 0.68rem; color: #666; }
     .gh-panel-row { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 
-    /* ── Set selector row ───────────────────────────────────────────────── */
-    .set-view-row {
-      display: flex; align-items: center; gap: 0.5rem;
-      justify-content: center; flex-wrap: wrap; margin-bottom: 0.35rem;
+    /* ── Controls bar ───────────────────────────────────────────────────── */
+    .controls-row {
+      display: flex; align-items: center; justify-content: center;
+      flex-wrap: wrap; column-gap: 0.3rem; row-gap: 0.35rem;
+      padding: 0 0.5rem 0.4rem;
     }
-    .cube-select {
+    .ctrl-group { display: flex; align-items: center; gap: 0.3rem; }
+    .ctrl-sep { width: 1px; height: 1.1rem; background: #2e2e2e; flex-shrink: 0; align-self: center; }
+
+    /* ── Custom set dropdown ────────────────────────────────────────────── */
+    .cube-dropdown { position: relative; }
+    .cube-trigger {
+      display: inline-flex; align-items: center; gap: 0.4rem;
       background: #242424; border: none; border-radius: 999px; cursor: pointer;
       font-size: 0.78rem; font-weight: 700; color: #c9a84c;
-      padding: 0.3rem 1.8rem 0.3rem 0.85rem;
-      -webkit-appearance: none; appearance: none; outline: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%23c9a84c' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 0.65rem center;
+      padding: 0.3rem 0.85rem 0.3rem 0.6rem; white-space: nowrap; outline: none;
     }
-    .cube-select option { background: #1e1e1e; color: #d0d0d0; font-weight: 400; }
+    .cube-trigger:hover { background: #2e2e2e; }
+    .set-sym { width: 20px; height: 20px; flex-shrink: 0; }
+    .cube-arr { font-size: 0.6rem; opacity: 0.6; margin-left: 0.15rem; }
+    .cube-menu {
+      display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 200;
+      background: #1e1e1e; border: 1px solid #333; border-radius: 8px;
+      padding: 0.35rem; min-width: 190px; max-height: 280px; overflow-y: auto;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.75);
+    }
+    .cube-menu.open { display: block; }
+    .cube-option {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.35rem 0.5rem; border-radius: 5px; cursor: pointer;
+      font-size: 0.75rem; color: #aaa; white-space: nowrap;
+    }
+    .cube-option:hover { background: #2a2a2a; color: #d0d0d0; }
+    .cube-option.selected { color: #c9a84c; font-weight: 700; }
+    .cube-option .set-sym { width: 18px; height: 18px; }
 
     /* ── View tabs (Cards / Info) ───────────────────────────────────────── */
-    .tab-row { display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap; }
     .view-tab {
       padding: 0.28rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
       font-size: 0.73rem; font-weight: 700; background: #1e1e1e; color: #555;
@@ -261,14 +281,13 @@
       header { padding: 0.45rem 0.75rem 0; }
       h1 { font-size: 1.05rem; }
       .gh-login-btn { font-size: 0.65rem; padding: 0.2rem 0.5rem; }
-      .set-view-row { gap: 0.3rem; }
-      .cube-select { font-size: 0.7rem; padding: 0.22rem 1.4rem 0.22rem 0.55rem; }
+      .controls-row { column-gap: 0.2rem; row-gap: 0.3rem; padding-bottom: 0.3rem; }
+      .ctrl-sep { display: none; }
+      .cube-trigger { font-size: 0.7rem; padding: 0.22rem 0.65rem 0.22rem 0.5rem; }
+      .set-sym { width: 16px; height: 16px; }
       .view-tab  { padding: 0.2rem 0.55rem; font-size: 0.68rem; white-space: nowrap; }
-      .filter-row { margin-bottom: 0.25rem; }
       .filter-btn { padding: 0.2rem 0.55rem; font-size: 0.68rem; }
-      .size-row { margin-bottom: 0.25rem; }
       .size-btn { padding: 0.15rem 0.45rem; font-size: 0.65rem; }
-      .stats-row { margin-bottom: 0.25rem; }
       .stats { font-size: 0.72rem; }
       .token-input { font-size: 0.68rem; }
       .btn { padding: 0.22rem 0.5rem; font-size: 0.68rem; }
@@ -306,11 +325,45 @@
     </div>
   </div>
 
-  <div class="set-view-row">
-    <select id="cubeSelect" class="cube-select"></select>
-    <div class="tab-row" id="viewTabs">
+  <div class="controls-row">
+    <div class="ctrl-group">
+      <div class="cube-dropdown" id="cubeDropdown">
+        <button class="cube-trigger" id="cubeTrigger">
+          <img class="set-sym" id="cubeSymImg" src="" alt="">
+          <span id="cubeLabel">…</span>
+          <span class="cube-arr">▼</span>
+        </button>
+        <div class="cube-menu" id="cubeMenu"></div>
+      </div>
+    </div>
+    <span class="ctrl-sep"></span>
+    <div class="ctrl-group" id="viewTabs">
       <button class="view-tab active" data-view="cards">Cards</button>
       <button class="view-tab"        data-view="info">Info</button>
+    </div>
+    <span class="ctrl-sep"></span>
+    <div class="ctrl-group" id="filterRow">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn"        data-filter="missing">Missing</button>
+      <button class="mark-all-btn"      id="btnMarkAllOwned">Mark All Owned</button>
+    </div>
+    <span class="ctrl-sep"></span>
+    <div class="ctrl-group" id="rarityRow">
+      <button class="filter-btn active" data-rarity="all">All Rarities</button>
+      <button class="filter-btn"        data-rarity="common">Common</button>
+      <button class="filter-btn"        data-rarity="uncommon">Uncommon</button>
+      <button class="filter-btn"        data-rarity="rare-mythic">Rare/Mythic</button>
+    </div>
+    <span class="ctrl-sep"></span>
+    <div class="ctrl-group size-row">
+      <button class="size-btn" data-size="s">S</button>
+      <button class="size-btn" data-size="m">M</button>
+      <button class="size-btn" data-size="l">L</button>
+    </div>
+    <span class="ctrl-sep"></span>
+    <div class="ctrl-group">
+      <button class="filter-btn" id="btnCollapseAll">Collapse All</button>
+      <button class="filter-btn" id="btnExpandAll">Expand All</button>
     </div>
   </div>
 
@@ -320,32 +373,11 @@
     <div class="progress-wrap" id="progressWrap">
       <div class="progress-bar" id="bar" style="width:0%"></div>
     </div>
-    <div class="size-row">
-      <button class="size-btn" data-size="s">S</button>
-      <button class="size-btn" data-size="m">M</button>
-      <button class="size-btn" data-size="l">L</button>
-    </div>
     <div class="stats-row">
       <span class="stats" id="stats">Loading…</span>
     </div>
-    <div class="filter-row" id="filterRow">
-      <button class="filter-btn active" data-filter="all">All</button>
-      <button class="filter-btn"        data-filter="missing">Missing</button>
-      <button class="mark-all-btn"      id="btnMarkAllOwned">Mark All Owned</button>
-    </div>
-    <div class="filter-row" id="rarityRow">
-      <button class="filter-btn active" data-rarity="all">All Rarities</button>
-      <button class="filter-btn"        data-rarity="common">Common</button>
-      <button class="filter-btn"        data-rarity="uncommon">Uncommon</button>
-      <button class="filter-btn"        data-rarity="rare-mythic">Rare/Mythic</button>
-    </div>
   </div>
 </header>
-
-<div id="collapseRow" style="display:none;gap:0.4rem;justify-content:center;padding:0.5rem 1rem 0">
-  <button class="filter-btn" id="btnCollapseAll">Collapse All</button>
-  <button class="filter-btn" id="btnExpandAll">Expand All</button>
-</div>
 
 <div class="grid" id="grid">
   <div class="loading">Loading cards from Scryfall…</div>
@@ -862,17 +894,9 @@ document.querySelectorAll('.view-tab').forEach(btn => {
     activeView = btn.dataset.view;
     localStorage.setItem('activeView', activeView);
     document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b === btn));
-    updateViewUI();
     render();
   });
 });
-
-function updateViewUI() {
-  const showFilters = activeView === 'cards';
-  document.getElementById('filterRow').style.display    = showFilters ? 'flex' : 'none';
-  document.getElementById('rarityRow').style.display    = showFilters ? 'flex' : 'none';
-  document.getElementById('progressWrap').style.display = showFilters ? 'block' : 'none';
-}
 
 document.querySelectorAll('#filterRow .filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -913,26 +937,52 @@ document.getElementById('btnMarkAllOwned').addEventListener('click', () => {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CUBE SELECT DROPDOWN
+// CUBE SELECT DROPDOWN (custom, with set symbols)
 // ═══════════════════════════════════════════════════════════════════════════
 
 const sortedCubeEntries = Object.entries(CUBES).sort(([,a],[,b]) => new Date(a.releaseDate) - new Date(b.releaseDate));
-const cubeSelect = document.getElementById('cubeSelect');
+const cubeTrigger = document.getElementById('cubeTrigger');
+const cubeSymImg  = document.getElementById('cubeSymImg');
+const cubeLabel   = document.getElementById('cubeLabel');
+const cubeMenu    = document.getElementById('cubeMenu');
+
+function setSymUrl(code) { return `https://svgs.scryfall.io/sets/${code}.svg`; }
+
+function updateCubeTrigger(key) {
+  const cube = CUBES[key];
+  cubeSymImg.src = setSymUrl(cube.setCode);
+  cubeSymImg.alt = cube.setCode;
+  cubeLabel.textContent = cube.name;
+}
 
 sortedCubeEntries.forEach(([key, cube]) => {
-  const year = cube.releaseDate.slice(2, 4);
-  const opt  = document.createElement('option');
-  opt.value  = key;
-  opt.textContent = `${cube.name} '${year}`;
-  if (key === activeCube) opt.selected = true;
-  cubeSelect.appendChild(opt);
+  const item = document.createElement('div');
+  item.className = 'cube-option' + (key === activeCube ? ' selected' : '');
+  item.dataset.key = key;
+  item.innerHTML = `<img class="set-sym" src="${setSymUrl(cube.setCode)}" alt="${cube.setCode}" loading="lazy"> ${cube.name}`;
+  item.addEventListener('click', async () => {
+    cubeMenu.classList.remove('open');
+    if (key === activeCube) return;
+    document.querySelectorAll('.cube-option').forEach(o => o.classList.toggle('selected', o.dataset.key === key));
+    activeCube = key;
+    localStorage.setItem('activeCube', activeCube);
+    updateCubeTrigger(key);
+    if (!cardCache[activeCube]) await loadCubeData(activeCube);
+    render();
+  });
+  cubeMenu.appendChild(item);
 });
 
-cubeSelect.addEventListener('change', async () => {
-  activeCube = cubeSelect.value;
-  localStorage.setItem('activeCube', activeCube);
-  if (!cardCache[activeCube]) await loadCubeData(activeCube);
-  render();
+updateCubeTrigger(activeCube);
+
+cubeTrigger.addEventListener('click', e => {
+  e.stopPropagation();
+  cubeMenu.classList.toggle('open');
+});
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('cubeDropdown').contains(e.target))
+    cubeMenu.classList.remove('open');
 });
 
 
@@ -1002,8 +1052,6 @@ function tokenCardHTML(t) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function render() {
-  const showCollapse = activeView === 'cards' || activeView === 'info';
-  document.getElementById('collapseRow').style.display = showCollapse ? 'flex' : 'none';
   if      (activeView === 'cards') renderCards();
   else if (activeView === 'info')  renderInfo();
 }
@@ -1242,7 +1290,6 @@ async function loadCubeData(cubeKey) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === activeView));
-updateViewUI();
 
 async function init() {
   await loadCollection();
