@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Set Cube Tracker</title>
-  <link href="https://cdn.jsdelivr.net/npm/mana-font@latest/css/mana.min.css" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -214,8 +213,8 @@
     .section-header.errata-unknown { background: #0a1a0a; color: #6aa06a; border: 1px solid #2a5030; }
 
     .mana-sym { width: 18px; height: 18px; display: inline-block; vertical-align: middle; flex-shrink: 0; }
-    .ms-hdr { font-size: 18px; line-height: 1; vertical-align: middle; flex-shrink: 0; }
-    .ms-land-row { display: inline-flex; align-items: center; gap: 1px; flex-shrink: 0; }
+    .five-color-sym { display: inline-flex; align-items: center; gap: 1px; flex-shrink: 0; }
+    .five-color-sym .mana-sym { width: 13px; height: 13px; }
 
     .section-header[data-color-key] { cursor: pointer; user-select: none; }
     .section-header[data-color-key]:hover { background: #282828; }
@@ -548,12 +547,8 @@ const COLOR_ORDER = ['W','U','B','R','G','M','A','L'];
 const COLOR_LABEL = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', M:'Multicolored', A:'Artifact', L:'Land' };
 
 const SYM = s => `<img class="mana-sym" src="https://svgs.scryfall.io/card-symbols/${s}.svg" alt="{${s}}">`;
-// Scryfall only has oracle-text symbols (W U B R G C T etc.) — no multicolor or land.
-// Use the mana-font library for those.
-const MS  = (cls) => `<i class="ms ms-${cls} ms-hdr"></i>`;
-const LAND_ROW = `<span class="ms-land-row">${['plains','island','swamp','mountain','forest'].map(t=>`<i class="ms ms-${t}" style="font-size:13px"></i>`).join('')}</span>`;
-
-const COLOR_ICON = { W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:MS('m ms-cost'), A:SYM('C'), L:LAND_ROW };
+const FIVE_COLOR = `<span class="five-color-sym">${SYM('W')}${SYM('U')}${SYM('B')}${SYM('R')}${SYM('G')}</span>`;
+const COLOR_ICON = { W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:FIVE_COLOR, A:SYM('C'), L:'🏔' };
 
 function colorKey(card) {
   // Scryfall categorises DFCs by front-face color only; the top-level
