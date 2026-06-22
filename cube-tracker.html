@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Set Cube Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/mana-font@latest/css/mana.min.css" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -213,7 +214,8 @@
     .section-header.errata-unknown { background: #0a1a0a; color: #6aa06a; border: 1px solid #2a5030; }
 
     .mana-sym { width: 18px; height: 18px; display: inline-block; vertical-align: middle; flex-shrink: 0; }
-    .color-icon-svg { width: 20px; height: 20px; display: inline-block; vertical-align: middle; flex-shrink: 0; border-radius: 50%; overflow: hidden; }
+    .ms-hdr { font-size: 18px; line-height: 1; vertical-align: middle; flex-shrink: 0; }
+    .ms-land-row { display: inline-flex; align-items: center; gap: 1px; flex-shrink: 0; }
 
     .section-header[data-color-key] { cursor: pointer; user-select: none; }
     .section-header[data-color-key]:hover { background: #282828; }
@@ -546,25 +548,12 @@ const COLOR_ORDER = ['W','U','B','R','G','M','A','L'];
 const COLOR_LABEL = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', M:'Multicolored', A:'Artifact', L:'Land' };
 
 const SYM = s => `<img class="mana-sym" src="https://svgs.scryfall.io/card-symbols/${s}.svg" alt="{${s}}">`;
+// Scryfall only has oracle-text symbols (W U B R G C T etc.) — no multicolor or land.
+// Use the mana-font library for those.
+const MS  = (cls) => `<i class="ms ms-${cls} ms-hdr"></i>`;
+const LAND_ROW = `<span class="ms-land-row">${['plains','island','swamp','mountain','forest'].map(t=>`<i class="ms ms-${t}" style="font-size:13px"></i>`).join('')}</span>`;
 
-// 5-color pie (WUBRG clockwise from top, 72° each sector).
-// Coords at r=10, cx=cy=10: angles measured from 12-o'clock, CW.
-// W: -36°→36°, U: 36°→108°, B: 108°→180°, R: 180°→252°, G: 252°→324°
-const MULTI_PIE = `<svg viewBox="0 0 20 20" class="color-icon-svg" xmlns="http://www.w3.org/2000/svg">
-  <path d="M10,10 L4.12,1.91 A10,10 0 0,1 15.88,1.91 Z" fill="#f9faf4" stroke="#fff" stroke-width="0.5"/>
-  <path d="M10,10 L15.88,1.91 A10,10 0 0,1 19.51,13.09 Z" fill="#0e68ab" stroke="#fff" stroke-width="0.5"/>
-  <path d="M10,10 L19.51,13.09 A10,10 0 0,1 10,20 Z"    fill="#150b00" stroke="#fff" stroke-width="0.5"/>
-  <path d="M10,10 L10,20 A10,10 0 0,1 0.49,13.09 Z"     fill="#d32029" stroke="#fff" stroke-width="0.5"/>
-  <path d="M10,10 L0.49,13.09 A10,10 0 0,1 4.12,1.91 Z" fill="#00733e" stroke="#fff" stroke-width="0.5"/>
-</svg>`;
-
-// Mountain silhouette on taupe circle (two peaks, fits inside r=10).
-const LAND_MTN = `<svg viewBox="0 0 20 20" class="color-icon-svg" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="10" cy="10" r="10" fill="#c5b9b0"/>
-  <path d="M3,17 L8,4 L12,11 L15.5,3 L17,17Z" fill="#1a1a1a"/>
-</svg>`;
-
-const COLOR_ICON = { W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:MULTI_PIE, A:SYM('C'), L:LAND_MTN };
+const COLOR_ICON = { W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:MS('m ms-cost'), A:SYM('C'), L:LAND_ROW };
 
 function colorKey(card) {
   let c = card.colors ?? [];
