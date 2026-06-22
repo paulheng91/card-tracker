@@ -16,12 +16,12 @@
     header {
       background: #1a1a1a;
       padding: 0.75rem 1rem 0;
-      position: sticky;
-      top: 0;
+      position: fixed;
+      top: 0; left: 0; right: 0;
       z-index: 10;
       box-shadow: 0 2px 10px rgba(0,0,0,0.6);
-      transition: transform 0.25s ease;
     }
+    #grid { padding-top: 120px; }
 
     .back-to-top {
       position: fixed; bottom: 1.5rem; right: 1.25rem; z-index: 50;
@@ -621,7 +621,7 @@ applySize(localStorage.getItem('cardSize') ?? defaultSize);
 // GIST CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════
 
-const APP_VERSION = '8f59f60';
+const APP_VERSION = '2026-06-22';
 
 const GIST_ID   = '39ef6aa0cfaa1b98874f0d9e60ae7f53';
 const GIST_USER = 'paulheng91';
@@ -1984,6 +1984,15 @@ async function init() {
 }
 
 init();
+
+// Keep grid padding in sync with fixed header height
+(function() {
+  const hdr = document.querySelector('header');
+  const grid = document.getElementById('grid');
+  function syncPadding() { grid.style.paddingTop = hdr.offsetHeight + 'px'; }
+  new ResizeObserver(syncPadding).observe(hdr);
+  syncPadding();
+})();
 
 // ── Constrain token info-side height to image-side height so creator list scrolls ──
 function constrainTokenCards() {
