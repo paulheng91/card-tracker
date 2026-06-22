@@ -22,7 +22,6 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.6);
       transition: transform 0.25s ease;
     }
-    header.header-hidden { transform: translateY(-110%); }
 
     .back-to-top {
       position: fixed; bottom: 1.5rem; right: 1.25rem; z-index: 50;
@@ -36,18 +35,6 @@
     }
     .back-to-top.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
-    .float-lock {
-      position: fixed; top: 0.75rem; right: 1.25rem; z-index: 50;
-      background: #242424; color: #c9a84c; border: 1px solid #3a3010;
-      border-radius: 999px; padding: 0 0.7rem; height: 2rem; font-size: 0.88rem;
-      cursor: pointer; display: flex; align-items: center; gap: 0.3rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-      opacity: 0; pointer-events: none;
-      transform: translateY(-0.5rem);
-      transition: opacity 0.2s, transform 0.2s;
-    }
-    .float-lock.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
-    .float-lock.pulse { animation: lockPulse 0.55s ease-out; }
 
     /* ── Header top row: (empty) · title+stats · GitHub login ─────────── */
     .header-top {
@@ -576,7 +563,6 @@
 </header>
 
 <button class="back-to-top" id="backToTop" title="Back to top">↑</button>
-<button class="float-lock" id="floatLock" title="Tap to unlock">🔒 Locked</button>
 
 <div class="grid" id="grid">
   <div class="loading">Loading cards from Scryfall…</div>
@@ -926,12 +912,11 @@ let excludedCards = {}; // { [cubeKey]: { [cardName]: true } }
 function isLocked() { return lockedCubes.has(activeCube); }
 
 function showLockNotice() {
-  const floatLock = document.getElementById('floatLock');
-  const target = floatLock.classList.contains('show') ? floatLock : document.getElementById('btnLock');
-  target.classList.remove('pulse');
-  void target.offsetWidth;
-  target.classList.add('pulse');
-  target.addEventListener('animationend', () => target.classList.remove('pulse'), { once: true });
+  const btn = document.getElementById('btnLock');
+  btn.classList.remove('pulse');
+  void btn.offsetWidth;
+  btn.classList.add('pulse');
+  btn.addEventListener('animationend', () => btn.classList.remove('pulse'), { once: true });
 }
 
 let justToggledCard = null;
@@ -1432,13 +1417,10 @@ function updateRaritySymbols(code) {
 
 function updateLockBtn() {
   const btn = document.getElementById('btnLock');
-  const floatLock = document.getElementById('floatLock');
   const locked = isLocked();
-  const headerHidden = document.querySelector('header').classList.contains('header-hidden');
   btn.textContent = locked ? '🔒' : '🔓';
   btn.classList.toggle('locked', locked);
   btn.title = locked ? 'Locked — click to unlock' : 'Lock this set';
-  floatLock.classList.toggle('show', locked && headerHidden);
 }
 
 function updateCubeTrigger(key) {
@@ -1588,14 +1570,10 @@ function getTokenCreators(token) {
 
 function creatorLink(name) {
   const c = cardByName[name];
-  const owned = ownedMap[activeCube]?.[name] ?? 0;
-  const tgt = c?.rarity ? (CUBES[activeCube]?.counts[c.rarity] ?? 1) : 1;
-  const qtyColor = owned >= tgt ? '#52b788' : '#c9a84c';
-  const qtyBadge = `<span style="font-size:0.52rem;color:${qtyColor};margin-left:2px">${owned}/${tgt}</span>`;
   const imgSrc = c
     ? (c.image_uris?.normal ?? c.card_faces?.[0]?.image_uris?.normal ?? '')
     : `https://api.scryfall.com/cards/named?format=image&version=normal&exact=${encodeURIComponent(name)}`;
-  return `<span class="creator-link" data-img="${imgSrc}">${name}${qtyBadge}</span>`;
+  return `<span class="creator-link" data-img="${imgSrc}">${name}</span>`;
 }
 
 function tokenCardHTML(t) {
@@ -1733,6 +1711,7 @@ function renderCards() {
   document.getElementById('grid').innerHTML = items.length
     ? items.join('')
     : '<div class="empty">No cards match this filter.</div>';
+  requestAnimationFrame(constrainTokenCards);
 }
 
 
@@ -2001,53 +1980,26 @@ async function init() {
 
 init();
 
-// ── Hide header on scroll down, reveal on scroll up; back-to-top button ──
-(function() {
-  const hdr = document.querySelector('header');
-  const btn = document.getElementById('backToTop');
-  const floatLock = document.getElementById('floatLock');
-  let lastY    = window.scrollY;
-  let dir      = 0;       // 1 = down, -1 = up
-  let dirFromY = 0;       // y position where current direction started
-
-  function syncFloatLock() {
-    floatLock.classList.toggle('show', isLocked() && hdr.classList.contains('header-hidden'));
-  }
-
-  window.addEventListener('scroll', () => {
-    const y = window.scrollY;
-    const delta = y - lastY;
-    if (Math.abs(delta) < 1) return;   // ignore sub-pixel jitter
-
-    const newDir = delta > 0 ? 1 : -1;
-    if (newDir !== dir) { dir = newDir; dirFromY = lastY; }
-    lastY = y;
-
-    if (y < 80) {
-      hdr.classList.remove('header-hidden');
-      btn.classList.remove('show');
-    } else if (dir === 1 && y - dirFromY > 60) {
-      // committed downward scroll (60px threshold to avoid re-hiding on small drift)
-      hdr.classList.add('header-hidden');
-      btn.classList.add('show');
-    } else if (dir === -1 && dirFromY - y > 12) {
-      // require 12px upward scroll before revealing (avoids flicker from momentum bounce)
-      hdr.classList.remove('header-hidden');
-    }
-    syncFloatLock();
-  }, { passive: true });
-
-  btn.addEventListener('click', () => {
-    // Use instant scroll — iOS Safari often stops smooth-scroll before reaching
-    // y=0, leaving the page partially scrolled with the header still hidden.
-    window.scrollTo(0, 0);
-    hdr.classList.remove('header-hidden');
-    btn.classList.remove('show');
-    floatLock.classList.remove('show');
-    lastY = 0; dir = 0; dirFromY = 0;
+// ── Constrain token info-side height to image-side height so creator list scrolls ──
+function constrainTokenCards() {
+  document.querySelectorAll('.token-card').forEach(card => {
+    const imgSide  = card.querySelector('.token-img-side');
+    const infoSide = card.querySelector('.token-info-side');
+    if (imgSide && infoSide) infoSide.style.maxHeight = imgSide.offsetHeight + 'px';
   });
+}
+new ResizeObserver(constrainTokenCards).observe(document.getElementById('grid'));
 
-  floatLock.addEventListener('click', () => openUnlockDialog());
+// ── Back-to-top button ──────────────────────────────────────────────────────
+(function() {
+  const btn = document.getElementById('backToTop');
+  window.addEventListener('scroll', () => {
+    btn.classList.toggle('show', window.scrollY > 200);
+  }, { passive: true });
+  btn.addEventListener('click', () => {
+    window.scrollTo(0, 0);
+    btn.classList.remove('show');
+  });
 })();
 
 // Position pill indicators after layout is ready (no animation on first paint)
