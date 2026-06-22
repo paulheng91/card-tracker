@@ -314,20 +314,13 @@
     }
     .creator-link:hover .creator-preview { display: block; }
 
-    /* ── Token list layout (one per row) ────────────────────────────────── */
-    .token-list { grid-column: 1/-1; display: flex; flex-direction: column; gap: 0.35rem; }
-    .token-card {
-      display: flex; flex-direction: row; align-items: center;
-      gap: 0.65rem; padding: 0.3rem 0.5rem; overflow: visible;
-    }
-    .token-thumb { position: relative; width: 60px; flex-shrink: 0; }
-    .token-thumb .card-img-wrap { aspect-ratio: 63/88; }
-    .token-thumb .flip-btn { width: 18px; height: 18px; font-size: 0.68rem; top: 2px; right: 2px; line-height: 18px; }
-    .token-card .card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
-    .token-card .card-name { padding: 0; font-size: 0.72rem; }
-    .token-card .card-num { color: #666; font-size: 0.65rem; }
-    .token-card .token-creators { padding: 0; }
-    .token-card .token-counter { flex-shrink: 0; }
+    /* ── Token list layout (2-col grid; DFT shows both faces) ─────────── */
+    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+    .token-card { overflow: visible; }
+    .token-card > .card-img-wrap,
+    .token-card > .token-img-pair { border-radius: 8px 8px 0 0; overflow: hidden; }
+    .token-img-pair { display: flex; gap: 3px; }
+    .token-img-pair .card-img-wrap { flex: 1; min-width: 0; border-radius: 0; }
 
     /* ── Info view ──────────────────────────────────────────────────────── */
     .info-section { grid-column: 1 / -1; padding: 0 0 0.5rem; }
@@ -1133,14 +1126,25 @@ function creatorLink(name) {
 }
 
 function tokenCardHTML(t) {
-  const count    = tokenOwned[activeCube]?.[t.id] ?? 1;
-  const isDFT    = t.card_faces?.length > 1;
-  const faceKey  = `token:${t.id}`;
-  const faceIdx  = flippedCards.has(faceKey) ? 1 : 0;
-  const face     = isDFT ? t.card_faces[faceIdx] : null;
-  const img      = face?.image_uris?.normal ?? t.image_uris?.normal ?? '';
-  const dispName = face?.name ?? t.name;
-  const pt       = t.power !== undefined ? ` · ${t.power}/${t.toughness}` : '';
+  const count = tokenOwned[activeCube]?.[t.id] ?? 1;
+  const isDFT = t.card_faces?.length > 1;
+
+  let imgHtml;
+  if (isDFT) {
+    const img0 = t.card_faces[0]?.image_uris?.normal ?? '';
+    const img1 = t.card_faces[1]?.image_uris?.normal ?? '';
+    imgHtml = `<div class="token-img-pair">
+      <div class="card-img-wrap"><img src="${img0}" loading="lazy" alt="${t.card_faces[0]?.name ?? t.name}"></div>
+      <div class="card-img-wrap"><img src="${img1}" loading="lazy" alt="${t.card_faces[1]?.name ?? t.name}"></div>
+    </div>`;
+  } else {
+    imgHtml = `<div class="card-img-wrap"><img src="${t.image_uris?.normal ?? ''}" loading="lazy" alt="${t.name}"></div>`;
+  }
+
+  const dispName = isDFT
+    ? `${t.card_faces[0]?.name ?? ''} // ${t.card_faces[1]?.name ?? ''}`
+    : t.name;
+  const pt = !isDFT && t.power !== undefined ? ` · ${t.power}/${t.toughness}` : '';
 
   const creators = getTokenCreators(t);
   const creatorsHtml = creators.length
@@ -1148,20 +1152,17 @@ function tokenCardHTML(t) {
     : '';
 
   return `<div class="card token-card" data-token-id="${t.id}">
-    <div class="token-thumb">
-      <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${t.name}"></div>
-      ${isDFT ? `<button class="flip-btn" title="Flip">${flippedCards.has(faceKey) ? '↺' : '↻'}</button>` : ''}
+    ${imgHtml}
+    <div class="card-footer">
+      <span class="card-num">#${t.collector_number}</span>
+      <div class="token-counter">
+        <button class="count-btn" data-delta="-1">−</button>
+        <span class="count-display">${count}</span>
+        <button class="count-btn" data-delta="1">+</button>
+      </div>
     </div>
-    <div class="card-body">
-      <div class="card-name">${dispName}${pt}</div>
-      <div class="card-num">#${t.collector_number}</div>
-      ${creatorsHtml}
-    </div>
-    <div class="token-counter">
-      <button class="count-btn" data-delta="-1">−</button>
-      <span class="count-display">${count}</span>
-      <button class="count-btn" data-delta="1">+</button>
-    </div>
+    <div class="card-name">${dispName}${pt}</div>
+    ${creatorsHtml}
   </div>`;
 }
 
