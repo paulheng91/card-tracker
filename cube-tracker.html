@@ -1394,6 +1394,7 @@ document.getElementById('btnToggleAll').addEventListener('click', () => {
     collapsedSections.clear();
     localStorage.setItem('collapsedSections', JSON.stringify([]));
   } else {
+    COLOR_ORDER.forEach(k => collapsedSections.add(k));
     document.querySelectorAll('.section-header[data-color-key]').forEach(h => collapsedSections.add(h.dataset.colorKey));
     localStorage.setItem('collapsedSections', JSON.stringify([...collapsedSections]));
   }
