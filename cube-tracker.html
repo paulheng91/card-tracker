@@ -1723,6 +1723,22 @@ function cardHTML(c, cube, owned) {
 // LOAD CUBE DATA
 // ═══════════════════════════════════════════════════════════════════════════
 
+function tokenIsFromCube(token, cubeCards) {
+  const tl = token.type_line ?? '';
+  const typeMatch = tl.match(/—\s*(.+)/);
+  if (!typeMatch) {
+    const searchFor = (token.card_faces?.[0]?.name ?? token.name).toLowerCase();
+    if (!searchFor) return false;
+    return cubeCards.some(c => (oracleMap[c.name] ?? '').toLowerCase().includes(searchFor));
+  }
+  const types = typeMatch[1].trim().split(/\s+/).map(t => t.toLowerCase()).filter(t => t.length > 2);
+  return cubeCards.some(c => {
+    const oracle = (oracleMap[c.name] ?? '').toLowerCase();
+    if (!oracle.includes('token')) return false;
+    return types.some(t => oracle.includes(t));
+  });
+}
+
 async function loadCubeData(cubeKey) {
   const cube = CUBES[cubeKey];
   const code = cube.setCode;
@@ -1751,7 +1767,8 @@ async function loadCubeData(cubeKey) {
   }
 
   cardCache[cubeKey] = allCards;
-  tokenPool[code]    = tokens;
+  // Drop tokens whose only creators are Commander cards (not in this cube's booster pool)
+  tokenPool[code] = tokens.filter(t => tokenIsFromCube(t, allCards));
 
   if (cube.allOwned && !ownedMap[cubeKey]) {
     ownedMap[cubeKey] = {};
