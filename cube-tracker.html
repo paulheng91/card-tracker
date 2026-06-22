@@ -286,9 +286,6 @@
 
     .card-img-wrap { aspect-ratio: 63/88; overflow: hidden; background: #0a0a0a; border-radius: 4.5% / 3.2%; position: relative; }
     .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.2s; }
-    .card.missing  { border-color: #cc4444; }
-    .card.partial  { border-color: #c9a84c; }
-    .card.complete { border-color: #52b788; }
 
     /* Excluded from draft — big red overlay spanning the full image */
     .card.excluded > .card-img-wrap::after,
@@ -419,7 +416,7 @@
     .creator-link:hover .creator-preview { display: block; }
 
     /* ── Token list layout (2-col grid; DFT shows both faces) ─────────── */
-    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: repeat(var(--grid-cols), 1fr); gap: 0.6rem; }
+    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: repeat(var(--grid-cols), minmax(0, 1fr)); gap: 0.6rem; }
     @media (min-width: 700px) {
       .token-list { grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); }
     }
@@ -1178,10 +1175,31 @@ document.getElementById('grid').addEventListener('click', e => {
     if (!card) return;
     const name = card.dataset.name;
     if (!excludedCards[activeCube]) excludedCards[activeCube] = {};
-    if (excludedCards[activeCube][name]) delete excludedCards[activeCube][name];
-    else excludedCards[activeCube][name] = true;
-    render();
+    const nowExcluded = !excludedCards[activeCube][name];
+    if (nowExcluded) excludedCards[activeCube][name] = true;
+    else delete excludedCards[activeCube][name];
+    // Surgical update — toggling the class applies the CSS overlay without
+    // re-rendering all cards (which would flash every image on mobile).
+    card.classList.toggle('excluded', nowExcluded);
+    excludeBtn.title = nowExcluded ? 'Restore to draft' : 'Exclude from draft';
     scheduleSave();
+    return;
+  }
+
+  const flipBtn = e.target.closest('.flip-btn');
+  if (flipBtn) {
+    const card = flipBtn.closest('.card[data-name]');
+    if (!card) return;
+    const name = card.dataset.name;
+    if (flippedCards.has(name)) flippedCards.delete(name);
+    else flippedCards.add(name);
+    const flipped = flippedCards.has(name);
+    const img = card.querySelector('.card-img-wrap img');
+    if (img) {
+      img.src = flipped ? (img.dataset.face1 ?? '') : (img.dataset.face0 ?? '');
+      img.alt = flipped ? (img.dataset.alt1 ?? '') : (img.dataset.alt0 ?? '');
+    }
+    flipBtn.title = flipped ? 'See front face' : 'See back face';
     return;
   }
 
@@ -1737,7 +1755,9 @@ function statusCircle(n, total) {
   // total>1: segmented donut — gaps between segments are the "dividing lines"
   const gapRad = 8 * Math.PI / 180;          // 8° gap between each segment
   const segSpan = (2 * Math.PI - total * gapRad) / total;
-  const startAngle = -Math.PI / 2;           // 12 o'clock
+  // Offset by half a gap so the wrap-around gap (last→first segment) lands
+  // exactly at 12 o'clock — without this the seam is slightly off-center.
+  const startAngle = -Math.PI / 2 + gapRad / 2;
   const allDone = n >= total;
   const paths = [];
   for (let i = 0; i < total; i++) {
@@ -1766,15 +1786,17 @@ function cardHTML(c, cube, owned) {
   const flash      = justToggledCard === c.name ? ' card-flashed' : '';
   const statusSym  = statusCircle(n, target);
 
-  let imgHtml, displayName;
+  let imgHtml, displayName, flipBtn = '';
   if (isDFC(c)) {
-    const img0 = c.card_faces[0]?.image_uris?.normal ?? '';
-    const img1 = c.card_faces[1]?.image_uris?.normal ?? '';
-    displayName = `${c.card_faces[0]?.name ?? ''} // ${c.card_faces[1]?.name ?? ''}`;
-    imgHtml = `<div class="token-img-pair">
-      <div class="card-img-wrap"><img src="${img0}" loading="lazy" alt="${c.card_faces[0]?.name ?? c.name}"></div>
-      <div class="card-img-wrap"><img src="${img1}" loading="lazy" alt="${c.card_faces[1]?.name ?? c.name}"></div>
-    </div>`;
+    const f0 = c.card_faces[0], f1 = c.card_faces[1];
+    const src0 = f0?.image_uris?.normal ?? '';
+    const src1 = f1?.image_uris?.normal ?? '';
+    const name0 = f0?.name ?? c.name;
+    const name1 = f1?.name ?? c.name;
+    const flipped = flippedCards.has(c.name);
+    displayName = `${name0} // ${name1}`;
+    imgHtml = `<div class="card-img-wrap"><img src="${flipped ? src1 : src0}" loading="lazy" alt="${flipped ? name1 : name0}" data-face0="${src0}" data-face1="${src1}" data-alt0="${name0}" data-alt1="${name1}"></div>`;
+    flipBtn = `<button class="flip-btn" title="See ${flipped ? 'front' : 'back'} face">⟳</button>`;
   } else {
     displayName = c.name;
     imgHtml = `<div class="card-img-wrap"><img src="${cardImage(c)}" loading="lazy" alt="${c.name}"></div>`;
@@ -1788,6 +1810,7 @@ function cardHTML(c, cube, owned) {
     </div>
     <div class="card-name">${displayName}</div>
     <button class="exclude-btn" title="${isExcluded ? 'Restore to draft' : 'Exclude from draft'}">✕</button>
+    ${flipBtn}
   </div>`;
 }
 
@@ -1917,9 +1940,9 @@ init();
   }, { passive: true });
 
   btn.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    // Immediately restore header — mobile browsers may not fire scroll events
-    // during smooth-scroll animation, leaving the header stuck hidden.
+    // Use instant scroll — iOS Safari often stops smooth-scroll before reaching
+    // y=0, leaving the page partially scrolled with the header still hidden.
+    window.scrollTo(0, 0);
     hdr.classList.remove('header-hidden');
     btn.classList.remove('show');
     lastY = 0; dir = 0; dirFromY = 0;
