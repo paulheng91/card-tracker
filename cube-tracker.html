@@ -791,7 +791,7 @@ const COLOR_LABEL = { C:'Colorless', W:'White', U:'Blue', B:'Black', R:'Red', G:
 
 const SYM = s => `<img class="mana-sym" src="https://svgs.scryfall.io/card-symbols/${s}.svg" alt="{${s}}">`;
 const FIVE_COLOR = `<span class="five-color-sym">${SYM('W')}${SYM('U')}${SYM('B')}${SYM('R')}${SYM('G')}</span>`;
-const COLOR_ICON = { C:SYM('C'), W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:FIVE_COLOR, A:'⚙', L:'🏔' };
+const COLOR_ICON = { C:SYM('C'), W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:FIVE_COLOR, A:SYM('C'), L:'🏔' };
 
 function colorKey(card) {
   // Scryfall categorises DFCs by front-face color only; the top-level
@@ -801,9 +801,15 @@ function colorKey(card) {
     : (card.colors ?? []);
   if (c.length > 1) return 'M';
   if (c.length === 1) return c[0];
+  // colors[] is empty — use color_identity as fallback.
+  // Catches colorless-mana-cost permanents (e.g. TDM Omen tokens) that
+  // have a faction color embedded in their abilities.
+  const id = card.color_identity ?? [];
+  if (id.length > 1) return 'M';
+  if (id.length === 1) return id[0];
   if (card.type_line?.includes('Land')) return 'L';
   if (card.type_line?.includes('Artifact')) return 'A';
-  return 'C'; // colorless non-artifact: Eldrazi, etc.
+  return 'C'; // truly colorless non-artifact: Eldrazi, etc.
 }
 
 
@@ -1568,13 +1574,18 @@ function renderCards() {
       if (groups[key]) groups[key].push(c);
     }
   }
-  for (const k of COLOR_ORDER) groups[k].sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
-  for (const [, grp] of specialGroups) grp.sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
+  const cnInt = c => parseInt(c.collector_number) || 99999;
+  for (const k of COLOR_ORDER) groups[k].sort((a, b) => cnInt(a) - cnInt(b));
+  for (const [, grp] of specialGroups) grp.sort((a, b) => cnInt(a) - cnInt(b));
+
+  // Order sections by minimum collector number so display matches set ordering.
+  const orderedKeys = COLOR_ORDER
+    .filter(k => groups[k].length > 0)
+    .sort((a, b) => Math.min(...groups[a].map(cnInt)) - Math.min(...groups[b].map(cnInt)));
 
   const items = [];
-  for (const key of COLOR_ORDER) {
+  for (const key of orderedKeys) {
     const group = groups[key];
-    if (!group.length) continue;
     const collapsed = collapsedSections.has(key);
     items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${key}">${COLOR_ICON[key]} ${COLOR_LABEL[key]}<span class="sec-chevron">▼</span></div>`);
     if (!collapsed) for (const c of group) items.push(cardHTML(c, cube, owned));
