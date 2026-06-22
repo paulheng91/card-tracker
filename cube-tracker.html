@@ -1635,9 +1635,8 @@ function renderInfo() {
   if (cube.booster) {
     const b = cube.booster;
     const realSlots = (b.slots ?? []).map(s => `<li>${s}</li>`).join('');
-    const cubeSlots = Object.entries(cube.counts)
-      .map(([r, n]) => `<li>${n}× each ${r.charAt(0).toUpperCase()+r.slice(1)}</li>`)
-      .join('');
+    const cubePack = ['1 Rare or Mythic', '4 Uncommons', '10 Commons', '<strong>15 cards total</strong>']
+      .map(s => `<li>${s}</li>`).join('');
     const excl = (b.excluded ?? []).map(s => `<li>${s}</li>`).join('');
     items.push(`<div class="info-section"><div class="info-block">
       <div class="info-block-title">Booster Construction</div>
@@ -1647,8 +1646,8 @@ function renderInfo() {
           <ul class="booster-list">${realSlots}</ul>
         </div>
         <div>
-          <div class="booster-col-title">This Cube (target copies)</div>
-          <ul class="booster-list">${cubeSlots}</ul>
+          <div class="booster-col-title">Cube Draft Pack</div>
+          <ul class="booster-list">${cubePack}</ul>
           ${excl ? `<div class="booster-col-title" style="margin-top:0.6rem">Excluded from cube</div><ul class="booster-list booster-excluded">${excl}</ul>` : ''}
         </div>
       </div>
