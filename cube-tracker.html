@@ -387,8 +387,7 @@
       <button class="size-btn" data-size="l">L</button>
     </div>
     <div class="ctrl-group">
-      <button class="filter-btn" id="btnCollapseAll">Collapse All</button>
-      <button class="filter-btn" id="btnExpandAll">Expand All</button>
+      <button class="filter-btn" id="btnToggleAll">Collapse All</button>
     </div>
     <div class="ctrl-group">
       <button class="lock-btn" id="btnLock" title="Lock this set">🔓</button>
@@ -950,15 +949,19 @@ document.querySelectorAll('#rarityRow .filter-btn').forEach(btn => {
   });
 });
 
-document.getElementById('btnCollapseAll').addEventListener('click', () => {
-  document.querySelectorAll('.section-header[data-color-key]').forEach(h => collapsedSections.add(h.dataset.colorKey));
-  localStorage.setItem('collapsedSections', JSON.stringify([...collapsedSections]));
-  render();
-});
+function updateToggleAllBtn() {
+  document.getElementById('btnToggleAll').textContent =
+    collapsedSections.size > 0 ? 'Expand All' : 'Collapse All';
+}
 
-document.getElementById('btnExpandAll').addEventListener('click', () => {
-  collapsedSections.clear();
-  localStorage.setItem('collapsedSections', JSON.stringify([]));
+document.getElementById('btnToggleAll').addEventListener('click', () => {
+  if (collapsedSections.size > 0) {
+    collapsedSections.clear();
+    localStorage.setItem('collapsedSections', JSON.stringify([]));
+  } else {
+    document.querySelectorAll('.section-header[data-color-key]').forEach(h => collapsedSections.add(h.dataset.colorKey));
+    localStorage.setItem('collapsedSections', JSON.stringify([...collapsedSections]));
+  }
   render();
 });
 
@@ -1107,6 +1110,7 @@ function tokenCardHTML(t) {
 function render() {
   if      (activeView === 'cards') renderCards();
   else if (activeView === 'info')  renderInfo();
+  updateToggleAllBtn();
 }
 
 
