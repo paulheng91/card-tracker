@@ -20,6 +20,7 @@
       top: 0; left: 0; right: 0;
       z-index: 10;
       box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+      transition: transform 0.25s ease;
     }
     #grid { padding-top: 120px; }
 
@@ -2004,12 +2005,28 @@ function constrainTokenCards() {
 }
 new ResizeObserver(constrainTokenCards).observe(document.getElementById('grid'));
 
-// ── Back-to-top button ──────────────────────────────────────────────────────
+// ── Smart header + back-to-top ──────────────────────────────────────────────
 (function() {
+  const hdr = document.querySelector('header');
   const btn = document.getElementById('backToTop');
+  let lastY = window.scrollY;
+
   window.addEventListener('scroll', () => {
-    btn.classList.toggle('show', window.scrollY > 200);
+    const y = window.scrollY;
+    const delta = y - lastY;
+
+    if (y < 60) {
+      hdr.style.transform = '';           // always show near the top
+    } else if (delta > 4) {
+      hdr.style.transform = 'translateY(-110%)';  // hide on scroll down
+    } else if (delta < -2) {
+      hdr.style.transform = '';           // show on any upward scroll
+    }
+
+    btn.classList.toggle('show', y > 200);
+    lastY = y;
   }, { passive: true });
+
   btn.addEventListener('click', () => {
     window.scrollTo(0, 0);
     btn.classList.remove('show');
