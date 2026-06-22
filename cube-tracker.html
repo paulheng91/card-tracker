@@ -110,13 +110,14 @@
     }
     .flip-btn:hover { background: rgba(0,0,0,0.85); }
 
-    .excl-btn {
-      background: none; border: none; color: #555; font-size: 0.75rem; cursor: pointer;
-      padding: 0 2px; line-height: 1; transition: color 0.15s;
+    .header-toggle {
+      display: block; width: 100%; text-align: center; background: none; border: none;
+      color: #444; cursor: pointer; font-size: 0.6rem; padding: 0.15rem 0 0;
+      transition: color 0.15s; letter-spacing: 0.08em;
     }
-    .excl-btn:hover { color: #e07020; }
-    .excl-btn.excl-on { color: #e07020; }
-    .card.excl .card-img-wrap img { opacity: 0.65; }
+    .header-toggle:hover { color: #c9a84c; }
+    #headerExtra { overflow: hidden; transition: max-height 0.25s ease, opacity 0.2s; max-height: 400px; opacity: 1; }
+    #headerExtra.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
 
     .card-footer { padding: 0.3rem 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
     .card-num  { color: #666; }
@@ -226,34 +227,38 @@
     <button class="view-tab" data-view="pack">Pack Opener</button>
   </div>
 
-  <div class="progress-wrap" id="progressWrap">
-    <div class="progress-bar" id="bar" style="width:0%"></div>
-  </div>
-  <div class="size-row">
-    <button class="size-btn" data-size="s">S</button>
-    <button class="size-btn active" data-size="m">M</button>
-    <button class="size-btn" data-size="l">L</button>
-  </div>
-  <div class="stats-row">
-    <span class="stats" id="stats">Loading…</span>
-    <span class="save-status" id="saveStatus"></span>
-  </div>
+  <button class="header-toggle" id="headerToggle">▴</button>
 
-  <div class="filter-row" id="filterRow">
-    <button class="filter-btn active" data-filter="all">All</button>
-    <button class="filter-btn" data-filter="missing">Missing</button>
-  </div>
-  <div class="filter-row" id="rarityRow">
-    <button class="filter-btn active" data-rarity="all">All Rarities</button>
-    <button class="filter-btn" data-rarity="common">Common</button>
-    <button class="filter-btn" data-rarity="uncommon">Uncommon</button>
-    <button class="filter-btn" data-rarity="rare-mythic">Rare/Mythic</button>
-  </div>
+  <div id="headerExtra">
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar" id="bar" style="width:0%"></div>
+    </div>
+    <div class="size-row">
+      <button class="size-btn" data-size="s">S</button>
+      <button class="size-btn" data-size="m">M</button>
+      <button class="size-btn" data-size="l">L</button>
+    </div>
+    <div class="stats-row">
+      <span class="stats" id="stats">Loading…</span>
+      <span class="save-status" id="saveStatus"></span>
+    </div>
 
-  <div class="token-section">
-    <input class="token-input" id="tokenInput" type="password" placeholder="GitHub token (for saving)">
-    <button class="btn" id="btnSaveToken">Save Token</button>
-    <button class="btn" id="btnCheckGist">Check Gist</button>
+    <div class="filter-row" id="filterRow">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="missing">Missing</button>
+    </div>
+    <div class="filter-row" id="rarityRow">
+      <button class="filter-btn active" data-rarity="all">All Rarities</button>
+      <button class="filter-btn" data-rarity="common">Common</button>
+      <button class="filter-btn" data-rarity="uncommon">Uncommon</button>
+      <button class="filter-btn" data-rarity="rare-mythic">Rare/Mythic</button>
+    </div>
+
+    <div class="token-section">
+      <input class="token-input" id="tokenInput" type="password" placeholder="GitHub token (for saving)">
+      <button class="btn" id="btnSaveToken">Save Token</button>
+      <button class="btn" id="btnCheckGist">Check Gist</button>
+    </div>
   </div>
 </header>
 
@@ -270,7 +275,20 @@ function applySize(key) {
   localStorage.setItem('cardSize', key);
 }
 document.querySelectorAll('.size-btn').forEach(btn => btn.addEventListener('click', () => applySize(btn.dataset.size)));
-applySize(localStorage.getItem('cardSize') ?? 'm');
+const defaultSize = window.innerWidth >= 768 ? 'l' : 's';
+applySize(localStorage.getItem('cardSize') ?? defaultSize);
+
+// ── Header collapse ───────────────────────────────────────────────────────────
+const headerExtra  = document.getElementById('headerExtra');
+const headerToggle = document.getElementById('headerToggle');
+const savedCollapsed = localStorage.getItem('headerCollapsed');
+const startCollapsed = savedCollapsed !== null ? savedCollapsed === 'true' : window.innerWidth < 768;
+if (startCollapsed) { headerExtra.classList.add('collapsed'); headerToggle.textContent = '▾'; }
+headerToggle.addEventListener('click', () => {
+  const collapsed = headerExtra.classList.toggle('collapsed');
+  headerToggle.textContent = collapsed ? '▾' : '▴';
+  localStorage.setItem('headerCollapsed', collapsed);
+});
 
 const GIST_ID   = '39ef6aa0cfaa1b98874f0d9e60ae7f53';
 const GIST_USER = 'paulheng91';
@@ -621,10 +639,6 @@ document.getElementById('grid').addEventListener('click', e => {
   const badge = e.target.closest('.errata-badge');
   if (badge) { showErrataModal(badge.closest('.card').dataset.name); return; }
 
-  // Exclude from draft button
-  const exclBtn = e.target.closest('.excl-btn');
-  if (exclBtn) { toggleExcluded(exclBtn.closest('.card').dataset.name); return; }
-
   // Flip button → swap DFC image without re-rendering
   const flipBtn = e.target.closest('.flip-btn');
   if (flipBtn) {
@@ -928,25 +942,20 @@ function renderPack() {
 
 // ── Shared card HTML (cards view) ─────────────────────────────────────────────
 function cardHTML(c, cube, owned) {
-  const target    = cube.counts[c.rarity] ?? 1;
-  const n         = owned[c.name] ?? 0;
-  const isExcl    = (excludedFromDraft[activeCube] ?? new Set()).has(c.name);
-  const cls       = (n >= target ? 'complete' : n > 0 ? 'partial' : 'missing') + (isExcl ? ' excl' : '');
-  const lblCls    = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
-  const label     = `${n}/${target}`;
-  const img       = cardImage(c);
-  const safeName  = c.name.replace(/"/g, '&quot;');
+  const target      = cube.counts[c.rarity] ?? 1;
+  const n           = owned[c.name] ?? 0;
+  const cls         = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
+  const lblCls      = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
+  const label       = `${n}/${target}`;
+  const img         = cardImage(c);
+  const safeName    = c.name.replace(/"/g, '&quot;');
   const isFlipped   = flippedCards.has(c.name);
   const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
-  const exclBtn     = n >= target
-    ? `<button class="excl-btn${isExcl ? ' excl-on' : ''}" title="${isExcl ? 'Add back to draft pool' : 'Remove from draft pool'}">${isExcl ? '⊕' : '⊗'}</button>`
-    : '';
   return `<div class="card ${cls}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
     ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
-      ${exclBtn}
       <span class="${lblCls}">${label}</span>
     </div>
     <div class="card-name">${displayName}</div>
