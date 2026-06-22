@@ -239,17 +239,46 @@
     .card:not(.token-card):active  { transform: scale(0.93); }
     .count-btn:active              { transform: scale(0.75); background: #111; }
 
-    .card.complete { border-color: #3a7a55; }
     .card.partial  { border-color: #b7791f; }
     .card.missing  { border-color: #8b2020; }
     .card.basic-land { border-color: #2a2a2a; cursor: default; }
     .card.basic-land:hover  { transform: none; }
     .card.basic-land:active { transform: none; }
 
-    .card-img-wrap { aspect-ratio: 63/88; overflow: hidden; background: #0a0a0a; border-radius: 4.5% / 3.2%; }
+    .card-img-wrap { aspect-ratio: 63/88; overflow: hidden; background: #0a0a0a; border-radius: 4.5% / 3.2%; position: relative; }
     .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.2s; }
     .card.missing .card-img-wrap img { opacity: 0.2; filter: grayscale(80%); }
     .card.partial  .card-img-wrap img { opacity: 0.65; }
+
+    /* Complete checkmark — overlaid bottom-right of card art */
+    .complete-check {
+      position: absolute; bottom: 5px; right: 5px;
+      color: #52b788; font-size: 1.25rem; font-weight: 900; line-height: 1;
+      pointer-events: none; z-index: 1;
+      text-shadow: 0 0 6px rgba(0,0,0,0.95), 0 1px 4px rgba(0,0,0,0.8);
+    }
+
+    /* Excluded from cube — red overlay + X on image */
+    .card.excluded .card-img-wrap::after {
+      content: '✕';
+      position: absolute; inset: 0;
+      display: grid; place-items: center;
+      background: rgba(100,20,20,0.52);
+      color: rgba(255,100,100,0.95);
+      font-size: 2.6rem; font-weight: 900;
+      pointer-events: none; z-index: 2;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    }
+
+    /* Exclude toggle button (top-left badge area, always faintly visible) */
+    .exclude-btn {
+      background: rgba(0,0,0,0.45); border: none; border-radius: 4px;
+      font-size: 0.55rem; font-weight: 800; padding: 2px 4px; cursor: pointer;
+      color: rgba(255,255,255,0.2); letter-spacing: 0.04em; line-height: 1.2;
+      transition: color 0.15s, background 0.15s;
+    }
+    .exclude-btn:hover { color: rgba(255,120,120,0.85); background: rgba(80,10,10,0.6); }
+    .card.excluded .exclude-btn { color: #ffaaaa; background: rgba(139,32,32,0.85); }
 
     .badge-row { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; gap: 3px; }
     .errata-badge {
@@ -440,10 +469,9 @@ function updatePillSlide(groupEl) {
   if (!slide) return;
   const active = groupEl.querySelector('.active');
   if (!active) { slide.style.width = '0px'; return; }
-  const gr = groupEl.getBoundingClientRect();
-  const br = active.getBoundingClientRect();
-  slide.style.width     = br.width + 'px';
-  slide.style.transform = `translateX(${br.left - gr.left}px)`;
+  const borderLeft = parseInt(getComputedStyle(groupEl).borderLeftWidth) || 0;
+  slide.style.width     = active.offsetWidth + 'px';
+  slide.style.transform = `translateX(${active.offsetLeft - borderLeft}px)`;
 }
 
 function updateAllPillSlides() {
@@ -622,7 +650,8 @@ let collapsedSections = new Set(JSON.parse(localStorage.getItem('collapsedSectio
 let tokenPool  = {};
 let tokenOwned = {};
 
-let lockedCubes = new Set(JSON.parse(localStorage.getItem('lockedCubes') || '[]'));
+let lockedCubes   = new Set(JSON.parse(localStorage.getItem('lockedCubes') || '[]'));
+let excludedCards = {}; // { [cubeKey]: { [cardName]: true } }
 function isLocked() { return lockedCubes.has(activeCube); }
 
 let lockToastTimer = null;
@@ -706,12 +735,14 @@ async function loadCollection() {
     const res = await fetch(GIST_RAW + '?t=' + Date.now());
     if (res.ok) {
       const data = await res.json();
-      oracleSnapshot = data._oracle  ?? {};
-      tokenOwned     = data._tokens  ?? {};
+      oracleSnapshot = data._oracle    ?? {};
+      tokenOwned     = data._tokens    ?? {};
       lockedCubes    = new Set(data._locked ?? []);
+      excludedCards  = data._excluded  ?? {};
       delete data._oracle;
       delete data._tokens;
       delete data._locked;
+      delete data._excluded;
       ownedMap = data;
     }
   } catch (e) {}
@@ -730,9 +761,10 @@ async function pushCollection() {
       headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify({
         ...ownedMap,
-        _oracle:  oracleSnapshot,
-        _tokens:  tokenOwned,
-        _locked:  [...lockedCubes],
+        _oracle:    oracleSnapshot,
+        _tokens:    tokenOwned,
+        _locked:    [...lockedCubes],
+        _excluded:  excludedCards,
       }, null, 2) } } })
     });
     if (!res.ok) {
@@ -887,6 +919,20 @@ document.getElementById('grid').addEventListener('click', e => {
     else collapsedSections.add(key);
     localStorage.setItem('collapsedSections', JSON.stringify([...collapsedSections]));
     render();
+    return;
+  }
+
+  const excludeBtn = e.target.closest('.exclude-btn');
+  if (excludeBtn) {
+    if (isLocked()) { showLockToast(); return; }
+    const card = excludeBtn.closest('.card[data-name]');
+    if (!card) return;
+    const name = card.dataset.name;
+    if (!excludedCards[activeCube]) excludedCards[activeCube] = {};
+    if (excludedCards[activeCube][name]) delete excludedCards[activeCube][name];
+    else excludedCards[activeCube][name] = true;
+    render();
+    scheduleSave();
     return;
   }
 
@@ -1189,6 +1235,7 @@ function renderCards() {
 
   let totalNeeded = 0, totalOwned = 0;
   cards.forEach(c => {
+    if (excludedCards[activeCube]?.[c.name]) return;
     const t = cube.counts[c.rarity] ?? 1;
     totalNeeded += t;
     totalOwned  += Math.min(owned[c.name] ?? 0, t);
@@ -1332,6 +1379,7 @@ function renderInfo() {
 function cardHTML(c, cube, owned) {
   const target      = cube.counts[c.rarity] ?? 1;
   const n           = owned[c.name] ?? 0;
+  const isExcluded  = !!excludedCards[activeCube]?.[c.name];
   const cls         = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
   const lblCls      = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
   const label       = `${n} of ${target}`;
@@ -1339,9 +1387,11 @@ function cardHTML(c, cube, owned) {
   const safeName    = c.name.replace(/"/g, '&quot;');
   const isFlipped   = flippedCards.has(c.name);
   const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
-  const flash = justToggledCard === c.name ? ' card-flashed' : '';
-  return `<div class="card ${cls}${flash}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
-    <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+  const flash       = justToggledCard === c.name ? ' card-flashed' : '';
+  const check       = cls === 'complete' && !isExcluded ? '<span class="complete-check">✓</span>' : '';
+  return `<div class="card ${cls}${isExcluded ? ' excluded' : ''}${flash}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
+    <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}">${check}</div>
+    <div class="badge-row"><button class="exclude-btn" title="${isExcluded ? 'Restore to cube' : 'Remove from cube'}">✕</button></div>
     ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
