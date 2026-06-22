@@ -246,7 +246,7 @@
       border-radius: 6px; letter-spacing: 0.05em; text-transform: uppercase;
       display: flex; align-items: center; gap: 0.35rem;
     }
-    .section-header.errata-high { background: #2a1a0a; color: #e07020; border: 1px solid #c05c00; }
+    .section-header.errata-high { background: #181614; color: #6a5f50; border: 1px solid #2e2a24; }
     .section-header.errata-low  { background: #0a1a2a; color: #6aa0b8; border: 1px solid #2a5060; }
     .section-header.errata-unknown { background: #0a1a0a; color: #6aa06a; border: 1px solid #2a5030; }
 
@@ -256,7 +256,7 @@
 
     .section-header[data-color-key] { cursor: pointer; user-select: none; }
     .section-header[data-color-key]:hover { background: #282828; }
-    .section-header.errata-high[data-color-key]:hover { background: #3a2010; }
+    .section-header.errata-high[data-color-key]:hover { background: #201c18; }
     .section-header.errata-low[data-color-key]:hover  { background: #142030; }
 
     /* Chevron — fixed square so rotation has a stable center */
@@ -322,8 +322,8 @@
       border: none; border-radius: 4px; font-size: 0.55rem; font-weight: 800;
       padding: 2px 4px; cursor: pointer; letter-spacing: 0.04em; line-height: 1.2;
     }
-    .errata-high { background: #c05c00; color: #fff; }
-    .errata-high:hover { background: #e06e00; }
+    .errata-high { background: #221e1a; color: #7a6a55; border: 1px solid #38322a; }
+    .errata-high:hover { background: #2c2820; }
     .errata-low  { background: #0a1a2a; color: #6aa0b8; border: 1px solid #2a5060; }
     .errata-low:hover { background: #142030; }
 
@@ -453,13 +453,7 @@
     .archetype-name { font-size: 0.78rem; font-weight: 700; color: #d0d0d0; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem; }
     .archetype-desc { font-size: 0.72rem; color: #888; line-height: 1.5; }
     .info-empty { font-size: 0.8rem; color: #555; font-style: italic; }
-    .booster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-    .booster-col-title { font-size: 0.7rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
-    .booster-list { list-style: none; padding: 0; margin: 0; }
-    .booster-list li { font-size: 0.73rem; color: #c0c0c0; line-height: 1.6; padding-left: 0.9rem; position: relative; }
-    .booster-list li::before { content: '·'; position: absolute; left: 0; color: #c9a84c; }
-    .booster-excluded li { color: #777; }
-    @media (max-width: 600px) { .booster-grid { grid-template-columns: 1fr; } }
+    .archetype-group-label { font-size: 0.65rem; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.4rem; }
 
     /* ── Mobile ─────────────────────────────────────────────────────────── */
     @media (max-width: 600px) {
@@ -1740,7 +1734,7 @@ function errataCardHTML(c) {
   }
   return `<div class="card" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     ${imgHtml}
-    <div class="badge-row"><button class="errata-badge errata-high">⚠ ERRATA</button></div>
+    <div class="badge-row"><button class="errata-badge errata-high">errata</button></div>
     <div class="card-footer"><span class="card-num">#${c.collector_number}</span></div>
     <div class="card-name">${displayName}</div>
   </div>`;
@@ -1752,39 +1746,27 @@ function renderInfo() {
 
   const items = [];
 
-  // Booster construction block
-  if (cube.booster) {
-    const b = cube.booster;
-    const realSlots = (b.slots ?? []).map(s => `<li>${s}</li>`).join('');
-    const cubePack = ['1 Rare or Mythic', '4 Uncommons', '10 Commons', '<strong>15 cards total</strong>']
-      .map(s => `<li>${s}</li>`).join('');
-    const excl = (b.excluded ?? []).map(s => `<li>${s}</li>`).join('');
-    items.push(`<div class="info-section"><div class="info-block">
-      <div class="info-block-title">Booster Construction</div>
-      <div class="booster-grid">
-        <div>
-          <div class="booster-col-title">Real Draft Booster</div>
-          <ul class="booster-list">${realSlots}</ul>
-        </div>
-        <div>
-          <div class="booster-col-title">Cube Draft Pack</div>
-          <ul class="booster-list">${cubePack}</ul>
-          ${excl ? `<div class="booster-col-title" style="margin-top:0.6rem">Excluded from cube</div><ul class="booster-list booster-excluded">${excl}</ul>` : ''}
-        </div>
-      </div>
-    </div></div>`);
-  }
-
   // Draft archetypes block (full-width)
   const archetypes = cube.archetypes ?? [];
-  const archetypeHtml = archetypes.length
-    ? `<div class="archetype-grid">${archetypes.map(a =>
-        `<div class="archetype-card">
-          <div class="archetype-name">${(a.colors ?? []).map(c => SYM(c)).join('')} ${a.name}</div>
-          ${a.description ? `<div class="archetype-desc">${a.description}</div>` : ''}
-        </div>`).join('')}
-      </div>`
-    : `<p class="info-empty">No archetypes added yet — populate the <code>archetypes</code> array for this set in CUBES.</p>`;
+  const renderArchetypeGrid = (list) =>
+    `<div class="archetype-grid">${list.map(a =>
+      `<div class="archetype-card">
+        <div class="archetype-name">${(a.colors ?? []).map(c => SYM(c)).join('')} ${a.name}</div>
+        ${a.description ? `<div class="archetype-desc">${a.description}</div>` : ''}
+      </div>`).join('')}</div>`;
+
+  let archetypeHtml;
+  if (archetypes.length >= 10) {
+    archetypeHtml = `
+      <div class="archetype-group-label">Allied Colors</div>
+      ${renderArchetypeGrid(archetypes.slice(0, 5))}
+      <div class="archetype-group-label" style="margin-top:0.85rem">Enemy Colors</div>
+      ${renderArchetypeGrid(archetypes.slice(5, 10))}`;
+  } else if (archetypes.length > 0) {
+    archetypeHtml = renderArchetypeGrid(archetypes);
+  } else {
+    archetypeHtml = `<p class="info-empty">No archetypes added yet — populate the <code>archetypes</code> array for this set in CUBES.</p>`;
+  }
 
   items.push(`<div class="info-section">
     <div class="info-block">
@@ -1811,7 +1793,7 @@ function renderInfo() {
       if (!group.length) continue;
       const eKey      = `errata-${cat.id}`;
       const collapsed = collapsedSections.has(eKey);
-      items.push(`<div class="section-header errata-high${collapsed ? ' sec-collapsed' : ''}" data-color-key="${eKey}">⚠ ${cat.label} (${group.length} cards)<span class="sec-chevron">▼</span></div>`);
+      items.push(`<div class="section-header errata-high${collapsed ? ' sec-collapsed' : ''}" data-color-key="${eKey}">${cat.label} (${group.length} cards)<span class="sec-chevron">▼</span></div>`);
       if (!collapsed) for (const c of group) items.push(errataCardHTML(c));
     }
   } else {
