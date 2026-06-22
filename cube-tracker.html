@@ -94,7 +94,7 @@
 
     /* ── Rarity symbols (set icon in rarity color via CSS mask) ─────────── */
     .rarity-sym-mask {
-      display: inline-block; width: 13px; height: 13px; flex-shrink: 0;
+      display: inline-block; width: 20px; height: 20px; flex-shrink: 0;
       -webkit-mask-size: contain; mask-size: contain;
       -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
       -webkit-mask-position: center; mask-position: center;
@@ -120,10 +120,6 @@
       transition: all 0.15s;
     }
     .view-tab.active { background: #2e2e2e; color: #aaa; }
-
-    /* ── Progress bar ───────────────────────────────────────────────────── */
-    .progress-wrap { background: rgba(255,255,255,0.05); border-radius: 2px; height: 3px; margin-bottom: 0.4rem; }
-    .progress-bar  { background: #3a7a55; height: 3px; border-radius: 2px; transition: width 0.4s; }
 
     /* ── Lock toast ─────────────────────────────────────────────────────── */
     .lock-toast {
@@ -174,7 +170,7 @@
     :root { --card-min: 170px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); gap: 0.6rem; padding: 0.75rem; }
 
-    .size-row { display: flex; gap: 0.3rem; justify-content: center; margin-bottom: 0.4rem; }
+    .size-row { display: flex; gap: 0.3rem; justify-content: center; }
     .size-btn { padding: 0.18rem 0.55rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 800; background: #242424; color: #555; transition: all 0.15s; }
     .size-btn.active { background: #c9a84c; color: #111; }
 
@@ -317,7 +313,6 @@
       .stats { font-size: 0.72rem; }
       .token-input { font-size: 0.68rem; }
       .btn { padding: 0.22rem 0.5rem; font-size: 0.68rem; }
-      .progress-wrap { margin-bottom: 0.3rem; }
     }
   </style>
 </head>
@@ -400,9 +395,6 @@
     </div>
   </div>
 
-  <div class="progress-wrap" id="progressWrap">
-    <div class="progress-bar" id="bar" style="width:0%"></div>
-  </div>
 </header>
 
 <div class="grid" id="grid">
@@ -1126,7 +1118,6 @@ function renderCards() {
   });
   const pct = totalNeeded ? Math.round((totalOwned / totalNeeded) * 100) : 0;
   document.getElementById('stats').textContent = `${totalOwned} of ${totalNeeded} cards collected (${pct}%)`;
-  document.getElementById('bar').style.width = pct + '%';
 
   const groups = {};
   COLOR_ORDER.forEach(k => { groups[k] = []; });
@@ -1209,8 +1200,6 @@ function errataCardHTML(c) {
 function renderInfo() {
   const cube  = CUBES[activeCube];
   const cards = cardCache[activeCube] ?? [];
-
-  document.getElementById('bar').style.width = '0%';
 
   const items = [];
 
