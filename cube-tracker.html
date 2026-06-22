@@ -239,8 +239,6 @@
     .card:not(.token-card):active  { transform: scale(0.93); }
     .count-btn:active              { transform: scale(0.75); background: #111; }
 
-    .card.partial  { border-color: #b7791f; }
-    .card.missing  { border-color: #8b2020; }
     .card.basic-land { border-color: #2a2a2a; cursor: default; }
     .card.basic-land:hover  { transform: none; }
     .card.basic-land:active { transform: none; }
@@ -249,13 +247,6 @@
     .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.2s; }
     .card.missing .card-img-wrap img { opacity: 0.2; filter: grayscale(80%); }
     .card.partial  .card-img-wrap img { opacity: 0.65; }
-
-    /* Complete checkmark — bottom-right corner of card (below 1 of 1) */
-    .complete-check {
-      position: absolute; bottom: 4px; right: 6px;
-      color: #52b788; font-size: 1rem; font-weight: 900; line-height: 1;
-      pointer-events: none; z-index: 3;
-    }
 
     /* Excluded from draft — big red overlay spanning the full image */
     .card.excluded .card-img-wrap::after {
@@ -269,15 +260,22 @@
       text-shadow: 0 2px 14px rgba(0,0,0,0.85);
     }
 
-    /* Exclude toggle button (top-left badge area, always faintly visible) */
-    .exclude-btn {
-      background: rgba(0,0,0,0.45); border: none; border-radius: 4px;
-      font-size: 0.55rem; font-weight: 800; padding: 2px 4px; cursor: pointer;
-      color: rgba(255,255,255,0.2); letter-spacing: 0.04em; line-height: 1.2;
-      transition: color 0.15s, background 0.15s;
+    /* Status row — bottom-right corner: [✕ toggle] [✓ or ○] */
+    .card-status {
+      position: absolute; bottom: 4px; right: 5px;
+      display: flex; align-items: center; gap: 3px; z-index: 3;
     }
-    .exclude-btn:hover { color: rgba(255,120,120,0.85); background: rgba(80,10,10,0.6); }
-    .card.excluded .exclude-btn { color: #ffaaaa; background: rgba(139,32,32,0.85); }
+    .exclude-btn {
+      background: transparent; border: none; cursor: pointer;
+      font-size: 0.75rem; font-weight: 900; line-height: 1;
+      color: rgba(255,255,255,0.18); padding: 1px 2px;
+      transition: color 0.15s;
+    }
+    .exclude-btn:hover { color: rgba(255,120,120,0.85); }
+    .card.excluded .exclude-btn { color: rgba(255,130,130,0.9); }
+    .status-sym { font-size: 1rem; font-weight: 900; line-height: 1; pointer-events: none; }
+    .status-complete { color: #52b788; }
+    .status-missing  { color: rgba(190,65,65,0.7); }
 
     .badge-row { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; gap: 3px; }
     .errata-badge {
@@ -343,7 +341,7 @@
     .creator-link:hover .creator-preview { display: block; }
 
     /* ── Token list layout (2-col grid; DFT shows both faces) ─────────── */
-    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); gap: 0.6rem; }
     .token-card { overflow: visible; }
     .token-card > .card-img-wrap,
     .token-card > .token-img-pair { border-radius: 8px 8px 0 0; overflow: hidden; }
@@ -1387,17 +1385,21 @@ function cardHTML(c, cube, owned) {
   const isFlipped   = flippedCards.has(c.name);
   const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
   const flash       = justToggledCard === c.name ? ' card-flashed' : '';
-  const check       = cls === 'complete' && !isExcluded ? '<span class="complete-check">✓</span>' : '';
+  const statusSym = !isExcluded && cls === 'complete' ? '<span class="status-sym status-complete">✓</span>'
+                  : !isExcluded && cls === 'missing'  ? '<span class="status-sym status-missing">○</span>'
+                  : '';
   return `<div class="card ${cls}${isExcluded ? ' excluded' : ''}${flash}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
-    <div class="badge-row"><button class="exclude-btn" title="${isExcluded ? 'Restore to draft' : 'Exclude from draft'}">✕</button></div>
-    ${check}
     ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
       <span class="${lblCls}">${label}</span>
     </div>
     <div class="card-name">${displayName}</div>
+    <div class="card-status">
+      <button class="exclude-btn" title="${isExcluded ? 'Restore to draft' : 'Exclude from draft'}">✕</button>
+      ${statusSym}
+    </div>
   </div>`;
 }
 
