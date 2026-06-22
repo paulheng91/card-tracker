@@ -74,6 +74,14 @@
     .set-sym  { width: 17px; height: 17px; display: inline-block; vertical-align: middle; flex-shrink: 0;
                 filter: brightness(0) invert(1); opacity: 0.75; margin-right: 3px; }
     .cube-tab.active .set-sym { filter: brightness(0); opacity: 0.35; }
+    .five-color-sym { display: inline-flex; align-items: center; gap: 1px; flex-shrink: 0; }
+    .five-color-sym .mana-sym { width: 13px; height: 13px; }
+    .section-header[data-color-key] { cursor: pointer; user-select: none; }
+    .section-header[data-color-key]:hover { background: #282828; }
+    .section-header.errata-high[data-color-key]:hover { background: #3a2010; }
+    .section-header.errata-low[data-color-key]:hover  { background: #142030; }
+    .sec-chevron { margin-left: auto; font-size: 0.65rem; opacity: 0.55; padding-left: 0.5rem; transition: transform 0.15s; }
+    .section-header.sec-collapsed .sec-chevron { transform: rotate(-90deg); }
 
     .card {
       background: #1e1e1e; border: 2px solid #333; border-radius: 10px;
@@ -327,7 +335,8 @@ const CUBES = {
 const COLOR_ORDER = ['W','U','B','R','G','M','A','L'];
 const COLOR_LABEL = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', M:'Multicolored', A:'Artifact', L:'Land' };
 const SYM = s => `<img class="mana-sym" src="https://svgs.scryfall.io/card-symbols/${s}.svg" alt="{${s}}">`;
-const COLOR_ICON  = { W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:'◆', A:SYM('C'), L:'🏔' };
+const FIVE_COLOR  = `<span class="five-color-sym">${SYM('W')}${SYM('U')}${SYM('B')}${SYM('R')}${SYM('G')}</span>`;
+const COLOR_ICON  = { W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:FIVE_COLOR, A:SYM('C'), L:'🏔' };
 
 function colorKey(card) {
   let c = card.colors ?? [];
@@ -408,7 +417,8 @@ let oracleSnapshot  = {};  // { isd: { cardName: text } } — baseline for detec
 let ownedMap        = {};
 let saveTimer       = null;
 let packState       = { cards: [], pick: null, packNum: 1 };
-let flippedCards    = new Set();  // card names currently showing back face
+let flippedCards      = new Set();
+let collapsedSections = new Set(JSON.parse(localStorage.getItem('collapsedSections') || '[]'));
 let excludedFromDraft = {};       // { isd: Set(['Card Name', ...]) } — owned but skip in pack gen
 let basicLandPool   = {};         // { setCode: [...] } basic land cards per set
 let tokenPool       = {};         // { setCode: [...] } token cards per set
@@ -643,8 +653,17 @@ document.getElementById('modal').addEventListener('click', e => {
 
 // ── Grid interaction ──────────────────────────────────────────────────────────
 document.getElementById('grid').addEventListener('click', e => {
-  // Errata badge → modal
-  // Token count buttons
+  // Section header collapse toggle
+  const secHeader = e.target.closest('.section-header[data-color-key]');
+  if (secHeader) {
+    const key = secHeader.dataset.colorKey;
+    if (collapsedSections.has(key)) collapsedSections.delete(key);
+    else collapsedSections.add(key);
+    localStorage.setItem('collapsedSections', JSON.stringify([...collapsedSections]));
+    render();
+    return;
+  }
+
   const countBtn = e.target.closest('.count-btn');
   if (countBtn) {
     const tokenCard = countBtn.closest('[data-token-id]');
@@ -850,10 +869,9 @@ function renderCards() {
   for (const key of COLOR_ORDER) {
     const group = groups[key];
     if (!group.length) continue;
-    items.push(`<div class="section-header">${COLOR_ICON[key]} ${COLOR_LABEL[key]}</div>`);
-    for (const c of group) {
-      items.push(cardHTML(c, cube, owned));
-    }
+    const collapsed = collapsedSections.has(key);
+    items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${key}">${COLOR_ICON[key]} ${COLOR_LABEL[key]}<span class="sec-chevron">▼</span></div>`);
+    if (!collapsed) for (const c of group) items.push(cardHTML(c, cube, owned));
   }
 
   document.getElementById('grid').innerHTML = items.length ? items.join('') : '<div class="empty">No cards match this filter.</div>';
@@ -908,17 +926,21 @@ function renderErrata() {
   for (const cat of ERRATA_CATEGORIES) {
     const group = byCategory[cat.id];
     if (!group.length) continue;
+    const eKey = `errata-${cat.id}`;
+    const collapsed = collapsedSections.has(eKey);
     const cls = cat.severity === 'high' ? 'errata-high' : 'errata-low';
     const icon = cat.severity === 'high' ? '⚠' : 'ℹ';
     const badgeCls = cat.severity === 'high' ? 'errata-high' : 'errata-low';
     const badgeTxt = cat.severity === 'high' ? '⚠ ERRATA' : 'ℹ minor';
-    items.push(`<div class="section-header ${cls}">${icon} ${cat.label} (${group.length} cards)</div>`);
-    for (const c of group) items.push(errataCardHTML(c, badgeCls, badgeTxt));
+    items.push(`<div class="section-header ${cls}${collapsed ? ' sec-collapsed' : ''}" data-color-key="${eKey}">${icon} ${cat.label} (${group.length} cards)<span class="sec-chevron">▼</span></div>`);
+    if (!collapsed) for (const c of group) items.push(errataCardHTML(c, badgeCls, badgeTxt));
   }
 
   if (uncategorized.length) {
-    items.push(`<div class="section-header errata-unknown">? Uncategorized Oracle Changes (${uncategorized.length} cards)</div>`);
-    for (const c of uncategorized) items.push(errataCardHTML(c, 'errata-low', '? changed'));
+    const eKey = 'errata-unknown';
+    const collapsed = collapsedSections.has(eKey);
+    items.push(`<div class="section-header errata-unknown${collapsed ? ' sec-collapsed' : ''}" data-color-key="${eKey}">? Uncategorized Oracle Changes (${uncategorized.length} cards)<span class="sec-chevron">▼</span></div>`);
+    if (!collapsed) for (const c of uncategorized) items.push(errataCardHTML(c, 'errata-low', '? changed'));
   }
 
   document.getElementById('grid').innerHTML = items.length ? items.join('') : '<div class="empty">No errata detected.</div>';
