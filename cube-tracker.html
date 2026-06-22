@@ -263,20 +263,19 @@
       text-shadow: 0 2px 14px rgba(0,0,0,0.85);
     }
 
-    /* ✕ exclude — pinned bottom-right, never moves */
+    /* Status symbol — rightmost, never moves */
+    .status-sym { position: absolute; bottom: 4px; right: 5px; z-index: 3; pointer-events: none; }
+
+    /* ✕ exclude — just left of status symbol, never moves */
     .exclude-btn {
-      position: absolute; bottom: 4px; right: 5px; z-index: 3;
+      position: absolute; bottom: 2px; right: 20px; z-index: 3;
       background: transparent; border: none; cursor: pointer;
       font-size: 0.75rem; font-weight: 900; line-height: 1;
-      color: rgba(255,255,255,0.18); padding: 1px 2px;
-      transition: color 0.15s;
+      color: rgba(255,255,255,0.18); padding: 3px 4px; border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
     }
-    .exclude-btn:hover { color: rgba(255,120,120,0.85); }
+    .exclude-btn:hover { color: rgba(255,100,100,0.95); background: rgba(200,30,30,0.25); }
     .card.excluded .exclude-btn { color: rgba(255,130,130,0.9); }
-
-    /* Status symbol — pinned just left of ✕, never moves */
-    .status-sym { position: absolute; bottom: 4px; right: 20px; z-index: 3; pointer-events: none; }
-    .status-complete { color: #52b788; font-size: 1rem; font-weight: 900; line-height: 1; }
 
     .badge-row { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; gap: 3px; }
     .errata-badge {
@@ -358,6 +357,13 @@
     .archetype-name { font-size: 0.78rem; font-weight: 700; color: #d0d0d0; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem; }
     .archetype-desc { font-size: 0.72rem; color: #888; line-height: 1.5; }
     .info-empty { font-size: 0.8rem; color: #555; font-style: italic; }
+    .booster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .booster-col-title { font-size: 0.7rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
+    .booster-list { list-style: none; padding: 0; margin: 0; }
+    .booster-list li { font-size: 0.73rem; color: #c0c0c0; line-height: 1.6; padding-left: 0.9rem; position: relative; }
+    .booster-list li::before { content: '·'; position: absolute; left: 0; color: #c9a84c; }
+    .booster-excluded li { color: #777; }
+    @media (max-width: 600px) { .booster-grid { grid-template-columns: 1fr; } }
 
     /* ── Mobile ─────────────────────────────────────────────────────────── */
     @media (max-width: 600px) {
@@ -516,26 +522,161 @@ const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
 // ═══════════════════════════════════════════════════════════════════════════
 
 const CUBES = {
-  isd: { name: 'Innistrad',           setCode: 'isd', releaseDate: '2011-09-30', counts: { mythic:1, rare:1, uncommon:2, common:3 }, errataCheck: true,
-    archetypes: [] },
-  ktk: { name: 'Khans of Tarkir',     setCode: 'ktk', releaseDate: '2014-09-26', counts: { mythic:1, rare:1, uncommon:2, common:3 }, errataCheck: true, allOwned: true,
-    archetypes: [] },
-  neo: { name: 'Neon Dynasty',         setCode: 'neo', releaseDate: '2022-02-18', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true,
-    archetypes: [] },
-  dmu: { name: 'Dominaria United',     setCode: 'dmu', releaseDate: '2022-09-09', counts: { mythic:1, rare:1, uncommon:2, common:3 }, specials: [{ code: 'mul', label: 'Multiverse Legends' }],
-    archetypes: [] },
-  ltr: { name: 'Lord of the Rings',    setCode: 'ltr', releaseDate: '2023-06-23', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true,
-    archetypes: [] },
-  blb: { name: 'Bloomburrow',          setCode: 'blb', releaseDate: '2024-08-02', counts: { mythic:1, rare:1, uncommon:2, common:3 },
-    archetypes: [] },
-  fdn: { name: 'Foundations',          setCode: 'fdn', releaseDate: '2024-11-15', counts: { mythic:1, rare:1, uncommon:2, common:3 },
-    archetypes: [] },
+  isd: { name: 'Innistrad', setCode: 'isd', releaseDate: '2011-09-30', counts: { mythic:1, rare:1, uncommon:2, common:3 }, errataCheck: true,
+    booster: {
+      slots: ['1 Rare or Mythic (1-in-8 mythic)', '3 Uncommons', '10 Commons (1 basic land)', '1 DFC slot (any rarity)'],
+      excluded: ['Basic lands', 'Token/checklist cards', 'The DFC slot is mixed into the pool rather than a separate slot'],
+    },
+    archetypes: [
+      { name: 'Spirits', colors: ['W','U'], description: 'Flying spirits and haunting synergies' },
+      { name: 'Zombie Mill', colors: ['U','B'], description: 'Zombie tribal with graveyard recursion' },
+      { name: 'Vampires', colors: ['B','R'], description: 'Vampire aggro with madness enablers' },
+      { name: 'Werewolves', colors: ['R','G'], description: 'Transform synergies and human/wolf payoffs' },
+      { name: 'Humans', colors: ['G','W'], description: 'Human tribal go-wide' },
+      { name: 'Spirit Tokens', colors: ['W','B'], description: 'Tokens, lifelink, and morbid' },
+      { name: 'Flashback', colors: ['U','R'], description: 'Instants/sorceries with flashback value' },
+      { name: 'Morbid', colors: ['B','G'], description: 'Morbid triggers and undying value' },
+      { name: 'Aggro Humans', colors: ['R','W'], description: 'Fast humans with equipment' },
+      { name: 'Self-Mill', colors: ['G','U'], description: 'Mill your own library for graveyard value' },
+    ]},
+  ktk: { name: 'Khans of Tarkir', setCode: 'ktk', releaseDate: '2014-09-26', counts: { mythic:1, rare:1, uncommon:2, common:3 }, errataCheck: true, allOwned: true,
+    booster: {
+      slots: ['1 Rare or Mythic (1-in-8 mythic)', '3 Uncommons', '10 Commons (1 basic land)'],
+      excluded: ['Basic lands', 'Token/marketing cards', 'Fetchlands are included as rares'],
+    },
+    archetypes: [
+      { name: 'Abzan', colors: ['W','B','G'], description: 'Outlast +1/+1 counters on tough creatures' },
+      { name: 'Jeskai', colors: ['U','R','W'], description: 'Prowess triggers from instants and sorceries' },
+      { name: 'Sultai', colors: ['B','G','U'], description: 'Delve using the graveyard as a resource' },
+      { name: 'Mardu', colors: ['R','W','B'], description: 'Raid triggers rewarding aggressive attacks' },
+      { name: 'Temur', colors: ['G','U','R'], description: 'Ferocious — rewards for 4+ power creatures' },
+    ]},
+  neo: { name: 'Neon Dynasty', setCode: 'neo', releaseDate: '2022-02-18', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true,
+    booster: {
+      slots: ['1 Rare or Mythic', '3 Uncommons', '5 Commons', '1 Traditional Foil (any rarity)', '2 DFC (Double-Faced Cards)', '1 Art Card'],
+      excluded: ['Art cards', 'Foil-only special treatments', 'DFCs distributed throughout rarity slots'],
+    },
+    archetypes: [
+      { name: 'Spirits', colors: ['W','U'], description: 'Flying spirits and enchantment synergies' },
+      { name: 'Ninjas', colors: ['U','B'], description: 'Ninjutsu and unblocked-creature triggers' },
+      { name: 'Sacrifice', colors: ['B','R'], description: 'Sacrifice outlets and blood token synergies' },
+      { name: 'Modified', colors: ['R','G'], description: 'Equipment, auras, and counters — Modified payoffs' },
+      { name: 'Shrines', colors: ['G','W'], description: 'Sagas, shrines, and enchantment payoffs' },
+      { name: 'Reconfigure', colors: ['W','B'], description: 'Artifact creatures that equip as gear' },
+      { name: 'Thopters', colors: ['U','R'], description: 'Artifact token creation and cantrips' },
+      { name: 'Toxic', colors: ['B','G'], description: 'Deathtouch and graveyard recursion' },
+      { name: 'Samurai', colors: ['R','W'], description: 'Samurai combat tricks and exalted attacks' },
+      { name: 'Counters', colors: ['G','U'], description: '+1/+1 counters and snake tribal' },
+    ]},
+  dmu: { name: 'Dominaria United', setCode: 'dmu', releaseDate: '2022-09-09', counts: { mythic:1, rare:1, uncommon:2, common:3 }, specials: [{ code: 'mul', label: 'Multiverse Legends' }],
+    booster: {
+      slots: ['1 Rare or Mythic', '3 Uncommons', '9 Commons (1 basic land)', '1 Traditional Foil or Multiverse Legends card'],
+      excluded: ['Basic lands', 'Multiverse Legends bonus cards (tracked separately)', 'Special Guest cards'],
+    },
+    archetypes: [
+      { name: 'Legend Tempo', colors: ['W','U'], description: 'Legendary creatures and domain fixing' },
+      { name: 'Mill Control', colors: ['U','B'], description: 'Card draw, mill, and legend removal' },
+      { name: 'Phyrexian Aggro', colors: ['B','R'], description: 'Aggressive Phyrexian vectors' },
+      { name: 'Domain Ramp', colors: ['R','G'], description: 'Kicker and domain with mana fixing' },
+      { name: 'Coalition Tokens', colors: ['G','W'], description: 'Enlist and go-wide token strategies' },
+      { name: 'Life Drain', colors: ['W','B'], description: 'Life gain and attrition removal' },
+      { name: 'Wizards', colors: ['U','R'], description: 'Instant/sorcery cantrips and wizard tribal' },
+      { name: 'Graveyard Domain', colors: ['B','G'], description: 'Ramp into domain with graveyard payoffs' },
+      { name: 'Soldiers', colors: ['R','W'], description: 'Attack triggers and enlist synergies' },
+      { name: 'Domain Tempo', colors: ['G','U'], description: 'Bounce spells and domain value' },
+    ]},
+  ltr: { name: 'Lord of the Rings', setCode: 'ltr', releaseDate: '2023-06-23', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true,
+    booster: {
+      slots: ['1 Rare or Mythic', '3 Uncommons', '9 Commons (1 basic land)', '1 Traditional Foil (any rarity)'],
+      excluded: ['Basic lands', 'Scene cards (panoramic lands)', 'Special Guest cards (The One Ring variants)', 'Holiday promo cards'],
+    },
+    archetypes: [
+      { name: 'Amass Gondor', colors: ['W','U'], description: 'Scry and amass orcs for Gondor' },
+      { name: 'The Ring Tempts', colors: ['U','B'], description: 'Ring-bearer upgrades and card draw' },
+      { name: 'Sauron\'s Army', colors: ['B','R'], description: 'Amass orcs and the ring grows strong' },
+      { name: 'Rangers', colors: ['R','G'], description: 'Adventure cards and ranger synergies' },
+      { name: 'Fellowship', colors: ['G','W'], description: 'Hobbit food tokens and fellowship bonds' },
+      { name: 'Wraith Walk', colors: ['W','B'], description: 'The ring tempts with deathtouch creatures' },
+      { name: 'Istari', colors: ['U','R'], description: 'Wizard spells and Gandalf synergies' },
+      { name: 'Sméagol', colors: ['B','G'], description: 'Sacrifice and graveyard value engine' },
+      { name: 'Rohan', colors: ['R','W'], description: 'Warrior attack triggers and cavalry' },
+      { name: 'Elves', colors: ['G','U'], description: 'Elf tribal and sea-faring tempo' },
+    ]},
+  blb: { name: 'Bloomburrow', setCode: 'blb', releaseDate: '2024-08-02', counts: { mythic:1, rare:1, uncommon:2, common:3 },
+    booster: {
+      slots: ['1 Rare or Mythic', '3 Uncommons', '9 Commons', '1 Double-Sided Token'],
+      excluded: ['Token cards', 'Seasonal alternate art treatments'],
+    },
+    archetypes: [
+      { name: 'Birds', colors: ['W','U'], description: 'Bird tribal and flying synergies' },
+      { name: 'Rats', colors: ['U','B'], description: 'Rat tribal and threshold payoffs' },
+      { name: 'Mice', colors: ['B','R'], description: 'Valiant triggers and mouse aggro' },
+      { name: 'Lizards', colors: ['R','G'], description: 'Lizard tokens and sacrifice engines' },
+      { name: 'Rabbits', colors: ['G','W'], description: '+1/+1 counters and rabbit growth' },
+      { name: 'Squirrels', colors: ['W','B'], description: 'Death triggers and squirrel token armies' },
+      { name: 'Frogs', colors: ['U','R'], description: 'Instant/sorcery payoffs and frog tribal' },
+      { name: 'Bats', colors: ['B','G'], description: 'Forage from graveyard and flying bats' },
+      { name: 'Otters', colors: ['R','W'], description: 'Valiant otter aggro and tempo' },
+      { name: 'Turtles', colors: ['G','U'], description: 'Turtles, ramp, and landfall payoffs' },
+    ]},
+  fdn: { name: 'Foundations', setCode: 'fdn', releaseDate: '2024-11-15', counts: { mythic:1, rare:1, uncommon:2, common:3 },
+    booster: {
+      slots: ['1 Rare or Mythic', '3 Uncommons', '9 Commons (1 basic land)'],
+      excluded: ['Basic lands', 'Token/art cards', 'Showcase frame cards'],
+    },
+    archetypes: [
+      { name: 'Skies', colors: ['W','U'], description: 'Flying creatures and tempo' },
+      { name: 'Control', colors: ['U','B'], description: 'Card draw, mill, and removal' },
+      { name: 'Burn', colors: ['B','R'], description: 'Aggressive haste creatures and direct damage' },
+      { name: 'Ramp', colors: ['R','G'], description: 'Mana acceleration into big threats' },
+      { name: 'Tokens', colors: ['G','W'], description: 'Wide token boards and anthem effects' },
+      { name: 'Life Gain', colors: ['W','B'], description: 'Lifelink and life gain payoffs' },
+      { name: 'Spells', colors: ['U','R'], description: 'Spellcasting rewards and card draw' },
+      { name: 'Graveyard', colors: ['B','G'], description: 'Graveyard recursion and sacrifice' },
+      { name: 'Equipment', colors: ['R','W'], description: 'Equipment and combat power' },
+      { name: 'Counters', colors: ['G','U'], description: '+1/+1 counters and adapt' },
+    ]},
   inr: { name: 'Innistrad Remastered', setCode: 'inr', releaseDate: '2025-01-17', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true,
-    archetypes: [] },
-  tdm: { name: 'Tarkir: Dragonstorm',  setCode: 'tdm', releaseDate: '2025-04-25', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true,
-    archetypes: [] },
-  fin: { name: 'Final Fantasy',        setCode: 'fin', releaseDate: '2025-06-13', counts: { mythic:1, rare:1, uncommon:2, common:3 }, noDFCLands: true,
-    archetypes: [] },
+    booster: {
+      slots: ['1 Rare or Mythic (may be Booster Fun variant)', '3 Uncommons', '7 Commons', '1 DFC (any rarity)', '1 Innistrad land (mana fixer)'],
+      excluded: ['Booster Fun alternate art variants', 'Innistrad land bonus slot (mana fixers not in main pool)', 'Token/art cards'],
+    },
+    archetypes: [
+      { name: 'Spirits', colors: ['W','U'], description: 'Flying spirits and haunting synergies' },
+      { name: 'Zombie Mill', colors: ['U','B'], description: 'Zombie tribal with graveyard recursion' },
+      { name: 'Vampires', colors: ['B','R'], description: 'Vampire aggro with madness' },
+      { name: 'Werewolves', colors: ['R','G'], description: 'Transform synergies and daylight/nightfall' },
+      { name: 'Humans', colors: ['G','W'], description: 'Human tribal go-wide' },
+      { name: 'Spirit Tokens', colors: ['W','B'], description: 'Spirits, deathtouch, and lifelink' },
+      { name: 'Flashback', colors: ['U','R'], description: 'Instants/sorceries with flashback value' },
+      { name: 'Delirium', colors: ['B','G'], description: 'Self-mill for 4+ card type synergies' },
+      { name: 'Aggro Humans', colors: ['R','W'], description: 'Fast humans with equipment' },
+      { name: 'Investigate', colors: ['G','U'], description: 'Clue tokens and self-mill setup' },
+    ]},
+  tdm: { name: 'Tarkir: Dragonstorm', setCode: 'tdm', releaseDate: '2025-04-25', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true,
+    booster: {
+      slots: ['1 Rare or Mythic', '3 Uncommons', '9 Commons'],
+      excluded: ['Basic lands', 'Token/art cards', 'Special treatment dragon cards'],
+    },
+    archetypes: [
+      { name: 'Ojutai', colors: ['W','U'], description: 'Spells matter and evasion' },
+      { name: 'Silumgar', colors: ['U','B'], description: 'Control and steal effects' },
+      { name: 'Kolaghan', colors: ['B','R'], description: 'Dash and aggressive haste threats' },
+      { name: 'Atarka', colors: ['R','G'], description: 'Big stompy creatures and direct damage' },
+      { name: 'Dromoka', colors: ['G','W'], description: 'Bolster and outlast counters' },
+    ]},
+  fin: { name: 'Final Fantasy', setCode: 'fin', releaseDate: '2025-06-13', counts: { mythic:1, rare:1, uncommon:2, common:3 }, noDFCLands: true,
+    booster: {
+      slots: ['1 Rare or Mythic', '3 Uncommons', '9 Commons'],
+      excluded: ['Basic lands', 'Token/art cards', 'Boss Battle special treatments', 'Legendary alternate art variants', 'Special Guest cards'],
+    },
+    archetypes: [
+      { name: 'Warriors of Light', colors: ['W','R'], description: 'Heroic attackers from across the FF games' },
+      { name: 'Black Magic', colors: ['U','B'], description: 'Spellcasting control and Black Mage synergies' },
+      { name: 'Nature\'s Call', colors: ['G','W'], description: 'Summons and creature-based strategies' },
+      { name: 'Dark Arts', colors: ['B','R'], description: 'Villain cards and sacrifice mechanics' },
+      { name: 'Time Magic', colors: ['U','G'], description: 'Ramp, card advantage, and tempo' },
+    ]},
 };
 
 
@@ -1288,7 +1429,7 @@ function renderCards() {
     if (tokens.length) {
       const tKey      = 'tokens-section';
       const collapsed = collapsedSections.has(tKey);
-      items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${tKey}">🎴 Tokens (${tokens.length})<span class="sec-chevron">▼</span></div>`);
+      items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${tKey}">Tokens (${tokens.length})<span class="sec-chevron">▼</span></div>`);
       if (!collapsed) items.push(`<div class="token-list">${tokens.map(tokenCardHTML).join('')}</div>`);
     }
   }
@@ -1322,6 +1463,30 @@ function renderInfo() {
   const cards = cardCache[activeCube] ?? [];
 
   const items = [];
+
+  // Booster construction block
+  if (cube.booster) {
+    const b = cube.booster;
+    const realSlots = (b.slots ?? []).map(s => `<li>${s}</li>`).join('');
+    const cubeSlots = Object.entries(cube.counts)
+      .map(([r, n]) => `<li>${n}× each ${r.charAt(0).toUpperCase()+r.slice(1)}</li>`)
+      .join('');
+    const excl = (b.excluded ?? []).map(s => `<li>${s}</li>`).join('');
+    items.push(`<div class="info-section"><div class="info-block">
+      <div class="info-block-title">Booster Construction</div>
+      <div class="booster-grid">
+        <div>
+          <div class="booster-col-title">Real Draft Booster</div>
+          <ul class="booster-list">${realSlots}</ul>
+        </div>
+        <div>
+          <div class="booster-col-title">This Cube (target copies)</div>
+          <ul class="booster-list">${cubeSlots}</ul>
+          ${excl ? `<div class="booster-col-title" style="margin-top:0.6rem">Excluded from cube</div><ul class="booster-list booster-excluded">${excl}</ul>` : ''}
+        </div>
+      </div>
+    </div></div>`);
+  }
 
   // Draft archetypes block (full-width)
   const archetypes = cube.archetypes ?? [];
@@ -1376,7 +1541,7 @@ function renderInfo() {
 // Pie-slice SVG circle: empty (red) → partial fill (gold) → ✓ checkmark (green).
 // n = owned, total = target copies needed.
 function statusCircle(n, total) {
-  if (n >= total) return '<span class="status-sym status-complete">✓</span>';
+  if (n >= total) return `<svg width="12" height="12" viewBox="0 0 12 12" class="status-sym"><circle cx="6" cy="6" r="4.5" fill="#52b788"/></svg>`;
   const cx = 6, cy = 6, r = 4.5, sw = 1.5;
   const stroke = n === 0 ? 'rgba(190,60,60,0.8)' : '#c9a84c';
   let pie = '';
