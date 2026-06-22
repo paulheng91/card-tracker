@@ -286,8 +286,9 @@
 
     .card-img-wrap { aspect-ratio: 63/88; overflow: hidden; background: #0a0a0a; border-radius: 4.5% / 3.2%; position: relative; }
     .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.2s; }
-    .card.missing .card-img-wrap img { opacity: 0.2; filter: grayscale(80%); }
-    .card.partial  .card-img-wrap img { opacity: 0.65; }
+    .card.missing  { border-color: #cc4444; }
+    .card.partial  { border-color: #c9a84c; }
+    .card.complete { border-color: #52b788; }
 
     /* Excluded from draft — big red overlay spanning the full image */
     .card.excluded > .card-img-wrap::after,
@@ -1213,10 +1214,27 @@ document.getElementById('grid').addEventListener('click', e => {
   const target = CUBES[activeCube].counts[rarity] ?? 1;
   const cur    = ownedMap[activeCube]?.[name] ?? 0;
   if (!ownedMap[activeCube]) ownedMap[activeCube] = {};
-  ownedMap[activeCube][name] = cur >= target ? 0 : cur + 1;
-  justToggledCard = name;
-  render();
-  justToggledCard = null;
+  const newN = cur >= target ? 0 : cur + 1;
+  ownedMap[activeCube][name] = newN;
+
+  // If a filter is active it may need to hide/show this card — full render.
+  if (activeFilter === 'missing' || activeRarityFilter.size > 0) {
+    render();
+  } else {
+    // Surgical update: only touch this card's class + status circle.
+    // Avoids reloading all card images (causes flash on mobile).
+    const newCls = newN >= target ? 'complete' : newN > 0 ? 'partial' : 'missing';
+    const isExcluded = !!excludedCards[activeCube]?.[name];
+    card.className = `card ${newCls}${isExcluded ? ' excluded' : ''}`;
+    const sym = card.querySelector('.status-sym');
+    if (sym) {
+      const tmp = document.createElement('span');
+      tmp.innerHTML = statusCircle(newN, target);
+      sym.replaceWith(tmp.firstChild);
+    }
+    card.classList.add('card-flashed');
+    setTimeout(() => card.classList.remove('card-flashed'), 260);
+  }
   scheduleSave();
 });
 
@@ -1698,14 +1716,14 @@ function renderInfo() {
 // n = owned, total = target copies needed.
 function statusCircle(n, total) {
   const S = 16, cx = 8, cy = 8;
-  // total=1: solid circle, no segmentation needed
+  const outerR = 6.5, innerR = 3.5;
+  // total=1: full donut ring (consistent outer diameter with segmented cases)
   if (total <= 1) {
-    const r = 4.625, sw = 1.75;
-    if (n >= 1) return `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" class="status-sym"><circle cx="${cx}" cy="${cy}" r="${r}" fill="#52b788"/></svg>`;
-    return `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" class="status-sym"><circle cx="${cx}" cy="${cy}" r="${r + sw/2}" fill="none" stroke="rgba(190,60,60,0.5)" stroke-width="${sw}"/></svg>`;
+    const midR = (outerR + innerR) / 2, sw = outerR - innerR;
+    const color = n >= 1 ? '#52b788' : 'rgba(190,60,60,0.4)';
+    return `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" class="status-sym"><circle cx="${cx}" cy="${cy}" r="${midR}" fill="none" stroke="${color}" stroke-width="${sw}"/></svg>`;
   }
   // total>1: segmented donut — gaps between segments are the "dividing lines"
-  const outerR = 6.5, innerR = 3.5;
   const gapRad = 8 * Math.PI / 180;          // 8° gap between each segment
   const segSpan = (2 * Math.PI - total * gapRad) / total;
   const startAngle = -Math.PI / 2;           // 12 o'clock
