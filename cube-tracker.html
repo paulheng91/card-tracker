@@ -494,7 +494,7 @@ function scheduleSave() {
 // ── Scryfall fetch ─────────────────────────────────────────────────────────────
 async function fetchSetCards(setCode) {
   const cards = [];
-  let url = `https://api.scryfall.com/cards/search?q=set:${setCode}+not:extra&order=collector&unique=cards`;
+  let url = `https://api.scryfall.com/cards/search?q=set:${setCode}+not:extra+game:paper&order=collector&unique=cards`;
   while (url) {
     const data = await (await fetch(url)).json();
     if (!data.data) break;
@@ -540,7 +540,7 @@ function toggleExcluded(cardName) {
 
 async function fetchBasicLands(setCode) {
   try {
-    const url  = `https://api.scryfall.com/cards/search?q=set:${setCode}+type:basic&order=collector&unique=prints`;
+    const url  = `https://api.scryfall.com/cards/search?q=set:${setCode}+type:basic+game:paper&order=collector&unique=prints`;
     const data = await (await fetch(url)).json();
     return data.data ?? [];
   } catch { return []; }
@@ -548,7 +548,7 @@ async function fetchBasicLands(setCode) {
 
 async function fetchTokens(setCode) {
   const tokens = [];
-  let url = `https://api.scryfall.com/cards/search?q=set:t${setCode}&order=collector&unique=prints`;
+  let url = `https://api.scryfall.com/cards/search?q=set:t${setCode}+game:paper&order=collector&unique=prints`;
   try {
     while (url) {
       const data = await (await fetch(url)).json();
