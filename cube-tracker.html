@@ -301,25 +301,18 @@
       text-shadow: 0 2px 14px rgba(0,0,0,0.85);
     }
 
-    /* Status symbol — rightmost, never moves */
-    /* ── Card bottom-right: ✕ + status circle, always aligned ─────────── */
-    .card-status-row {
-      position: absolute; bottom: 5px; right: 5px; z-index: 3;
-      display: flex; align-items: center; gap: 3px;
-      line-height: 0;
-    }
-    .status-sym { display: block; pointer-events: none; flex-shrink: 0; }
+    .status-sym { display: block; pointer-events: none; }
     .exclude-btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      height: 16px; padding: 0 4px; flex-shrink: 0;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 4px; cursor: pointer;
-      font-size: 0.72rem; font-weight: 900;
-      color: rgba(255,255,255,0.22);
-      transition: color 0.15s, background 0.15s, border-color 0.15s;
+      position: absolute; bottom: 2px; right: 2px; z-index: 4;
+      width: 22px; height: 22px; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; border-radius: 50%;
+      cursor: pointer; font-size: 0.58rem; font-weight: 900; line-height: 1;
+      color: rgba(255,255,255,0.13);
+      transition: color 0.15s, background 0.15s;
     }
-    .exclude-btn:hover { color: rgba(255,90,90,0.95); background: rgba(200,30,30,0.28); border-color: rgba(200,50,50,0.5); }
-    .card.excluded .exclude-btn { color: rgba(255,130,130,0.9); border-color: rgba(255,100,100,0.4); background: rgba(180,30,30,0.18); }
+    .exclude-btn:hover { color: rgba(255,80,80,0.9); background: rgba(160,20,20,0.22); }
+    .card.excluded .exclude-btn { color: rgba(255,120,120,0.75); background: rgba(130,15,15,0.18); }
 
     .badge-row { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; gap: 3px; }
     .errata-badge {
@@ -341,11 +334,15 @@
     .flip-btn:hover { background: rgba(0,0,0,0.85); }
 
 
-.card-footer { padding: 0.3rem 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
-    .card-num  { color: #666; }
-    .lbl-own   { color: #52b788; font-weight: 700; }
-    .lbl-part  { color: #c9a84c; font-weight: 700; }
-    .lbl-need  { color: #cc4444; font-weight: 700; }
+.card-footer {
+      padding: 0.3rem 0.5rem; font-size: 0.7rem;
+      display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 2px;
+    }
+    .card-num  { color: #666; text-align: left; }
+    .card-footer .status-sym { margin: 0 auto; display: block; }
+    .lbl-own   { color: #52b788; font-weight: 700; text-align: right; }
+    .lbl-part  { color: #c9a84c; font-weight: 700; text-align: right; }
+    .lbl-need  { color: #cc4444; font-weight: 700; text-align: right; }
     .card-name { padding: 0 0.5rem 0.35rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .loading { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; font-size: 0.9rem; }
@@ -1718,8 +1715,8 @@ function renderInfo() {
 // Pie-slice SVG circle: empty (red) → partial fill (gold) → ✓ checkmark (green).
 // n = owned, total = target copies needed.
 function statusCircle(n, total) {
-  if (n >= total) return `<svg width="12" height="12" viewBox="0 0 12 12" class="status-sym"><circle cx="6" cy="6" r="4.5" fill="#52b788"/></svg>`;
-  const cx = 6, cy = 6, r = 4.5, sw = 1.5;
+  const S = 16, cx = 8, cy = 8, r = 5.5, sw = 1.75;
+  if (n >= total) return `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" class="status-sym"><circle cx="${cx}" cy="${cy}" r="${r - sw / 2}" fill="#52b788"/></svg>`;
   const stroke = n === 0 ? 'rgba(190,60,60,0.8)' : '#c9a84c';
   let pie = '';
   if (n > 0) {
@@ -1729,7 +1726,7 @@ function statusCircle(n, total) {
     const x2 = (cx + r * Math.cos(a2)).toFixed(3), y2 = (cy + r * Math.sin(a2)).toFixed(3);
     pie = `<path d="M${cx},${cy}L${x1},${y1}A${r},${r} 0 ${frac > 0.5 ? 1 : 0},1 ${x2},${y2}Z" fill="#c9a84c"/>`;
   }
-  return `<svg width="12" height="12" viewBox="0 0 12 12" class="status-sym"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${stroke}" stroke-width="${sw}"/>${pie}</svg>`;
+  return `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" class="status-sym"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${stroke}" stroke-width="${sw}"/>${pie}</svg>`;
 }
 
 function cardHTML(c, cube, owned) {
@@ -1750,13 +1747,11 @@ function cardHTML(c, cube, owned) {
     ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
+      ${statusSym}
       <span class="${lblCls}">${label}</span>
     </div>
     <div class="card-name">${displayName}</div>
-    <div class="card-status-row">
-      <button class="exclude-btn" title="${isExcluded ? 'Restore to draft' : 'Exclude from draft'}">✕</button>
-      ${statusSym}
-    </div>
+    <button class="exclude-btn" title="${isExcluded ? 'Restore to draft' : 'Exclude from draft'}">✕</button>
   </div>`;
 }
 
@@ -1857,23 +1852,32 @@ init();
 
 // ── Hide header on scroll down, reveal on scroll up; back-to-top button ──
 (function() {
-  const hdr      = document.querySelector('header');
-  const btn      = document.getElementById('backToTop');
-  let lastY      = window.scrollY;
+  const hdr = document.querySelector('header');
+  const btn = document.getElementById('backToTop');
+  let lastY    = window.scrollY;
+  let dir      = 0;       // 1 = down, -1 = up
+  let dirFromY = 0;       // y position where current direction started
 
   window.addEventListener('scroll', () => {
-    const y    = window.scrollY;
-    const down = y > lastY;
-    if (y < 60) {
+    const y = window.scrollY;
+    const delta = y - lastY;
+    if (Math.abs(delta) < 1) return;   // ignore sub-pixel jitter
+
+    const newDir = delta > 0 ? 1 : -1;
+    if (newDir !== dir) { dir = newDir; dirFromY = lastY; }
+    lastY = y;
+
+    if (y < 80) {
       hdr.classList.remove('header-hidden');
       btn.classList.remove('show');
-    } else if (down) {
+    } else if (dir === 1 && y - dirFromY > 40) {
+      // committed downward scroll (40px since last direction change)
       hdr.classList.add('header-hidden');
       btn.classList.add('show');
-    } else {
+    } else if (dir === -1) {
+      // any upward movement — immediately reveal
       hdr.classList.remove('header-hidden');
     }
-    lastY = y;
   }, { passive: true });
 
   btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
