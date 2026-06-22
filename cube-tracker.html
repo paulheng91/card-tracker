@@ -66,9 +66,14 @@
       grid-column: 1 / -1; background: #1e1e1e; color: #c9a84c;
       font-weight: 700; font-size: 0.78rem; padding: 0.4rem 0.8rem;
       border-radius: 6px; letter-spacing: 0.05em; text-transform: uppercase;
+      display: flex; align-items: center; gap: 0.35rem;
     }
     .section-header.errata-high { background: #2a1a0a; color: #e07020; border: 1px solid #c05c00; }
     .section-header.errata-low  { background: #0a1a2a; color: #6aa0b8; border: 1px solid #2a5060; }
+    .mana-sym { width: 18px; height: 18px; display: inline-block; vertical-align: middle; flex-shrink: 0; }
+    .set-sym  { width: 17px; height: 17px; display: inline-block; vertical-align: middle; flex-shrink: 0;
+                filter: brightness(0) invert(1); opacity: 0.75; margin-right: 3px; }
+    .cube-tab.active .set-sym { filter: brightness(0); opacity: 0.35; }
 
     .card {
       background: #1e1e1e; border: 2px solid #333; border-radius: 10px;
@@ -321,7 +326,8 @@ const CUBES = {
 // ── Color grouping ────────────────────────────────────────────────────────────
 const COLOR_ORDER = ['W','U','B','R','G','M','A','L'];
 const COLOR_LABEL = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', M:'Multicolored', A:'Artifact', L:'Land' };
-const COLOR_ICON  = { W:'☀', U:'💧', B:'💀', R:'🔥', G:'🌿', M:'◆', A:'⚙', L:'🏔' };
+const SYM = s => `<img class="mana-sym" src="https://svgs.scryfall.io/card-symbols/${s}.svg" alt="{${s}}">`;
+const COLOR_ICON  = { W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:'◆', A:SYM('C'), L:'🏔' };
 
 function colorKey(card) {
   let c = card.colors ?? [];
@@ -742,7 +748,7 @@ sortedCubeEntries.forEach(([key, cube]) => {
   const btn  = document.createElement('button');
   btn.className   = `cube-tab${key === activeCube ? ' active' : ''}`;
   btn.dataset.cube = key;
-  btn.innerHTML   = `${cube.name}<span class="tab-year">'${year.slice(2)}</span>`;
+  btn.innerHTML   = `<img class="set-sym" src="https://svgs.scryfall.io/sets/${key}.svg" onerror="this.style.display='none'">${cube.name}<span class="tab-year">'${year.slice(2)}</span>`;
   btn.addEventListener('click', async () => {
     activeCube = key;
     localStorage.setItem('activeCube', activeCube);
