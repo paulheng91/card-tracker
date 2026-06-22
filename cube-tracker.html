@@ -624,7 +624,7 @@ const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
 // ═══════════════════════════════════════════════════════════════════════════
 
 const CUBES = {
-  isd: { name: 'Innistrad', setCode: 'isd', releaseDate: '2011-09-30', counts: { mythic:1, rare:1, uncommon:2, common:3 }, errataCheck: true,
+  isd: { name: 'Innistrad', setCode: 'isd', releaseDate: '2011-09-30', counts: { mythic:1, rare:1, uncommon:2, common:3 }, errataCheck: true, specials: [{ q: 'set:isd+layout:checklist', label: 'Checklist' }],
     booster: {
       slots: ['1 Rare or Mythic (1-in-8 mythic)', '3 Uncommons', '10 Commons (1 basic land)', '1 DFC slot (any rarity)'],
       excluded: ['Basic lands', 'Token/checklist cards', 'The DFC slot is mixed into the pool rather than a separate slot'],
