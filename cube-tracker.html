@@ -1414,6 +1414,7 @@ function doUnlock() {
   localStorage.setItem('lockedCubes', JSON.stringify([...lockedCubes]));
   updateLockBtn();
   scheduleSave();
+  setStatus('🔓 Unlocked — saving…', 'saving');
   document.getElementById('unlockDialog').classList.remove('open');
 }
 
@@ -1452,6 +1453,7 @@ document.getElementById('btnLock').addEventListener('click', () => {
     localStorage.setItem('lockedCubes', JSON.stringify([...lockedCubes]));
     updateLockBtn();
     scheduleSave();
+    setStatus('🔒 Locked — saving…', 'saving');
   }
 });
 
