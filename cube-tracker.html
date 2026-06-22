@@ -6,87 +6,86 @@
   <title>MTG Cube Tracker</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f6f8; color: #1c2730; min-height: 100vh; }
 
-    header { background: #16213e; padding: 0.75rem 1rem; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+    header { background: #1d3043; padding: 0.75rem 1rem; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.4); }
 
-    .nav-link { display: block; text-align: center; font-size: 0.7rem; color: #666; text-decoration: none; margin-bottom: 0.35rem; }
-    .nav-link:hover { color: #9f7aea; }
+    .nav-link { display: block; text-align: center; font-size: 0.7rem; color: #6a8fa0; text-decoration: none; margin-bottom: 0.35rem; }
+    .nav-link:hover { color: #1a9bd7; }
 
-    h1 { font-size: 1.3rem; text-align: center; color: #9f7aea; margin-bottom: 0.5rem; }
+    h1 { font-size: 1.3rem; text-align: center; color: #7ec8e3; margin-bottom: 0.5rem; }
 
     .tab-row { display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.45rem; }
 
     .cube-tab {
       padding: 0.3rem 0.85rem; border: none; border-radius: 999px; cursor: pointer;
-      font-size: 0.78rem; font-weight: 700; background: #2d1b69; color: #aaa; transition: all 0.15s;
+      font-size: 0.78rem; font-weight: 700; background: #122030; color: #7a9ab0; transition: all 0.15s;
     }
-    .cube-tab.active { background: #9f7aea; color: #1a1a2e; }
+    .cube-tab.active { background: #1a9bd7; color: #fff; }
 
     .view-tab {
       padding: 0.28rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
-      font-size: 0.73rem; font-weight: 700; background: #1e1e3a; color: #666; transition: all 0.15s;
+      font-size: 0.73rem; font-weight: 700; background: #122030; color: #607080; transition: all 0.15s;
     }
-    .view-tab.active { background: #3a3a60; color: #ccc; }
+    .view-tab.active { background: #1d3f60; color: #9abfd0; }
 
-    .progress-wrap { background: #2d1b69; border-radius: 4px; height: 5px; margin-bottom: 0.4rem; }
-    .progress-bar  { background: #9f7aea; height: 5px; border-radius: 4px; transition: width 0.3s; }
+    .progress-wrap { background: #122030; border-radius: 4px; height: 5px; margin-bottom: 0.4rem; }
+    .progress-bar  { background: #1a9bd7; height: 5px; border-radius: 4px; transition: width 0.3s; }
 
     .stats-row { display: flex; justify-content: center; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
-    .stats       { font-size: 0.8rem; color: #aaa; }
-    .save-status { font-size: 0.73rem; color: #555; }
-    .save-status.saving { color: #9f7aea; }
+    .stats       { font-size: 0.8rem; color: #7a9ab0; }
+    .save-status { font-size: 0.73rem; color: #507080; }
+    .save-status.saving { color: #1a9bd7; }
     .save-status.saved  { color: #52b788; }
     .save-status.error  { color: #e05; }
 
-    .filter-row { display: flex; gap: 0.4rem; justify-content: center; margin-bottom: 0.4rem; }
+    .filter-row { display: flex; gap: 0.4rem; justify-content: center; margin-bottom: 0.25rem; }
     .filter-btn {
       padding: 0.25rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
-      font-size: 0.73rem; font-weight: 700; background: #2d1b69; color: #aaa; transition: all 0.15s;
+      font-size: 0.73rem; font-weight: 700; background: #122030; color: #6a8a9a; transition: all 0.15s;
     }
-    .filter-btn.active { background: #9f7aea; color: #1a1a2e; }
-    .filter-btn[data-rarity="mythic"].active  { background: #b5460b; color: #fff; }
-    .filter-btn[data-rarity="rare"].active    { background: #7a6010; color: #ffd700; }
-    .filter-btn[data-rarity="uncommon"].active{ background: #2a4060; color: #a8c8e0; }
-    .filter-btn[data-rarity="common"].active  { background: #3a3a50; color: #ccc; }
+    .filter-btn.active                          { background: #1a9bd7; color: #fff; }
+    .filter-btn[data-rarity="rare-mythic"].active { background: #8a6010; color: #ffd700; }
+    .filter-btn[data-rarity="uncommon"].active  { background: #3a6080; color: #a8c8e0; }
+    .filter-btn[data-rarity="common"].active    { background: #4a5a68; color: #c8d4dc; }
 
     .token-section { display: flex; gap: 0.4rem; justify-content: center; align-items: center; flex-wrap: wrap; }
-    .token-input { background: #0f0f2a; border: 1px solid #444; color: #eee; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.73rem; width: 190px; }
-    .btn { padding: 0.3rem 0.7rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.73rem; font-weight: 700; background: #2d1b69; color: #9f7aea; transition: background 0.15s; }
-    .btn:hover { background: #4c2889; }
+    .token-input { background: #0e1e2c; border: 1px solid #2a4050; color: #a0c0d0; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.73rem; width: 190px; }
+    .btn { padding: 0.3rem 0.7rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.73rem; font-weight: 700; background: #122030; color: #1a9bd7; transition: background 0.15s; }
+    .btn:hover { background: #1d3050; }
 
     /* ── Card grid ── */
     :root { --card-min: 170px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); gap: 0.6rem; padding: 0.75rem; }
 
     .size-row { display: flex; gap: 0.3rem; justify-content: center; margin-bottom: 0.4rem; }
-    .size-btn { padding: 0.18rem 0.55rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 800; background: #2d1b69; color: #666; transition: all 0.15s; }
-    .size-btn.active { background: #9f7aea; color: #1a1a2e; }
+    .size-btn { padding: 0.18rem 0.55rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 800; background: #122030; color: #507080; transition: all 0.15s; }
+    .size-btn.active { background: #1a9bd7; color: #fff; }
 
     .section-header {
-      grid-column: 1 / -1; background: #2d1b69; color: #9f7aea;
+      grid-column: 1 / -1; background: #dde8f0; color: #1a3050;
       font-weight: 700; font-size: 0.78rem; padding: 0.4rem 0.8rem;
       border-radius: 6px; letter-spacing: 0.05em; text-transform: uppercase;
     }
-    .section-header.errata-high { background: #3d1800; color: #e07020; border: 1px solid #c05c00; }
-    .section-header.errata-low  { background: #0e2030; color: #7ab4c8; border: 1px solid #2a5060; }
+    .section-header.errata-high { background: #fdf0e8; color: #c05c00; border: 1px solid #e07020; }
+    .section-header.errata-low  { background: #e8f0f8; color: #2a6090; border: 1px solid #5090c0; }
 
     .card {
-      background: #12122a; border: 2px solid #2d2d5e; border-radius: 10px;
+      background: #ffffff; border: 2px solid #c8d4dc; border-radius: 10px;
       overflow: hidden; cursor: pointer; transition: transform 0.15s, border-color 0.15s; position: relative;
     }
     .card:hover  { transform: scale(1.03); }
     .card:active { transform: scale(0.93); }
     .card.complete { border-color: #2d6a4f; }
     .card.partial  { border-color: #b7791f; }
-    .card.missing  { border-color: #6b1a1a; }
-    .card.picked   { border-color: #9f7aea; box-shadow: 0 0 12px rgba(159,122,234,0.6); }
+    .card.missing  { border-color: #c03030; }
+    .card.picked   { border-color: #1a9bd7; box-shadow: 0 0 12px rgba(26,155,215,0.5); }
     .card.passed   { opacity: 0.45; }
-    .card.basic-land { border-color: #3a3a3a; cursor: default; }
+    .card.basic-land { border-color: #c8d4dc; cursor: default; }
     .card.basic-land:hover  { transform: none; }
     .card.basic-land:active { transform: none; }
 
-    .card-img-wrap { aspect-ratio: 63/88; overflow: hidden; background: #0a0a1a; border-radius: 4.5% / 3.2%; }
+    .card-img-wrap { aspect-ratio: 63/88; overflow: hidden; background: #e8ecf0; border-radius: 4.5% / 3.2%; }
     .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.2s; }
     .card.missing .card-img-wrap img { opacity: 0.2; filter: grayscale(80%); }
     .card.partial  .card-img-wrap img { opacity: 0.65; }
@@ -98,21 +97,21 @@
     }
     .errata-high { background: #c05c00; color: #fff; }
     .errata-high:hover { background: #e06e00; }
-    .errata-low  { background: #1e3040; color: #7ab4c8; border: 1px solid #3a6070; }
-    .errata-low:hover { background: #2a4050; }
-    .section-header.errata-unknown { background: #1a2a1a; color: #7ab47a; border: 1px solid #3a603a; }
+    .errata-low  { background: #e8f0f8; color: #2a6090; border: 1px solid #5090c0; }
+    .errata-low:hover { background: #d0e4f0; }
+    .section-header.errata-unknown { background: #e8f8e8; color: #2a6040; border: 1px solid #60b060; }
 
     .flip-btn {
       position: absolute; top: 4px; right: 4px; z-index: 2;
-      background: rgba(0,0,0,0.65); color: #fff; border: none;
+      background: rgba(0,0,0,0.55); color: #fff; border: none;
       border-radius: 50%; width: 22px; height: 22px;
       font-size: 0.8rem; cursor: pointer; line-height: 22px; text-align: center;
       transition: background 0.15s;
     }
-    .flip-btn:hover { background: rgba(0,0,0,0.85); }
+    .flip-btn:hover { background: rgba(0,0,0,0.75); }
 
     .excl-btn {
-      background: none; border: none; color: #555; font-size: 0.75rem; cursor: pointer;
+      background: none; border: none; color: #8a9aaa; font-size: 0.75rem; cursor: pointer;
       padding: 0 2px; line-height: 1; transition: color 0.15s;
     }
     .excl-btn:hover { color: #e07020; }
@@ -120,63 +119,63 @@
     .card.excl .card-img-wrap img { opacity: 0.65; }
 
     .card-footer { padding: 0.3rem 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
-    .card-num  { color: #666; }
-    .lbl-own   { color: #52b788; font-weight: 700; }
-    .lbl-part  { color: #ffd700; font-weight: 700; }
-    .lbl-need  { color: #e05555; font-weight: 700; }
+    .card-num  { color: #7a8a94; }
+    .lbl-own   { color: #2a7a4f; font-weight: 700; }
+    .lbl-part  { color: #9a6010; font-weight: 700; }
+    .lbl-need  { color: #c03030; font-weight: 700; }
 
-    .card-name { padding: 0 0.5rem 0.35rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-name { padding: 0 0.5rem 0.35rem; font-size: 0.68rem; font-weight: 700; color: #2a3a46; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* ── Pack opener ── */
     .pack-splash {
       grid-column: 1 / -1; display: flex; flex-direction: column;
       align-items: center; gap: 1rem; padding: 3rem 1rem; text-align: center;
     }
-    .pack-splash h2 { color: #9f7aea; font-size: 1.2rem; }
-    .pack-splash p  { color: #aaa; font-size: 0.85rem; }
+    .pack-splash h2 { color: #1a6090; font-size: 1.2rem; }
+    .pack-splash p  { color: #5a7a8a; font-size: 0.85rem; }
     .btn-lg { padding: 0.6rem 1.8rem; font-size: 0.9rem; border-radius: 8px; }
 
     .pack-banner {
-      grid-column: 1 / -1; background: #1e1e3a; border: 1px solid #9f7aea;
+      grid-column: 1 / -1; background: #f0f5f8; border: 1px solid #1a9bd7;
       border-radius: 8px; padding: 0.5rem 1rem;
       display: flex; justify-content: space-between; align-items: center;
     }
-    .pack-banner span { font-size: 0.85rem; color: #ccc; }
-    .pack-banner strong { color: #9f7aea; }
+    .pack-banner span { font-size: 0.85rem; color: #3a5060; }
+    .pack-banner strong { color: #1a9bd7; }
 
     .pick-label {
       position: absolute; bottom: 2.4rem; left: 0; right: 0;
       text-align: center; font-size: 0.65rem; font-weight: 800;
-      color: #9f7aea; text-shadow: 0 0 6px rgba(159,122,234,0.9);
+      color: #1a9bd7; text-shadow: 0 0 6px rgba(26,155,215,0.7);
       pointer-events: none;
     }
 
     .pack-actions { grid-column: 1 / -1; display: flex; justify-content: center; padding: 0.5rem 0; }
 
-    .loading { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #666; font-size: 0.9rem; }
-    .empty   { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; }
+    .loading { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #8a9aaa; font-size: 0.9rem; }
+    .empty   { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #9aaab8; }
 
     /* ── Modal ── */
-    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; overflow-y: auto; padding: 1rem; }
-    .modal-box { background: #12122a; border: 1px solid #9f7aea; border-radius: 12px; padding: 1.25rem; max-width: 420px; margin: 2rem auto; }
-    .modal-title  { font-size: 1rem; font-weight: 800; color: #9f7aea; margin-bottom: 0.5rem; }
+    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; overflow-y: auto; padding: 1rem; }
+    .modal-box { background: #ffffff; border: 1px solid #1a9bd7; border-radius: 12px; padding: 1.25rem; max-width: 420px; margin: 2rem auto; }
+    .modal-title  { font-size: 1rem; font-weight: 800; color: #1a6090; margin-bottom: 0.5rem; }
     .modal-reasons { margin-bottom: 0.75rem; }
-    .modal-label  { font-size: 0.68rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
-    .modal-text   { font-size: 0.8rem; color: #eee; line-height: 1.6; white-space: pre-wrap; background: #1a1a3e; border-radius: 6px; padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
-    .modal-close  { background: #2d1b69; color: #9f7aea; border: none; padding: 0.4rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
-    .modal-close:hover { background: #4c2889; }
+    .modal-label  { font-size: 0.68rem; font-weight: 700; color: #6a8090; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
+    .modal-text   { font-size: 0.8rem; color: #1c2730; line-height: 1.6; white-space: pre-wrap; background: #f0f5f8; border-radius: 6px; padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
+    .modal-close  { background: #dde8f0; color: #1a3050; border: none; padding: 0.4rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
+    .modal-close:hover { background: #c8d8e4; }
 
     /* ── Token view ── */
     .token-counter { display: flex; align-items: center; gap: 0.3rem; }
     .count-btn {
-      background: #2d1b69; border: none; color: #9f7aea;
+      background: #dde8f0; border: none; color: #1a3050;
       width: 20px; height: 20px; border-radius: 4px; cursor: pointer;
       font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
       line-height: 1; transition: background 0.15s;
     }
-    .count-btn:hover { background: #4c2889; }
-    .count-display { font-weight: 700; font-size: 0.82rem; color: #eee; min-width: 18px; text-align: center; }
-    .token-creators { padding: 0 0.5rem 0.4rem; font-size: 0.56rem; color: #666; line-height: 1.4; }
+    .count-btn:hover { background: #c8d8e4; }
+    .count-display { font-weight: 700; font-size: 0.82rem; color: #1c2730; min-width: 18px; text-align: center; }
+    .token-creators { padding: 0 0.5rem 0.4rem; font-size: 0.56rem; color: #8a9aaa; line-height: 1.4; }
 
     /* ── Mobile ── */
     @media (max-width: 600px) {
@@ -246,10 +245,9 @@
   </div>
   <div class="filter-row" id="rarityRow">
     <button class="filter-btn active" data-rarity="all">All Rarities</button>
-    <button class="filter-btn" data-rarity="mythic">Mythic</button>
-    <button class="filter-btn" data-rarity="rare">Rare</button>
-    <button class="filter-btn" data-rarity="uncommon">Uncommon</button>
     <button class="filter-btn" data-rarity="common">Common</button>
+    <button class="filter-btn" data-rarity="uncommon">Uncommon</button>
+    <button class="filter-btn" data-rarity="rare-mythic">Rare/Mythic</button>
   </div>
 
   <div class="token-section">
@@ -573,12 +571,12 @@ function showErrataModal(cardName) {
   document.getElementById('modal-title').textContent = cardName;
 
   let reasonsHtml = matches.map(m => {
-    const color = m.severity === 'high' ? '#e07020' : '#7ab4c8';
+    const color = m.severity === 'high' ? '#c05c00' : '#2a6090';
     const label = m.severity === 'high' ? '⚠ HIGH' : 'ℹ LOW';
     return `<div style="margin-bottom:0.4rem;font-size:0.75rem;font-weight:700;color:${color}">${label} — ${m.detail}</div>`;
   }).join('');
   if (isUncategorized) {
-    reasonsHtml += `<div style="color:#7ab47a;font-size:0.75rem;font-weight:700;margin-bottom:0.4rem">? Oracle text changed since baseline — no category matched yet</div>`;
+    reasonsHtml += `<div style="color:#2a6040;font-size:0.75rem;font-weight:700;margin-bottom:0.4rem">? Oracle text changed since baseline — no category matched yet</div>`;
   }
   document.getElementById('modal-reasons').innerHTML = reasonsHtml;
 
@@ -782,7 +780,10 @@ function renderCards() {
   for (const c of cards) {
     const target = cube.counts[c.rarity] ?? 1;
     if (activeFilter === 'missing' && (owned[c.name] ?? 0) >= target) continue;
-    if (activeRarityFilter !== 'all' && c.rarity !== activeRarityFilter) continue;
+    if (activeRarityFilter !== 'all') {
+      if (activeRarityFilter === 'rare-mythic') { if (c.rarity !== 'rare' && c.rarity !== 'mythic') continue; }
+      else if (c.rarity !== activeRarityFilter) continue;
+    }
     const key = colorKey(c);
     if (groups[key]) groups[key].push(c);
   }
