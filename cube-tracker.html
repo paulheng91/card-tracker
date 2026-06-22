@@ -68,7 +68,7 @@
       display: inline-flex; align-items: center; gap: 0.5rem;
       background: #242424; border: none; border-radius: 999px; cursor: pointer;
       font-size: 1rem; font-weight: 700; color: #c9a84c;
-      padding: 0.35rem 1rem 0.35rem 0.75rem; white-space: nowrap; outline: none;
+      height: 2rem; padding: 0 1rem 0 0.75rem; white-space: nowrap; outline: none;
     }
     .cube-trigger:hover { background: #2e2e2e; }
     .set-sym { width: 24px; height: 24px; flex-shrink: 0; filter: brightness(0) invert(1); opacity: 0.85; }
@@ -112,7 +112,8 @@
 
     /* ── View tabs (Cards / Info) ───────────────────────────────────────── */
     .view-tab {
-      padding: 0.28rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
+      height: 2rem; padding: 0 0.75rem; border: none; border-radius: 999px; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
       font-size: 0.73rem; font-weight: 700; background: #1e1e1e; color: #555;
       transition: all 0.15s;
     }
@@ -146,7 +147,8 @@
     /* ── Filter rows ────────────────────────────────────────────────────── */
     .filter-row { display: flex; gap: 0.4rem; justify-content: center; margin-bottom: 0.25rem; }
     .filter-btn {
-      padding: 0.25rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
+      height: 2rem; padding: 0 0.75rem; border: none; border-radius: 999px; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
       font-size: 0.73rem; font-weight: 700; background: #242424; color: #777;
       transition: background 0.15s, color 0.15s, transform 0.1s;
     }
@@ -168,7 +170,7 @@
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); gap: 0.6rem; padding: 0.75rem; }
 
     .size-row { display: flex; gap: 0.3rem; justify-content: center; }
-    .size-btn { padding: 0.18rem 0.55rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 800; background: #242424; color: #555; transition: all 0.15s; }
+    .size-btn { height: 2rem; padding: 0 0.55rem; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; background: #242424; color: #555; transition: all 0.15s; }
     .size-btn.active { background: #c9a84c; color: #111; }
 
     /* ── Color section headers ──────────────────────────────────────────── */
@@ -339,7 +341,6 @@
         </button>
         <div class="cube-menu" id="cubeMenu"></div>
       </div>
-      <button class="lock-btn" id="btnLock" title="Lock this set">🔓</button>
     </div>
     <div class="gh-login-wrap" id="ghLoginWrap">
       <button class="gh-login-btn" id="ghLoginBtn">Login</button>
@@ -383,6 +384,10 @@
     <div class="ctrl-group">
       <button class="filter-btn" id="btnCollapseAll">Collapse All</button>
       <button class="filter-btn" id="btnExpandAll">Expand All</button>
+    </div>
+    <span class="ctrl-sep"></span>
+    <div class="ctrl-group">
+      <button class="lock-btn" id="btnLock" title="Lock this set">🔓</button>
     </div>
   </div>
 
@@ -440,7 +445,7 @@ const CUBES = {
     archetypes: [] },
   ltr: { name: 'Lord of the Rings',    setCode: 'ltr', releaseDate: '2023-06-23', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true,
     archetypes: [] },
-  blb: { name: 'Bloomburrow',          setCode: 'blb', releaseDate: '2024-08-02', counts: { mythic:1, rare:1, uncommon:2, common:3 }, specials: [{ q: 'set:spg+date=blb', label: 'Special Guests' }],
+  blb: { name: 'Bloomburrow',          setCode: 'blb', releaseDate: '2024-08-02', counts: { mythic:1, rare:1, uncommon:2, common:3 },
     archetypes: [] },
   fdn: { name: 'Foundations',          setCode: 'fdn', releaseDate: '2024-11-15', counts: { mythic:1, rare:1, uncommon:2, common:3 },
     archetypes: [] },
