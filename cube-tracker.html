@@ -1,77 +1,74 @@
 <!DOCTYPE html>
-<!--
-  HTML files always start with <!DOCTYPE html> to tell the browser this is a modern HTML5 page.
-  Everything visible on the page lives inside <html>...</html>.
-  The page has two main parts:
-    <head> — invisible setup: title, styles, settings
-    <body> — the actual content the user sees
--->
 <html lang="en">
 <head>
-  <!-- UTF-8 lets the browser display any character, including symbols like ◆ and ↻ -->
   <meta charset="UTF-8">
-  <!-- Makes the page scale correctly on phones instead of zooming out to show a tiny desktop layout -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MTG Cube Tracker</title>
-
-  <!-- ═══════════════════════════════════════════════════════════════════════════
-       STYLES
-       CSS (Cascading Style Sheets) controls how every element looks.
-       Rules follow the pattern:   selector { property: value; }
-       A "selector" targets one or more HTML elements by tag name, class (.name),
-       or id (#name).  Multiple properties are separated by semicolons.
-  ═══════════════════════════════════════════════════════════════════════════ -->
+  <title>Set Cube Tracker</title>
   <style>
-
-    /* ── Reset & base ────────────────────────────────────────────────────────
-       By default browsers add different padding/margin to elements.
-       This reset zeros those out so every element starts the same.
-       box-sizing: border-box means width/height include padding and border —
-       much easier to reason about than the default. */
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    /* Dark background, light text, fills the full viewport height */
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: #111111;
       color: #d0d0d0;
       min-height: 100vh;
     }
-
-    /* ── Sticky header ───────────────────────────────────────────────────────
-       position: sticky + top: 0 keeps the header visible as the user scrolls.
-       z-index: 10 makes it float above cards so it never gets covered. */
     header {
       background: #1a1a1a;
-      padding: 0.75rem 1rem;
+      padding: 0.75rem 1rem 0;
       position: sticky;
       top: 0;
       z-index: 10;
       box-shadow: 0 2px 10px rgba(0,0,0,0.6);
     }
 
-    /* Small "← Pokémon Card Tracker" link at the top of the header */
-    .nav-link { display: block; text-align: center; font-size: 0.7rem; color: #555; text-decoration: none; margin-bottom: 0.35rem; }
-    .nav-link:hover { color: #c9a84c; }
-
-    /* Page title */
-    h1 { font-size: 1.3rem; text-align: center; color: #c9a84c; margin-bottom: 0.5rem; }
-
-    /* ── Tab rows ────────────────────────────────────────────────────────────
-       flex + flex-wrap lets buttons wrap to a second line on small screens.
-       gap adds spacing between buttons without needing margins. */
-    .tab-row { display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap; margin-bottom: 0.45rem; }
-
-    /* Set selector tabs (Innistrad, KTK, NEO, …) */
-    .cube-tab {
-      padding: 0.3rem 0.85rem; border: none; border-radius: 999px; cursor: pointer;
-      font-size: 0.78rem; font-weight: 700; background: #242424; color: #888;
-      transition: all 0.15s;
+    /* ── Header top row: title + GitHub login ───────────────────────────── */
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 0.45rem;
     }
-    /* .active is added in JS when the tab is selected */
-    .cube-tab.active { background: #c9a84c; color: #111; }
+    h1 { font-size: 1.3rem; color: #c9a84c; }
 
-    /* View tabs (Cards / Tokens / Errata) */
+    /* GitHub login in top-right corner */
+    .gh-login-wrap { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+    .gh-login-btn {
+      padding: 0.25rem 0.65rem; border: none; border-radius: 999px; cursor: pointer;
+      font-size: 0.72rem; font-weight: 700; background: #242424; color: #888;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .gh-login-btn:hover { background: #2e2e2e; color: #c9a84c; }
+    .gh-login-btn.connected { color: #52b788; }
+
+    /* Login dropdown panel */
+    .gh-login-panel {
+      display: none; position: absolute; right: 0; top: calc(100% + 6px);
+      background: #1e1e1e; border: 1px solid #333; border-radius: 8px;
+      padding: 0.6rem; gap: 0.4rem; flex-direction: column;
+      min-width: 220px; z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,0.7);
+    }
+    .gh-login-panel.open { display: flex; }
+    .gh-panel-label { font-size: 0.68rem; color: #666; }
+    .gh-panel-row { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+    /* ── Set selector row ───────────────────────────────────────────────── */
+    .set-view-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      justify-content: center; flex-wrap: wrap; margin-bottom: 0.35rem;
+    }
+    .cube-select {
+      background: #242424; border: none; border-radius: 999px; cursor: pointer;
+      font-size: 0.78rem; font-weight: 700; color: #c9a84c;
+      padding: 0.3rem 1.8rem 0.3rem 0.85rem;
+      -webkit-appearance: none; appearance: none; outline: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%23c9a84c' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.65rem center;
+    }
+    .cube-select option { background: #1e1e1e; color: #d0d0d0; font-weight: 400; }
+
+    /* ── View tabs (Cards / Info) ───────────────────────────────────────── */
+    .tab-row { display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap; }
     .view-tab {
       padding: 0.28rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
       font-size: 0.73rem; font-weight: 700; background: #1e1e1e; color: #555;
@@ -79,12 +76,10 @@
     }
     .view-tab.active { background: #2e2e2e; color: #aaa; }
 
-    /* ── Progress bar ────────────────────────────────────────────────────────
-       The outer wrap is the gray track; the inner bar grows via JS (width: X%). */
+    /* ── Progress bar ───────────────────────────────────────────────────── */
     .progress-wrap { background: #242424; border-radius: 4px; height: 5px; margin-bottom: 0.4rem; }
     .progress-bar  { background: #c9a84c; height: 5px; border-radius: 4px; transition: width 0.3s; }
 
-    /* Stats text ("42 / 100 copies collected") and save status */
     .stats-row { display: flex; justify-content: center; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
     .stats       { font-size: 0.8rem; color: #888; }
     .save-status { font-size: 0.73rem; color: #555; }
@@ -92,40 +87,34 @@
     .save-status.saved  { color: #52b788; }
     .save-status.error  { color: #e05; }
 
-    /* ── Filter rows ─────────────────────────────────────────────────────────
-       All/Missing filter and the All Rarities/Common/Uncommon/Rare+Mythic filter */
+    /* ── Filter rows ────────────────────────────────────────────────────── */
     .filter-row { display: flex; gap: 0.4rem; justify-content: center; margin-bottom: 0.25rem; }
     .filter-btn {
       padding: 0.25rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
       font-size: 0.73rem; font-weight: 700; background: #242424; color: #777;
       transition: all 0.15s;
     }
-    /* Each rarity gets its own active colour to match MTG card rarity convention */
     .filter-btn.active                            { background: #c9a84c; color: #111; }
     .filter-btn[data-rarity="rare-mythic"].active { background: #8a6010; color: #ffd700; }
     .filter-btn[data-rarity="uncommon"].active    { background: #2a3a4a; color: #8ab0c8; }
     .filter-btn[data-rarity="common"].active      { background: #2a2a2a; color: #aaa; border: 1px solid #555; }
 
-    /* GitHub token input row (at the bottom of the collapsible header) */
-    .token-section { display: flex; gap: 0.4rem; justify-content: center; align-items: center; flex-wrap: wrap; }
-    .token-input { background: #0a0a0a; border: 1px solid #333; color: #aaa; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.73rem; width: 190px; }
-    .btn { padding: 0.3rem 0.7rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.73rem; font-weight: 700; background: #242424; color: #c9a84c; transition: background 0.15s; }
+    /* Token input + generic button */
+    .token-input { background: #0a0a0a; border: 1px solid #333; color: #aaa; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.73rem; width: 100%; }
+    .btn { padding: 0.3rem 0.7rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.73rem; font-weight: 700; background: #242424; color: #c9a84c; transition: background 0.15s; white-space: nowrap; }
     .btn:hover { background: #2e2e2e; }
+    .btn.btn-danger { color: #cc4444; }
+    .btn.btn-danger:hover { background: #2e1a1a; }
 
-    /* ── Card grid ───────────────────────────────────────────────────────────
-       CSS Grid auto-fills columns: each column is at least --card-min wide.
-       JS changes --card-min to resize cards (S/M/L buttons). */
+    /* ── Card grid ──────────────────────────────────────────────────────── */
     :root { --card-min: 170px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); gap: 0.6rem; padding: 0.75rem; }
 
-    /* S / M / L size buttons */
     .size-row { display: flex; gap: 0.3rem; justify-content: center; margin-bottom: 0.4rem; }
     .size-btn { padding: 0.18rem 0.55rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: 800; background: #242424; color: #555; transition: all 0.15s; }
     .size-btn.active { background: #c9a84c; color: #111; }
 
-    /* ── Color section headers ───────────────────────────────────────────────
-       These span the full grid width (grid-column: 1 / -1) and label each
-       colour group (White, Blue, Black …).  Clicking them collapses the group. */
+    /* ── Color section headers ──────────────────────────────────────────── */
     .section-header {
       grid-column: 1 / -1;
       background: #1e1e1e; color: #c9a84c;
@@ -133,72 +122,49 @@
       border-radius: 6px; letter-spacing: 0.05em; text-transform: uppercase;
       display: flex; align-items: center; gap: 0.35rem;
     }
-    /* Errata section headers get coloured borders to show severity */
     .section-header.errata-high { background: #2a1a0a; color: #e07020; border: 1px solid #c05c00; }
     .section-header.errata-low  { background: #0a1a2a; color: #6aa0b8; border: 1px solid #2a5060; }
+    .section-header.errata-unknown { background: #0a1a0a; color: #6aa06a; border: 1px solid #2a5030; }
 
-    /* Mana symbol images loaded from Scryfall's CDN */
     .mana-sym { width: 18px; height: 18px; display: inline-block; vertical-align: middle; flex-shrink: 0; }
-
-    /* Set symbol images (shown in the cube tabs).
-       filter: brightness(0) invert(1) turns any image white for dark backgrounds.
-       The active tab reverses this to dark on the gold background. */
-    .set-sym {
-      width: 17px; height: 17px; display: inline-block; vertical-align: middle; flex-shrink: 0;
-      filter: brightness(0) invert(1); opacity: 0.75; margin-right: 3px;
-    }
-    .cube-tab.active .set-sym { filter: brightness(0); opacity: 0.35; }
-
-    /* Multicolour section shows all five WUBRG mana pips side-by-side at smaller size */
     .five-color-sym { display: inline-flex; align-items: center; gap: 1px; flex-shrink: 0; }
     .five-color-sym .mana-sym { width: 13px; height: 13px; }
 
-    /* Any section header with a data-color-key attribute is clickable (collapse/expand) */
     .section-header[data-color-key] { cursor: pointer; user-select: none; }
     .section-header[data-color-key]:hover { background: #282828; }
     .section-header.errata-high[data-color-key]:hover { background: #3a2010; }
     .section-header.errata-low[data-color-key]:hover  { background: #142030; }
 
-    /* The ▼ chevron pushed to the right end of the header row.
-       When collapsed, JS adds .sec-collapsed which rotates it to point right (▶). */
-    .sec-chevron { margin-left: auto; font-size: 0.65rem; opacity: 0.55; padding-left: 0.5rem; transition: transform 0.15s; }
+    /* Chevron — flex so it's always vertically centered with surrounding text */
+    .sec-chevron {
+      margin-left: auto; font-size: 0.65rem; opacity: 0.55; padding-left: 0.5rem;
+      transition: transform 0.15s; display: flex; align-items: center; line-height: 1;
+    }
     .section-header.sec-collapsed .sec-chevron { transform: rotate(-90deg); }
 
-    /* ── Card tiles ──────────────────────────────────────────────────────────
-       Each card is a rounded box with a coloured border indicating ownership:
-         green  = you have all copies  (.complete)
-         gold   = you have some        (.partial)
-         red    = you have none        (.missing)  */
+    /* ── Card tiles ─────────────────────────────────────────────────────── */
     .card {
       background: #1e1e1e; border: 2px solid #333; border-radius: 10px;
       overflow: hidden; cursor: pointer;
       transition: transform 0.15s, border-color 0.15s;
-      position: relative; /* lets child elements use absolute positioning */
+      position: relative;
     }
     .card:hover                    { transform: scale(1.03); }
-    /* Only scale on tap for non-token cards (token cards have +/− buttons that need their own animation) */
     .card:not(.token-card):active  { transform: scale(0.93); }
     .count-btn:active              { transform: scale(0.75); background: #111; }
 
     .card.complete { border-color: #3a7a55; }
     .card.partial  { border-color: #b7791f; }
     .card.missing  { border-color: #8b2020; }
-
-    /* Leftover styles from pack opener (kept in case they're referenced elsewhere) */
-    .card.picked   { border-color: #c9a84c; box-shadow: 0 0 12px rgba(201,168,76,0.55); }
-    .card.passed   { opacity: 0.45; }
     .card.basic-land { border-color: #2a2a2a; cursor: default; }
     .card.basic-land:hover  { transform: none; }
     .card.basic-land:active { transform: none; }
 
-    /* Card image wrapper — aspect-ratio 63/88 matches the real MTG card proportions */
     .card-img-wrap { aspect-ratio: 63/88; overflow: hidden; background: #0a0a0a; border-radius: 4.5% / 3.2%; }
     .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.2s; }
-    /* Cards you don't own are dimmed and desaturated so missing ones stand out */
     .card.missing .card-img-wrap img { opacity: 0.2; filter: grayscale(80%); }
     .card.partial  .card-img-wrap img { opacity: 0.65; }
 
-    /* Errata badge sits in the top-left corner of a card in the Errata view */
     .badge-row { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; gap: 3px; }
     .errata-badge {
       border: none; border-radius: 4px; font-size: 0.55rem; font-weight: 800;
@@ -208,9 +174,7 @@
     .errata-high:hover { background: #e06e00; }
     .errata-low  { background: #0a1a2a; color: #6aa0b8; border: 1px solid #2a5060; }
     .errata-low:hover { background: #142030; }
-    .section-header.errata-unknown { background: #0a1a0a; color: #6aa06a; border: 1px solid #2a5030; }
 
-    /* Flip button (↻) for double-faced cards — sits in the top-right corner */
     .flip-btn {
       position: absolute; top: 4px; right: 4px; z-index: 2;
       background: rgba(0,0,0,0.65); color: #fff; border: none;
@@ -220,9 +184,7 @@
     }
     .flip-btn:hover { background: rgba(0,0,0,0.85); }
 
-    /* ── Collapsible header toggle ───────────────────────────────────────────
-       Clicking this button shows/hides #headerExtra (progress bar, filters, etc.).
-       max-height animation is used instead of display:none so CSS can transition it. */
+    /* ── Collapsible header extra ────────────────────────────────────────── */
     .header-toggle {
       display: block; width: 100%; background: #1e1e1e; border: none;
       border-top: 1px solid #2a2a2a;
@@ -231,16 +193,9 @@
     }
     .header-toggle:hover { color: #c9a84c; background: #242424; }
 
-    /* The year label inside each cube tab (e.g. '11 for Innistrad 2011) */
-    .tab-year { font-size: 0.6rem; font-weight: 400; opacity: 0.6; margin-left: 0.2rem; }
-
-    /* The collapsible section below the header toggle.
-       max-height transition creates a smooth slide animation.
-       .collapsed sets max-height to 0 so the content disappears. */
     #headerExtra { overflow: hidden; transition: max-height 0.25s ease, opacity 0.2s; max-height: 400px; opacity: 1; }
     #headerExtra.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
 
-    /* "Mark All Owned" button — distinct gold tint so it stands apart from filter buttons */
     .mark-all-btn {
       padding: 0.25rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
       font-size: 0.73rem; font-weight: 700; background: #2a2010; color: #c9a84c;
@@ -248,23 +203,17 @@
     }
     .mark-all-btn:hover { background: #3a3010; }
 
-    /* Bottom strip of each card tile: collector number on the left, owned count on the right */
     .card-footer { padding: 0.3rem 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
     .card-num  { color: #666; }
-    .lbl-own   { color: #52b788; font-weight: 700; } /* green  = fully owned */
-    .lbl-part  { color: #c9a84c; font-weight: 700; } /* gold   = partially owned */
-    .lbl-need  { color: #cc4444; font-weight: 700; } /* red    = need more */
-
-    /* Card name beneath the footer — truncated with "…" if it's too long */
+    .lbl-own   { color: #52b788; font-weight: 700; }
+    .lbl-part  { color: #c9a84c; font-weight: 700; }
+    .lbl-need  { color: #cc4444; font-weight: 700; }
     .card-name { padding: 0 0.5rem 0.35rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* Full-width messages shown in the grid when there's nothing to show */
     .loading { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; font-size: 0.9rem; }
     .empty   { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; }
 
-    /* ── Errata detail modal ─────────────────────────────────────────────────
-       position: fixed + inset: 0 covers the entire screen with a dark overlay.
-       The white box (.modal-box) sits centred on top of it. */
+    /* ── Info detail modal ──────────────────────────────────────────────── */
     #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; overflow-y: auto; padding: 1rem; }
     .modal-box { background: #1e1e1e; border: 1px solid #c9a84c; border-radius: 12px; padding: 1.25rem; max-width: 420px; margin: 2rem auto; }
     .modal-title   { font-size: 1rem; font-weight: 800; color: #c9a84c; margin-bottom: 0.5rem; }
@@ -274,59 +223,54 @@
     .modal-close   { background: #242424; color: #c9a84c; border: none; padding: 0.4rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
     .modal-close:hover { background: #2e2e2e; }
 
-    /* ── Token view ──────────────────────────────────────────────────────────
-       Tokens show a −/count/+ row instead of a tap-to-cycle interaction.
-       The ::after pseudo-element extends the invisible tap area 8 px in every
-       direction so the button is easier to hit on a touchscreen. */
+    /* ── Token +/− counter ──────────────────────────────────────────────── */
     .token-counter { display: flex; align-items: center; gap: 0.3rem; }
     .count-btn {
       background: #242424; border: none; color: #c9a84c;
       width: 36px; height: 36px; border-radius: 4px; cursor: pointer;
       font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
       line-height: 1; transition: background 0.1s, transform 0.1s;
-      touch-action: manipulation; /* prevents iOS double-tap zoom on fast taps */
-      flex-shrink: 0;
-      position: relative; /* needed for the ::after tap-area trick */
+      touch-action: manipulation; flex-shrink: 0; position: relative;
     }
     .count-btn::after { content: ''; position: absolute; inset: -8px; }
     .count-btn:hover { background: #2e2e2e; }
     .count-display { font-weight: 700; font-size: 0.82rem; color: #d0d0d0; min-width: 18px; text-align: center; }
 
-    /* "Made by: Card A, Card B" list at the bottom of each token tile.
-       Each name is wrapped in .creator-link which shows a card image on hover. */
     .token-creators { padding: 0 0.5rem 0.4rem; font-size: 0.6rem; color: #666; line-height: 1.5; }
     .creator-link { position: relative; display: inline-block; color: #8a8a8a; cursor: default; white-space: nowrap; }
     .creator-link:hover { color: #c9a84c; }
-    /* The preview image is hidden by default; hovering .creator-link shows it.
-       It's positioned above the text (bottom: 100%) and centred horizontally. */
     .creator-preview {
-      display: none;
-      position: absolute; bottom: calc(100% + 6px); left: 50%;
-      transform: translateX(-50%);
-      width: 150px; z-index: 200; pointer-events: none;
+      display: none; position: absolute; bottom: calc(100% + 6px); left: 50%;
+      transform: translateX(-50%); width: 150px; z-index: 200; pointer-events: none;
       border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.95);
     }
     .creator-link:hover .creator-preview { display: block; }
 
-    /* ── Mobile overrides ────────────────────────────────────────────────────
-       @media queries apply styles only when the screen is ≤ 600 px wide.
-       Everything here shrinks slightly so the UI fits on a phone. */
+    /* ── Info view ──────────────────────────────────────────────────────── */
+    .info-section { grid-column: 1 / -1; padding: 0 0 0.5rem; }
+    .info-block { background: #1e1e1e; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; }
+    .info-block-title { font-size: 0.78rem; font-weight: 700; color: #c9a84c; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.6rem; }
+    .archetype-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem; }
+    .archetype-card { background: #141414; border: 1px solid #2a2a2a; border-radius: 6px; padding: 0.6rem 0.75rem; }
+    .archetype-name { font-size: 0.78rem; font-weight: 700; color: #d0d0d0; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem; }
+    .archetype-desc { font-size: 0.72rem; color: #888; line-height: 1.5; }
+    .info-empty { font-size: 0.8rem; color: #555; font-style: italic; }
+
+    /* ── Mobile ─────────────────────────────────────────────────────────── */
     @media (max-width: 600px) {
-      header { padding: 0.45rem 0.75rem; }
-      h1 { font-size: 1.05rem; margin-bottom: 0.35rem; }
-      /* Horizontal scroll for tabs so they don't wrap on small screens */
-      .tab-row { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; margin-bottom: 0.3rem; }
-      .tab-row::-webkit-scrollbar { display: none; }
-      .cube-tab  { padding: 0.22rem 0.6rem; font-size: 0.7rem; white-space: nowrap; }
-      .view-tab  { padding: 0.2rem 0.55rem;  font-size: 0.68rem; white-space: nowrap; }
+      header { padding: 0.45rem 0.75rem 0; }
+      h1 { font-size: 1.05rem; }
+      .gh-login-btn { font-size: 0.65rem; padding: 0.2rem 0.5rem; }
+      .set-view-row { gap: 0.3rem; }
+      .cube-select { font-size: 0.7rem; padding: 0.22rem 1.4rem 0.22rem 0.55rem; }
+      .view-tab  { padding: 0.2rem 0.55rem; font-size: 0.68rem; white-space: nowrap; }
       .filter-row { margin-bottom: 0.25rem; }
       .filter-btn { padding: 0.2rem 0.55rem; font-size: 0.68rem; }
       .size-row { margin-bottom: 0.25rem; }
       .size-btn { padding: 0.15rem 0.45rem; font-size: 0.65rem; }
       .stats-row { margin-bottom: 0.25rem; }
       .stats { font-size: 0.72rem; }
-      .token-section { gap: 0.3rem; }
-      .token-input { width: 150px; font-size: 0.68rem; }
+      .token-input { font-size: 0.68rem; }
       .btn { padding: 0.22rem 0.5rem; font-size: 0.68rem; }
       .progress-wrap { margin-bottom: 0.3rem; }
     }
@@ -334,95 +278,70 @@
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     ERRATA DETAIL MODAL
-     Hidden by default (display:none in CSS).  JS sets display:block to show it.
-     Clicking the dark overlay behind the box also closes it (handled in JS).
-═══════════════════════════════════════════════════════════════════════════ -->
 <div id="modal">
   <div class="modal-box">
-    <div class="modal-title"   id="modal-title"></div>   <!-- Card name, filled by JS -->
-    <div class="modal-reasons" id="modal-reasons"></div> <!-- Why it has errata -->
+    <div class="modal-title"   id="modal-title"></div>
+    <div class="modal-reasons" id="modal-reasons"></div>
     <div class="modal-label">Current Oracle Text</div>
-    <div class="modal-text"    id="modal-oracle"></div>  <!-- Full oracle text -->
+    <div class="modal-text"    id="modal-oracle"></div>
     <button class="modal-close" onclick="document.getElementById('modal').style.display='none'">Close</button>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     STICKY HEADER
-     Everything inside <header> stays at the top of the screen while scrolling.
-═══════════════════════════════════════════════════════════════════════════ -->
 <header>
-  <!-- Link back to the Pokémon tracker that shares this folder -->
-  <a class="nav-link" href="index.html">← Pokemon Card Tracker</a>
-  <h1>MTG Cube Tracker</h1>
-
-  <!-- Cube tabs are empty here — JS creates a button for each set in CUBES and appends them -->
-  <div class="tab-row" id="cubeTabs"></div>
-
-  <!-- View tabs switch between the three pages: Cards, Tokens, Errata -->
-  <div class="tab-row" id="viewTabs">
-    <button class="view-tab active" data-view="cards">Cards</button>
-    <button class="view-tab"        data-view="tokens">Tokens</button>
-    <button class="view-tab"        data-view="errata">Errata</button>
+  <div class="header-top">
+    <h1>Set Cube Tracker</h1>
+    <div class="gh-login-wrap" id="ghLoginWrap">
+      <button class="gh-login-btn" id="ghLoginBtn">Login</button>
+      <div class="gh-login-panel" id="ghLoginPanel">
+        <span class="gh-panel-label">GitHub personal access token</span>
+        <input class="token-input" id="tokenInput" type="password" placeholder="ghp_…">
+        <div class="gh-panel-row">
+          <button class="btn" id="btnSaveToken">Connect</button>
+          <button class="btn" id="btnCheckGist">Verify</button>
+          <button class="btn btn-danger" id="btnClearToken">Disconnect</button>
+        </div>
+        <span class="save-status" id="saveStatus"></span>
+      </div>
+    </div>
   </div>
 
-  <!-- ▴/▾ button that shows/hides the extra controls below it -->
+  <div class="set-view-row">
+    <select id="cubeSelect" class="cube-select"></select>
+    <div class="tab-row" id="viewTabs">
+      <button class="view-tab active" data-view="cards">Cards</button>
+      <button class="view-tab"        data-view="info">Info</button>
+    </div>
+  </div>
+
   <button class="header-toggle" id="headerToggle">▴</button>
 
-  <!-- Everything below the toggle can be hidden.  JS adds class="collapsed" to slide it away. -->
   <div id="headerExtra">
-
-    <!-- Thin gold bar showing how many copies of the set you own -->
     <div class="progress-wrap" id="progressWrap">
       <div class="progress-bar" id="bar" style="width:0%"></div>
     </div>
-
-    <!-- S / M / L card size buttons -->
     <div class="size-row">
       <button class="size-btn" data-size="s">S</button>
       <button class="size-btn" data-size="m">M</button>
       <button class="size-btn" data-size="l">L</button>
     </div>
-
-    <!-- "42 / 100 copies collected" and save-status messages -->
     <div class="stats-row">
-      <span class="stats"       id="stats">Loading…</span>
-      <span class="save-status" id="saveStatus"></span>
+      <span class="stats" id="stats">Loading…</span>
     </div>
-
-    <!-- All / Missing filter, plus the "Mark All Owned" shortcut button -->
     <div class="filter-row" id="filterRow">
       <button class="filter-btn active" data-filter="all">All</button>
       <button class="filter-btn"        data-filter="missing">Missing</button>
       <button class="mark-all-btn"      id="btnMarkAllOwned">Mark All Owned</button>
     </div>
-
-    <!-- Rarity filter: All Rarities / Common / Uncommon / Rare+Mythic -->
     <div class="filter-row" id="rarityRow">
       <button class="filter-btn active" data-rarity="all">All Rarities</button>
       <button class="filter-btn"        data-rarity="common">Common</button>
       <button class="filter-btn"        data-rarity="uncommon">Uncommon</button>
       <button class="filter-btn"        data-rarity="rare-mythic">Rare/Mythic</button>
     </div>
-
-    <!-- GitHub personal-access-token input for saving to a Gist -->
-    <div class="token-section">
-      <input  class="token-input" id="tokenInput" type="password" placeholder="GitHub token (for saving)">
-      <button class="btn" id="btnSaveToken">Save Token</button>
-      <button class="btn" id="btnCheckGist">Check Gist</button>
-    </div>
-
-  </div><!-- end #headerExtra -->
+  </div>
 </header>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     MAIN CARD GRID
-     JS fills this div with card tiles.  The CSS grid layout automatically
-     arranges them into as many columns as fit at the current card size.
-═══════════════════════════════════════════════════════════════════════════ -->
-<!-- Collapse All / Expand All — shown above the grid in Cards and Errata views -->
 <div id="collapseRow" style="display:none;gap:0.4rem;justify-content:center;padding:0.5rem 1rem 0">
   <button class="filter-btn" id="btnCollapseAll">Collapse All</button>
   <button class="filter-btn" id="btnExpandAll">Expand All</button>
@@ -432,49 +351,32 @@
   <div class="loading">Loading cards from Scryfall…</div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     JAVASCRIPT
-     All the app logic lives here, after the HTML so elements exist before
-     the script tries to find them with getElementById / querySelectorAll.
-═══════════════════════════════════════════════════════════════════════════ -->
 <script>
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CARD SIZE PREFERENCE
-// The grid column width is controlled by the CSS variable --card-min.
-// Changing it resizes every card instantly without touching individual elements.
-// The chosen size is saved to localStorage so it survives page refreshes.
 // ═══════════════════════════════════════════════════════════════════════════
 
-const CARD_SIZES = { s: 110, m: 170, l: 230 }; // minimum column widths in pixels
+const CARD_SIZES = { s: 110, m: 170, l: 230 };
 
 function applySize(key) {
-  // Update the CSS variable that controls grid column width
   document.documentElement.style.setProperty('--card-min', CARD_SIZES[key] + 'px');
-  // Highlight the matching S/M/L button
   document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === key));
-  // Remember the choice across page reloads
   localStorage.setItem('cardSize', key);
 }
 
-// Wire up each size button
 document.querySelectorAll('.size-btn').forEach(btn => btn.addEventListener('click', () => applySize(btn.dataset.size)));
-
-// On first visit default to large on desktop, small on mobile
 const defaultSize = window.innerWidth >= 768 ? 'l' : 's';
 applySize(localStorage.getItem('cardSize') ?? defaultSize);
 
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HEADER COLLAPSE
-// The extra controls under the toggle button slide away when collapsed.
-// CSS handles the animation (max-height transition); JS just flips the class.
 // ═══════════════════════════════════════════════════════════════════════════
 
 const headerExtra  = document.getElementById('headerExtra');
 const headerToggle = document.getElementById('headerToggle');
 
-// Restore collapsed state — default to collapsed on mobile
 const savedCollapsed = localStorage.getItem('headerCollapsed');
 const startCollapsed = savedCollapsed !== null ? savedCollapsed === 'true' : window.innerWidth < 768;
 if (startCollapsed) {
@@ -491,88 +393,71 @@ headerToggle.addEventListener('click', () => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GIST CONFIGURATION
-// Collection data (owned counts, oracle snapshots, token counts) is stored
-// in a public GitHub Gist as a JSON file.  A personal-access-token is needed
-// to write back — it stays in the browser's localStorage, never sent anywhere
-// except the GitHub API.
 // ═══════════════════════════════════════════════════════════════════════════
 
 const GIST_ID   = '39ef6aa0cfaa1b98874f0d9e60ae7f53';
 const GIST_USER = 'paulheng91';
 const GIST_FILE = 'cube.json';
-// Raw URL bypasses GitHub's cache so we always get the latest data
 const GIST_RAW  = `https://gist.githubusercontent.com/${GIST_USER}/${GIST_ID}/raw/${GIST_FILE}`;
 const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
 
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CUBE DEFINITIONS
-// Each entry describes one MTG set used as a cube draft format.
-//   setCode     — Scryfall's short identifier for the set (e.g. 'isd')
-//   releaseDate — used to sort tabs oldest→newest
-//   counts      — how many copies of each rarity to target per cube
-//   errataCheck — true for older sets whose printed text differs from Oracle
-//   allOwned    — pre-fills every card as owned on first load
-//   specials    — extra set codes (or Scryfall query objects) to include
-//                 alongside the main set (e.g. special guest reprints)
+// archetypes: add { name, colors: ['W','U',...], description } entries per set
 // ═══════════════════════════════════════════════════════════════════════════
 
 const CUBES = {
-  isd: { name: 'Innistrad',           setCode: 'isd', releaseDate: '2011-09-30', counts: { mythic:1, rare:1, uncommon:2, common:3 }, errataCheck: true },
-  ktk: { name: 'Khans of Tarkir',     setCode: 'ktk', releaseDate: '2014-09-26', counts: { mythic:1, rare:1, uncommon:2, common:3 }, errataCheck: true, allOwned: true },
-  neo: { name: 'Neon Dynasty',         setCode: 'neo', releaseDate: '2022-02-18', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true },
-  dmu: { name: 'Dominaria United',     setCode: 'dmu', releaseDate: '2022-09-09', counts: { mythic:1, rare:1, uncommon:2, common:3 }, specials: [{ code: 'mul', label: 'Multiverse Legends' }] },
-  ltr: { name: 'Lord of the Rings',    setCode: 'ltr', releaseDate: '2023-06-23', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true },
-  blb: { name: 'Bloomburrow',          setCode: 'blb', releaseDate: '2024-08-02', counts: { mythic:1, rare:1, uncommon:2, common:3 }, specials: [{ q: 'set:spg+date=blb', label: 'Special Guests' }] },
-  fdn: { name: 'Foundations',          setCode: 'fdn', releaseDate: '2024-11-15', counts: { mythic:1, rare:1, uncommon:2, common:3 } },
-  inr: { name: 'Innistrad Remastered', setCode: 'inr', releaseDate: '2025-01-17', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true },
-  tdm: { name: 'Tarkir: Dragonstorm',  setCode: 'tdm', releaseDate: '2025-04-25', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true },
-  // noDFCLands: FIN has adventure Town lands and a transform land (Balamb Garden) — exclude them
-  // (is:booster added globally handles Through the Ages bonus-sheet cards automatically)
-  fin: { name: 'Final Fantasy',        setCode: 'fin', releaseDate: '2025-06-13', counts: { mythic:1, rare:1, uncommon:2, common:3 }, noDFCLands: true },
+  isd: { name: 'Innistrad',           setCode: 'isd', releaseDate: '2011-09-30', counts: { mythic:1, rare:1, uncommon:2, common:3 }, errataCheck: true,
+    archetypes: [] },
+  ktk: { name: 'Khans of Tarkir',     setCode: 'ktk', releaseDate: '2014-09-26', counts: { mythic:1, rare:1, uncommon:2, common:3 }, errataCheck: true, allOwned: true,
+    archetypes: [] },
+  neo: { name: 'Neon Dynasty',         setCode: 'neo', releaseDate: '2022-02-18', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true,
+    archetypes: [] },
+  dmu: { name: 'Dominaria United',     setCode: 'dmu', releaseDate: '2022-09-09', counts: { mythic:1, rare:1, uncommon:2, common:3 }, specials: [{ code: 'mul', label: 'Multiverse Legends' }],
+    archetypes: [] },
+  ltr: { name: 'Lord of the Rings',    setCode: 'ltr', releaseDate: '2023-06-23', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true,
+    archetypes: [] },
+  blb: { name: 'Bloomburrow',          setCode: 'blb', releaseDate: '2024-08-02', counts: { mythic:1, rare:1, uncommon:2, common:3 }, specials: [{ q: 'set:spg+date=blb', label: 'Special Guests' }],
+    archetypes: [] },
+  fdn: { name: 'Foundations',          setCode: 'fdn', releaseDate: '2024-11-15', counts: { mythic:1, rare:1, uncommon:2, common:3 },
+    archetypes: [] },
+  inr: { name: 'Innistrad Remastered', setCode: 'inr', releaseDate: '2025-01-17', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true,
+    archetypes: [] },
+  tdm: { name: 'Tarkir: Dragonstorm',  setCode: 'tdm', releaseDate: '2025-04-25', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true,
+    archetypes: [] },
+  fin: { name: 'Final Fantasy',        setCode: 'fin', releaseDate: '2025-06-13', counts: { mythic:1, rare:1, uncommon:2, common:3 }, noDFCLands: true,
+    archetypes: [] },
 };
 
 
 // ═══════════════════════════════════════════════════════════════════════════
 // COLOUR GROUPING
-// Cards are sorted into 8 buckets for display.  The order matches the
-// traditional WUBRG ordering used throughout MTG.
 // ═══════════════════════════════════════════════════════════════════════════
 
 const COLOR_ORDER = ['W','U','B','R','G','M','A','L'];
 const COLOR_LABEL = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', M:'Multicolored', A:'Artifact', L:'Land' };
 
-// SYM() returns an <img> tag that loads a mana-pip SVG from Scryfall's CDN
 const SYM = s => `<img class="mana-sym" src="https://svgs.scryfall.io/card-symbols/${s}.svg" alt="{${s}}">`;
-// Five pips side-by-side for the Multicoloured section header
 const FIVE_COLOR = `<span class="five-color-sym">${SYM('W')}${SYM('U')}${SYM('B')}${SYM('R')}${SYM('G')}</span>`;
-// Map from colour key to the icon shown in the section header
 const COLOR_ICON = { W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:FIVE_COLOR, A:SYM('C'), L:'🏔' };
 
-// Returns the single letter that describes a card's colour group
 function colorKey(card) {
   let c = card.colors ?? [];
-  // Double-faced cards (DFCs) sometimes store colours only on each face, not at the top level
   if (c.length === 0 && card.card_faces?.length > 0) {
     const all = new Set();
     card.card_faces.forEach(f => (f.colors ?? []).forEach(x => all.add(x)));
     c = [...all];
   }
-  if (c.length > 1) return 'M'; // two or more colours → Multicoloured
+  if (c.length > 1) return 'M';
   if (c.length === 1) return c[0];
   if (card.type_line?.includes('Land')) return 'L';
-  return 'A'; // colourless and not a land → Artifact
+  return 'A';
 }
 
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ERRATA DETECTION
-// Older cards (ISD, KTK) were printed before various Oracle-text updates.
-// These rules detect whether a card's current Oracle text contains wording
-// that differs from what was printed on the physical card.
-//
-// severity 'high' = the change affects gameplay (e.g. new legal targets)
-// severity 'low'  = cosmetic wording only (e.g. "enters" → "enters the battlefield")
 // ═══════════════════════════════════════════════════════════════════════════
 
 const ERRATA_CATEGORIES = [
@@ -607,13 +492,11 @@ const ERRATA_CATEGORIES = [
   },
 ];
 
-// Returns the list of errata categories that apply to a named card
 function getErrataMatches(cardName) {
   const t = oracleMap[cardName] ?? '';
   return ERRATA_CATEGORIES.filter(cat => cat.test(t));
 }
 
-// Returns true if oracle text changed since the snapshot was taken AND no category covers it
 function hasUncategorizedChange(cardName) {
   const snap = oracleSnapshot[activeCube]?.[cardName];
   if (snap === undefined) return false;
@@ -621,7 +504,6 @@ function hasUncategorizedChange(cardName) {
   return getErrataMatches(cardName).length === 0;
 }
 
-// Returns 'high', 'low', or null — used to pick badge colours
 function topSeverity(matches) {
   if (matches.some(m => m.severity === 'high')) return 'high';
   if (matches.length) return 'low';
@@ -631,57 +513,87 @@ function topSeverity(matches) {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // APPLICATION STATE
-// These variables hold everything the app needs to remember while the page
-// is open.  They are updated by user actions and by data loaded from Scryfall
-// and the Gist.
 // ═══════════════════════════════════════════════════════════════════════════
 
-let activeCube         = localStorage.getItem('activeCube') ?? 'isd'; // which set tab is selected
-let activeView         = localStorage.getItem('activeView') ?? 'cards'; // cards | tokens | errata
-let activeFilter       = 'all';       // all | missing
-let activeRarityFilter = 'all';       // all | common | uncommon | rare-mythic
+let activeCube         = localStorage.getItem('activeCube') ?? 'isd';
+let activeView         = localStorage.getItem('activeView') ?? 'cards';
+// Migrate legacy view names
+if (activeView === 'tokens') activeView = 'cards';
+if (activeView === 'errata') activeView = 'info';
+localStorage.setItem('activeView', activeView);
 
-let cardCache    = {};  // { cubeKey: [scryfall card objects] } — cards fetched from Scryfall
-let cardByName   = {};  // flat map: cardName → scryfall object, across all loaded sets
-let oracleMap    = {};  // cardName → oracle text string
-let oracleSnapshot = {}; // { cubeKey: { cardName: text } } — baseline for detecting future changes
-let ownedMap     = {};  // { cubeKey: { cardName: count } } — how many of each card you own
+let activeFilter       = 'all';
+let activeRarityFilter = 'all';
 
-let saveTimer    = null; // tracks the pending auto-save timeout
+let cardCache    = {};
+let cardByName   = {};
+let oracleMap    = {};
+let oracleSnapshot = {};
+let ownedMap     = {};
 
-let flippedCards      = new Set(); // card names (or token IDs) currently showing their back face
-let collapsedSections = new Set(JSON.parse(localStorage.getItem('collapsedSections') || '[]')); // collapsed colour groups
+let saveTimer    = null;
 
-let tokenPool  = {}; // { setCode: [token card objects] } — tokens loaded per set
-let tokenOwned = {}; // { cubeKey: { scryfallId: count } } — how many of each token you own
+let flippedCards      = new Set();
+let collapsedSections = new Set(JSON.parse(localStorage.getItem('collapsedSections') || '[]'));
+
+let tokenPool  = {};
+let tokenOwned = {};
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// GITHUB TOKEN INPUT
-// The personal-access-token is stored in localStorage under 'ghtoken'.
-// It's only sent to api.github.com for Gist reads/writes.
+// GITHUB TOKEN / LOGIN UI
 // ═══════════════════════════════════════════════════════════════════════════
 
 function getToken() { return localStorage.getItem('ghtoken') ?? ''; }
 
-// Pre-fill the input with any previously saved token so users don't have to re-enter it
-document.getElementById('tokenInput').value = getToken();
+const ghLoginBtn   = document.getElementById('ghLoginBtn');
+const ghLoginPanel = document.getElementById('ghLoginPanel');
+const tokenInput   = document.getElementById('tokenInput');
+
+function updateLoginBtn() {
+  const hasToken = !!getToken();
+  ghLoginBtn.textContent = hasToken ? '● Connected' : 'Login';
+  ghLoginBtn.classList.toggle('connected', hasToken);
+  tokenInput.value = getToken();
+}
+updateLoginBtn();
+
+ghLoginBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  ghLoginPanel.classList.toggle('open');
+});
+
+document.addEventListener('click', e => {
+  if (!document.getElementById('ghLoginWrap').contains(e.target))
+    ghLoginPanel.classList.remove('open');
+});
 
 document.getElementById('btnSaveToken').addEventListener('click', () => {
-  const t = document.getElementById('tokenInput').value.trim();
-  if (t) { localStorage.setItem('ghtoken', t); setStatus('token saved', 'saved'); }
+  const t = tokenInput.value.trim();
+  if (t) {
+    localStorage.setItem('ghtoken', t);
+    setStatus('Connected ✓', 'saved');
+    updateLoginBtn();
+    setTimeout(() => { ghLoginPanel.classList.remove('open'); setStatus(''); }, 1200);
+  }
 });
 
 document.getElementById('btnCheckGist').addEventListener('click', async () => {
   const token = getToken();
-  if (!token) { setStatus('no token saved', 'error'); return; }
+  if (!token) { setStatus('No token saved', 'error'); return; }
   try {
     const d = await (await fetch(GIST_API, { headers: { Authorization: `token ${token}` } })).json();
-    setStatus(d.id ? 'gist OK ✓' : 'gist error', d.id ? 'saved' : 'error');
-  } catch (e) { setStatus('network error', 'error'); }
+    setStatus(d.id ? 'Gist OK ✓' : 'Gist error', d.id ? 'saved' : 'error');
+  } catch (e) { setStatus('Network error', 'error'); }
 });
 
-// Updates the small status message ("saving…", "saved ✓", "save failed", …)
+document.getElementById('btnClearToken').addEventListener('click', () => {
+  localStorage.removeItem('ghtoken');
+  updateLoginBtn();
+  setStatus('Disconnected', '');
+  setTimeout(() => { ghLoginPanel.classList.remove('open'); setStatus(''); }, 1000);
+});
+
 function setStatus(msg, cls = '') {
   const el = document.getElementById('saveStatus');
   el.textContent = msg;
@@ -691,31 +603,20 @@ function setStatus(msg, cls = '') {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GIST I/O
-// The Gist JSON looks like:
-//   {
-//     "isd": { "Delver of Secrets": 1, "Snapcaster Mage": 1, … },
-//     "ktk": { … },
-//     "_oracle":  { "isd": { "Delver of Secrets": "Oracle text…", … } },
-//     "_tokens":  { "isd": { "scryfall-id": 2, … } }
-//   }
-//
-// loadCollection() reads it; pushCollection() writes it back.
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function loadCollection() {
   try {
-    // ?t= timestamp busts any browser cache so we always get the latest version
     const res = await fetch(GIST_RAW + '?t=' + Date.now());
     if (res.ok) {
       const data = await res.json();
-      oracleSnapshot = data._oracle  ?? {}; // pull out the special keys…
+      oracleSnapshot = data._oracle  ?? {};
       tokenOwned     = data._tokens  ?? {};
-      delete data._oracle;                  // …then whatever remains is the owned-card data
+      delete data._oracle;
       delete data._tokens;
       ownedMap = data;
     }
   } catch (e) {}
-  // Ensure every cube has an entry so the rest of the code never has to null-check
   for (const key of Object.keys(CUBES)) {
     if (!ownedMap[key]) ownedMap[key] = {};
   }
@@ -723,13 +624,12 @@ async function loadCollection() {
 
 async function pushCollection() {
   const token = getToken();
-  if (!token) { setStatus('no token', 'error'); return; }
-  setStatus('saving…', 'saving');
+  if (!token) { setStatus('No token', 'error'); return; }
+  setStatus('Saving…', 'saving');
   try {
     const res = await fetch(GIST_API, {
       method: 'PATCH',
       headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
-      // Spread ownedMap (all per-set owned counts) then add our special _keys
       body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify({
         ...ownedMap,
         _oracle: oracleSnapshot,
@@ -738,15 +638,14 @@ async function pushCollection() {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      setStatus(`save failed: ${err.message ?? res.status}`, 'error');
+      setStatus(`Save failed: ${err.message ?? res.status}`, 'error');
     } else {
-      setStatus('saved ✓', 'saved');
+      setStatus('Saved ✓', 'saved');
       setTimeout(() => setStatus(''), 3000);
     }
-  } catch (e) { setStatus(`save failed: ${e.message}`, 'error'); }
+  } catch (e) { setStatus(`Save failed: ${e.message}`, 'error'); }
 }
 
-// Debounces saves — waits 1.5 s after the last change before writing to the Gist
 function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(pushCollection, 1500);
@@ -755,18 +654,8 @@ function scheduleSave() {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SCRYFALL API HELPERS
-// Scryfall returns paginated results.  When has_more is true there is a
-// next_page URL for the following page of results.  We wait 100 ms between
-// pages to stay within Scryfall's rate limits.
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Generic query fetch — accepts a raw Scryfall search string (used for special guest sets).
-// specialLabel tags each returned card so renderCards can put them in their own section.
-//
-// URL encoding note: Scryfall uses '+' as its AND operator in query strings.
-// encodeURIComponent would encode '+' as '%2B', which Scryfall treats as a literal plus
-// (not AND), causing the wrong results.  We split on '+', encode each term separately,
-// then rejoin with raw '+' so Scryfall receives the correct AND-separated query.
 async function fetchByQuery(q, specialLabel = null) {
   const cards = [];
   const qStr = (q + '+game:paper').split('+').map(p => encodeURIComponent(p)).join('+');
@@ -787,26 +676,16 @@ async function fetchByQuery(q, specialLabel = null) {
   return cards;
 }
 
-// Fetch the draft-legal (non-extra, paper) cards for a set code.
-// options.maxCN:      skip cards whose collector number exceeds this value (filters bonus-sheet overflow)
-// options.noDFCLands: skip cards that are both DFC (have card_faces) and a Land type
-// specialLabel:       if set, tags each card so it can be rendered in its own section
 async function fetchSetCards(setCode, options = {}, specialLabel = null) {
   const { maxCN, noDFCLands } = options;
   const cards = [];
-  // not:extra excludes showcase / extended-art / borderless variants
-  // game:paper excludes Arena/MTGO-only digital versions
-  // is:booster restricts to cards that appear in play/draft boosters, excluding promo-only,
-  // commander-deck-only, and bonus-sheet overflow cards (e.g. FDN non-draft cards, FIN Through the Ages)
   let url = `https://api.scryfall.com/cards/search?q=set:${setCode}+not:extra+game:paper+is:booster&order=collector&unique=cards`;
   while (url) {
     const data = await (await fetch(url)).json();
     if (!data.data) break;
     for (const c of data.data) {
       if (c.type_line?.includes('Basic Land')) continue;
-      // Skip bonus-sheet cards that sneak past not:extra (e.g. FIN "Through the Ages" at #552+)
       if (maxCN && !isNaN(parseInt(c.collector_number)) && parseInt(c.collector_number) > maxCN) continue;
-      // Skip DFC lands (adventure Town lands, transform legendary lands) — single-faced non-basics are kept
       if (noDFCLands && c.card_faces?.length > 0) {
         const tl = c.type_line ?? c.card_faces[0]?.type_line ?? '';
         if (tl.includes('Land')) continue;
@@ -822,10 +701,6 @@ async function fetchSetCards(setCode, options = {}, specialLabel = null) {
   return cards;
 }
 
-// Returns the normal-resolution image URL for a card, handling double-faced cards.
-// Adventure cards (e.g. Bloomvine Regent // Claim Territory) have image_uris at the
-// top level — card_faces only splits oracle text, not the image.  Transform/modal DFCs
-// have no top-level image_uris; the image lives in each card_face.
 function cardImage(card) {
   if (card.image_uris) return card.image_uris.normal ?? '';
   const faceIdx = flippedCards.has(card.name) ? 1 : 0;
@@ -833,15 +708,10 @@ function cardImage(card) {
   return '';
 }
 
-// Returns true only for cards that have a visually distinct second face (transform/modal DFC).
-// Adventure cards have card_faces but show a single printed image, so they are excluded.
 function isDFC(card) {
   return card.card_faces?.length > 1 && !card.image_uris;
 }
 
-// Fetch tokens for a set.  Scryfall stores tokens in a separate set prefixed with 't'
-// e.g. tokens for 'isd' are in set 'tisd'.  unique=prints keeps all variants.
-// Non-token objects (like FIN's punch card with type "Card // Card") are filtered out.
 async function fetchTokens(setCode) {
   const tokens = [];
   let url = `https://api.scryfall.com/cards/search?q=set:t${setCode}+game:paper&order=collector&unique=prints`;
@@ -851,29 +721,25 @@ async function fetchTokens(setCode) {
       if (!data.data) break;
       for (const t of data.data) {
         const tl = t.type_line ?? '';
-        // Keep only actual tokens and emblems; skip punch cards and other non-token inserts
         if (!tl.includes('Token') && !tl.includes('Emblem')) continue;
         tokens.push(t);
       }
       url = data.has_more ? data.next_page : null;
       if (data.has_more) await new Promise(r => setTimeout(r, 100));
     }
-  } catch {} // some sets have no tokens — swallow the 404
+  } catch {}
   return tokens;
 }
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ERRATA DETAIL MODAL
-// Clicking the ⚠ badge on an errata card opens this modal with a full
-// explanation of what changed.
+// INFO DETAIL MODAL (errata cards)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function showErrataModal(cardName) {
   const matches  = getErrataMatches(cardName);
   const oracle   = oracleMap[cardName] ?? '(no oracle text)';
   const snap     = oracleSnapshot[activeCube]?.[cardName];
-  // "Uncategorized" means the text changed since our baseline but no known rule covers it
   const isUncategorized = snap !== undefined && snap !== oracle && matches.length === 0;
 
   document.getElementById('modal-title').textContent = cardName;
@@ -892,7 +758,6 @@ function showErrataModal(cardName) {
   const oracleEl = document.getElementById('modal-oracle');
   oracleEl.textContent = oracle;
 
-  // If the text changed from the baseline, also show what it used to say
   if (isUncategorized && snap) {
     oracleEl.insertAdjacentHTML('afterend',
       `<div class="modal-label" style="margin-top:0.5rem;color:#7ab47a">Previous text (baseline)</div>
@@ -904,7 +769,6 @@ function showErrataModal(cardName) {
   document.getElementById('modal').style.display = 'block';
 }
 
-// Clicking outside the modal box (on the dark overlay) closes the modal
 document.getElementById('modal').addEventListener('click', e => {
   if (e.target === document.getElementById('modal'))
     document.getElementById('modal').style.display = 'none';
@@ -913,15 +777,10 @@ document.getElementById('modal').addEventListener('click', e => {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GRID CLICK HANDLER
-// A single delegated listener on the grid div handles all card interactions.
-// "Event delegation" means we attach one listener to the parent instead of
-// hundreds of listeners on individual cards — much more efficient.
-// Each if-block handles a different type of clickable element.
 // ═══════════════════════════════════════════════════════════════════════════
 
 document.getElementById('grid').addEventListener('click', e => {
 
-  // ── Section header (colour group) collapse/expand ──────────────────────
   const secHeader = e.target.closest('.section-header[data-color-key]');
   if (secHeader) {
     const key = secHeader.dataset.colorKey;
@@ -932,34 +791,29 @@ document.getElementById('grid').addEventListener('click', e => {
     return;
   }
 
-  // ── Token +/− count buttons ────────────────────────────────────────────
   const countBtn = e.target.closest('.count-btn');
   if (countBtn) {
     const tokenCard = countBtn.closest('[data-token-id]');
     const id = tokenCard?.dataset.tokenId;
     if (id) {
-      const delta = parseInt(countBtn.dataset.delta); // +1 or −1
+      const delta = parseInt(countBtn.dataset.delta);
       if (!tokenOwned[activeCube]) tokenOwned[activeCube] = {};
       tokenOwned[activeCube][id] = Math.max(0, (tokenOwned[activeCube][id] ?? 1) + delta);
-      // Update just the count display in-place (no full re-render needed)
       tokenCard.querySelector('.count-display').textContent = tokenOwned[activeCube][id];
       scheduleSave();
     }
     return;
   }
 
-  // ── Errata badge → open detail modal ──────────────────────────────────
   const badge = e.target.closest('.errata-badge');
   if (badge) { showErrataModal(badge.closest('.card').dataset.name); return; }
 
-  // ── Flip button for double-faced cards ────────────────────────────────
   const flipBtn = e.target.closest('.flip-btn');
   if (flipBtn) {
     const cardEl  = flipBtn.closest('.card');
     const tokenId = cardEl.dataset.tokenId;
 
     if (tokenId) {
-      // Token card flip (e.g. The Ring // The Ring Tempts You)
       const faceKey = `token:${tokenId}`;
       if (flippedCards.has(faceKey)) flippedCards.delete(faceKey); else flippedCards.add(faceKey);
       const t = (tokenPool[CUBES[activeCube].setCode] ?? []).find(x => x.id === tokenId);
@@ -972,7 +826,6 @@ document.getElementById('grid').addEventListener('click', e => {
       return;
     }
 
-    // Regular card flip (e.g. Delver of Secrets)
     const name    = cardEl.dataset.name;
     const cardObj = cardByName[name];
     if (cardObj?.card_faces?.length > 1) {
@@ -986,8 +839,6 @@ document.getElementById('grid').addEventListener('click', e => {
     return;
   }
 
-  // ── Card tap — cycle owned count ──────────────────────────────────────
-  // Tapping a card increments your owned count up to the target, then wraps to 0
   const card = e.target.closest('.card[data-name]');
   if (!card) return;
 
@@ -1006,22 +857,23 @@ document.getElementById('grid').addEventListener('click', e => {
 // VIEW & FILTER TABS
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Cards / Tokens / Errata view tab switcher
 document.querySelectorAll('.view-tab').forEach(btn => {
   btn.addEventListener('click', () => {
     activeView = btn.dataset.view;
     localStorage.setItem('activeView', activeView);
     document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b === btn));
-    // Show the card-specific filter rows only in the Cards view
-    document.getElementById('filterRow').style.display   = activeView === 'cards' ? 'flex' : 'none';
-    document.getElementById('rarityRow').style.display   = activeView === 'cards' ? 'flex' : 'none';
-    // Hide the progress bar in Tokens view (tokens don't have an ownership percentage)
-    document.getElementById('progressWrap').style.display = activeView === 'tokens' ? 'none' : 'block';
+    updateViewUI();
     render();
   });
 });
 
-// All / Missing filter
+function updateViewUI() {
+  const showFilters = activeView === 'cards';
+  document.getElementById('filterRow').style.display    = showFilters ? 'flex' : 'none';
+  document.getElementById('rarityRow').style.display    = showFilters ? 'flex' : 'none';
+  document.getElementById('progressWrap').style.display = showFilters ? 'block' : 'none';
+}
+
 document.querySelectorAll('#filterRow .filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     activeFilter = btn.dataset.filter;
@@ -1030,7 +882,6 @@ document.querySelectorAll('#filterRow .filter-btn').forEach(btn => {
   });
 });
 
-// All Rarities / Common / Uncommon / Rare+Mythic filter
 document.querySelectorAll('#rarityRow .filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     activeRarityFilter = btn.dataset.rarity;
@@ -1039,21 +890,18 @@ document.querySelectorAll('#rarityRow .filter-btn').forEach(btn => {
   });
 });
 
-// Collapse All — collapses every visible section header
 document.getElementById('btnCollapseAll').addEventListener('click', () => {
   document.querySelectorAll('.section-header[data-color-key]').forEach(h => collapsedSections.add(h.dataset.colorKey));
   localStorage.setItem('collapsedSections', JSON.stringify([...collapsedSections]));
   render();
 });
 
-// Expand All — clears all collapsed sections
 document.getElementById('btnExpandAll').addEventListener('click', () => {
   collapsedSections.clear();
   localStorage.setItem('collapsedSections', JSON.stringify([]));
   render();
 });
 
-// "Mark All Owned" — sets every card in the current set to its target count
 document.getElementById('btnMarkAllOwned').addEventListener('click', () => {
   const cube  = CUBES[activeCube];
   const cards = cardCache[activeCube] ?? [];
@@ -1065,31 +913,26 @@ document.getElementById('btnMarkAllOwned').addEventListener('click', () => {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CUBE TABS (dynamically built)
-// Rather than hand-writing a button for each set in HTML, we loop over CUBES
-// and create them in JS.  Sorting by releaseDate shows oldest sets first.
+// CUBE SELECT DROPDOWN
 // ═══════════════════════════════════════════════════════════════════════════
 
 const sortedCubeEntries = Object.entries(CUBES).sort(([,a],[,b]) => new Date(a.releaseDate) - new Date(b.releaseDate));
-const cubeTabRow = document.getElementById('cubeTabs');
+const cubeSelect = document.getElementById('cubeSelect');
 
 sortedCubeEntries.forEach(([key, cube]) => {
-  const year = cube.releaseDate.slice(0, 4); // e.g. "2011"
-  const btn  = document.createElement('button');
-  btn.className    = `cube-tab${key === activeCube ? ' active' : ''}`;
-  btn.dataset.cube = key;
-  // Each tab shows the official set symbol SVG + set name + 2-digit year
-  btn.innerHTML = `<img class="set-sym" src="https://svgs.scryfall.io/sets/${key}.svg" onerror="this.style.display='none'">${cube.name}<span class="tab-year">'${year.slice(2)}</span>`;
-  btn.addEventListener('click', async () => {
-    activeCube = key;
-    localStorage.setItem('activeCube', activeCube);
-    document.querySelectorAll('.cube-tab').forEach(b => b.classList.toggle('active', b === btn));
-    syncErrataTab();
-    // Only fetch from Scryfall if we haven't loaded this set yet
-    if (!cardCache[activeCube]) await loadCubeData(activeCube);
-    render();
-  });
-  cubeTabRow.appendChild(btn);
+  const year = cube.releaseDate.slice(2, 4);
+  const opt  = document.createElement('option');
+  opt.value  = key;
+  opt.textContent = `${cube.name} '${year}`;
+  if (key === activeCube) opt.selected = true;
+  cubeSelect.appendChild(opt);
+});
+
+cubeSelect.addEventListener('change', async () => {
+  activeCube = cubeSelect.value;
+  localStorage.setItem('activeCube', activeCube);
+  if (!cardCache[activeCube]) await loadCubeData(activeCube);
+  render();
 });
 
 
@@ -1097,33 +940,23 @@ sortedCubeEntries.forEach(([key, cube]) => {
 // TOKEN HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Finds which cards in the current set create a given token.
-// For normal tokens we match the token's creature subtypes (e.g. "Soldier", "Spirit")
-// against oracle text that mentions "token".
-// For emblems and special tokens (like The Ring) that have no subtype, we search
-// for the token's first face name directly in oracle text.
 function getTokenCreators(token) {
-  const typeMatch = token.type_line?.match(/—\s*(.+)/); // everything after the em-dash is the subtype
+  const typeMatch = token.type_line?.match(/—\s*(.+)/);
   if (!typeMatch) {
-    // Emblem or double-faced token with no subtype line — search oracle text by name
     const searchFor = (token.card_faces?.[0]?.name ?? token.name).toLowerCase();
     if (!searchFor) return [];
     return (cardCache[activeCube] ?? []).filter(c =>
       (oracleMap[c.name] ?? '').toLowerCase().includes(searchFor)
     ).map(c => c.name);
   }
-  // Split subtypes, drop short words (avoids matching "a", "of", etc.)
   const types = typeMatch[1].trim().split(/\s+/).map(t => t.toLowerCase()).filter(t => t.length > 2);
   return (cardCache[activeCube] ?? []).filter(c => {
     const oracle = (oracleMap[c.name] ?? '').toLowerCase();
-    if (!oracle.includes('token')) return false; // quick early exit
+    if (!oracle.includes('token')) return false;
     return types.some(t => oracle.includes(t));
   }).map(c => c.name);
 }
 
-// Builds an HTML <span> for a creator name that shows a card image on hover.
-// Looks up the card image from the already-loaded cardByName cache;
-// falls back to the Scryfall named-card API if the card wasn't in this set.
 function creatorLink(name) {
   const c = cardByName[name];
   const imgSrc = c
@@ -1132,98 +965,52 @@ function creatorLink(name) {
   return `<span class="creator-link">${name}<img class="creator-preview" src="${imgSrc}" loading="lazy"></span>`;
 }
 
+function tokenCardHTML(t) {
+  const count    = tokenOwned[activeCube]?.[t.id] ?? 1;
+  const isDFT    = t.card_faces?.length > 1;
+  const faceKey  = `token:${t.id}`;
+  const faceIdx  = flippedCards.has(faceKey) ? 1 : 0;
+  const face     = isDFT ? t.card_faces[faceIdx] : null;
+  const img      = face?.image_uris?.normal ?? t.image_uris?.normal ?? '';
+  const dispName = face?.name ?? t.name;
+  const pt       = t.power !== undefined ? ` · ${t.power}/${t.toughness}` : '';
 
-// ═══════════════════════════════════════════════════════════════════════════
-// RENDER — TOKENS VIEW
-// ═══════════════════════════════════════════════════════════════════════════
+  const creators = getTokenCreators(t);
+  const creatorsHtml = creators.length
+    ? `<div class="token-creators">Made by: ${creators.slice(0, 5).map(creatorLink).join(', ')}${creators.length > 5 ? ` +${creators.length - 5}` : ''}</div>`
+    : '';
 
-function renderTokens() {
-  // Sort by collector number; non-numeric collector numbers (e.g. "H13") go last
-  const cnVal = s => { const n = parseInt(s); return isNaN(n) ? 99999 : n; };
-  const tokens = (tokenPool[CUBES[activeCube].setCode] ?? [])
-    .slice()
-    .sort((a, b) => cnVal(a.collector_number) - cnVal(b.collector_number));
-
-  const total = tokens.reduce((s, t) => s + (tokenOwned[activeCube]?.[t.id] ?? 1), 0);
-  document.getElementById('stats').textContent = `${tokens.length} token types · ${total} total`;
-  document.getElementById('bar').style.width = '0%'; // no progress bar in token view
-
-  if (!tokens.length) {
-    document.getElementById('grid').innerHTML = '<div class="empty">No tokens loaded yet.</div>';
-    return;
-  }
-
-  const items = tokens.map(t => {
-    const count   = tokenOwned[activeCube]?.[t.id] ?? 1;
-    const isDFT   = t.card_faces?.length > 1; // double-faced token (e.g. The Ring)
-    const faceKey = `token:${t.id}`;          // unique key for the flippedCards set
-    const faceIdx = flippedCards.has(faceKey) ? 1 : 0;
-    const face    = isDFT ? t.card_faces[faceIdx] : null;
-    const img     = face?.image_uris?.normal ?? t.image_uris?.normal ?? '';
-    const dispName = face?.name ?? t.name;
-    const pt      = t.power !== undefined ? ` · ${t.power}/${t.toughness}` : ''; // P/T if it's a creature token
-
-    const creators = getTokenCreators(t);
-    const creatorsHtml = creators.length
-      ? `<div class="token-creators">Made by: ${creators.slice(0, 5).map(creatorLink).join(', ')}${creators.length > 5 ? ` +${creators.length - 5}` : ''}</div>`
-      : '';
-
-    return `<div class="card token-card" data-token-id="${t.id}">
-      <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${t.name}"></div>
-      ${isDFT ? `<button class="flip-btn" title="Flip">${flippedCards.has(faceKey) ? '↺' : '↻'}</button>` : ''}
-      <div class="card-footer">
-        <span class="card-num">#${t.collector_number}</span>
-        <div class="token-counter">
-          <button class="count-btn" data-delta="-1">−</button>
-          <span class="count-display">${count}</span>
-          <button class="count-btn" data-delta="1">+</button>
-        </div>
+  return `<div class="card token-card" data-token-id="${t.id}">
+    <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${t.name}"></div>
+    ${isDFT ? `<button class="flip-btn" title="Flip">${flippedCards.has(faceKey) ? '↺' : '↻'}</button>` : ''}
+    <div class="card-footer">
+      <span class="card-num">#${t.collector_number}</span>
+      <div class="token-counter">
+        <button class="count-btn" data-delta="-1">−</button>
+        <span class="count-display">${count}</span>
+        <button class="count-btn" data-delta="1">+</button>
       </div>
-      <div class="card-name">${dispName}${pt}</div>
-      ${creatorsHtml}
-    </div>`;
-  });
-
-  document.getElementById('grid').innerHTML = items.join('');
+    </div>
+    <div class="card-name">${dispName}${pt}</div>
+    ${creatorsHtml}
+  </div>`;
 }
 
 
 // ═══════════════════════════════════════════════════════════════════════════
 // RENDER DISPATCHER
-// Called any time something changes.  Routes to the right render function
-// based on which view tab is active.
 // ═══════════════════════════════════════════════════════════════════════════
-
-// Shows/hides the Errata tab depending on whether the active set has errataCheck.
-// If the user was on the Errata view and switches to a set without errata, falls back to Cards.
-function syncErrataTab() {
-  const hasErrata = !!CUBES[activeCube].errataCheck;
-  const errataBtn = document.querySelector('.view-tab[data-view="errata"]');
-  if (errataBtn) errataBtn.style.display = hasErrata ? '' : 'none';
-  if (!hasErrata && activeView === 'errata') {
-    activeView = 'cards';
-    localStorage.setItem('activeView', activeView);
-    document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === activeView));
-    document.getElementById('filterRow').style.display    = 'flex';
-    document.getElementById('rarityRow').style.display    = 'flex';
-    document.getElementById('progressWrap').style.display = 'block';
-  }
-}
 
 function render() {
-  // Show Collapse All / Open All only for views that have collapsible sections
-  const showCollapse = activeView === 'cards' || activeView === 'errata';
+  const showCollapse = activeView === 'cards' || activeView === 'info';
   document.getElementById('collapseRow').style.display = showCollapse ? 'flex' : 'none';
-  if      (activeView === 'cards')  renderCards();
-  else if (activeView === 'tokens') renderTokens();
-  else if (activeView === 'errata') renderErrata();
+  if      (activeView === 'cards') renderCards();
+  else if (activeView === 'info')  renderInfo();
 }
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// RENDER — CARDS VIEW
-// Builds the main card grid grouped by colour.  Each group has a clickable
-// header and can be collapsed.
+// RENDER — CARDS VIEW (includes tokens after Lands)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function renderCards() {
@@ -1231,7 +1018,6 @@ function renderCards() {
   const cards = cardCache[activeCube] ?? [];
   const owned = ownedMap[activeCube]  ?? {};
 
-  // Calculate overall progress for the progress bar
   let totalNeeded = 0, totalOwned = 0;
   cards.forEach(c => {
     const t = cube.counts[c.rarity] ?? 1;
@@ -1239,13 +1025,12 @@ function renderCards() {
     totalOwned  += Math.min(owned[c.name] ?? 0, t);
   });
   const pct = totalNeeded ? Math.round((totalOwned / totalNeeded) * 100) : 0;
-  document.getElementById('stats').textContent = `${totalOwned} / ${totalNeeded} copies collected (${pct}%)`;
+  document.getElementById('stats').textContent = `${totalOwned} of ${totalNeeded} copies collected (${pct}%)`;
   document.getElementById('bar').style.width = pct + '%';
 
-  // Sort cards into colour groups (main-set cards only) and special-label buckets
   const groups = {};
   COLOR_ORDER.forEach(k => { groups[k] = []; });
-  const specialGroups = new Map(); // label → [cards]
+  const specialGroups = new Map();
 
   for (const c of cards) {
     const target = cube.counts[c.rarity] ?? 1;
@@ -1255,7 +1040,6 @@ function renderCards() {
       else if (c.rarity !== activeRarityFilter) continue;
     }
     if (c._specialLabel) {
-      // Special guest / bonus sheet cards → their own named section at the bottom
       if (!specialGroups.has(c._specialLabel)) specialGroups.set(c._specialLabel, []);
       specialGroups.get(c._specialLabel).push(c);
     } else {
@@ -1263,11 +1047,9 @@ function renderCards() {
       if (groups[key]) groups[key].push(c);
     }
   }
-  // Sort each group by collector number (the number printed on the card)
   for (const k of COLOR_ORDER) groups[k].sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
   for (const [, grp] of specialGroups) grp.sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
 
-  // Build HTML string for all visible cards
   const items = [];
   for (const key of COLOR_ORDER) {
     const group = groups[key];
@@ -1277,12 +1059,24 @@ function renderCards() {
     if (!collapsed) for (const c of group) items.push(cardHTML(c, cube, owned));
   }
 
-  // Special sections (Multiverse Legends, Special Guests, etc.) displayed after main colours
   for (const [label, group] of specialGroups) {
     const sKey     = `special-${label}`;
     const collapsed = collapsedSections.has(sKey);
     items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${sKey}">★ ${label} (${group.length})<span class="sec-chevron">▼</span></div>`);
     if (!collapsed) for (const c of group) items.push(cardHTML(c, cube, owned));
+  }
+
+  // Tokens section after Lands (and special sections)
+  if (activeFilter === 'all' && activeRarityFilter === 'all') {
+    const cnVal  = s => { const n = parseInt(s); return isNaN(n) ? 99999 : n; };
+    const tokens = (tokenPool[cube.setCode] ?? [])
+      .slice().sort((a, b) => cnVal(a.collector_number) - cnVal(b.collector_number));
+    if (tokens.length) {
+      const tKey      = 'tokens-section';
+      const collapsed = collapsedSections.has(tKey);
+      items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${tKey}">🎴 Tokens (${tokens.length})<span class="sec-chevron">▼</span></div>`);
+      if (!collapsed) for (const t of tokens) items.push(tokenCardHTML(t));
+    }
   }
 
   document.getElementById('grid').innerHTML = items.length
@@ -1292,74 +1086,81 @@ function renderCards() {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// RENDER — ERRATA VIEW
-// Only shown for ISD and KTK (sets printed before various oracle-text updates).
-// Cards are grouped by errata category.
+// RENDER — INFO VIEW (archetypes + errata for errataCheck sets)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function renderErrata() {
-  if (!CUBES[activeCube].errataCheck) {
-    document.getElementById('stats').textContent = 'Errata check N/A for this set';
-    document.getElementById('bar').style.width = '0%';
-    document.getElementById('grid').innerHTML = '<div class="empty">This set was printed with current Oracle wording — no errata to check.<br><br>Errata is only relevant for ISD and KTK.</div>';
-    return;
-  }
+function errataCardHTML(c) {
+  const safeName    = c.name.replace(/"/g, '&quot;');
+  const img         = cardImage(c);
+  const isFlipped   = flippedCards.has(c.name);
+  const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
+  return `<div class="card" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
+    <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+    <div class="badge-row"><button class="errata-badge errata-high">⚠ ERRATA</button></div>
+    ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
+    <div class="card-footer"><span class="card-num">#${c.collector_number}</span></div>
+    <div class="card-name">${displayName}</div>
+  </div>`;
+}
 
+function renderInfo() {
+  const cube  = CUBES[activeCube];
   const cards = cardCache[activeCube] ?? [];
 
-  // Only high-severity categories (gameplay-changing errata) are shown.
-  // Low-severity (cosmetic wording) are intentionally excluded.
-  const highCats = ERRATA_CATEGORIES.filter(cat => cat.severity === 'high');
-
-  const byCategory = {};
-  highCats.forEach(cat => { byCategory[cat.id] = []; });
-  for (const c of cards) {
-    highCats.forEach(cat => { if (cat.test(oracleMap[c.name] ?? '')) byCategory[cat.id].push(c); });
-  }
-  for (const cat of highCats) {
-    byCategory[cat.id].sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
-  }
-
-  const total = new Set(cards.filter(c => highCats.some(cat => cat.test(oracleMap[c.name] ?? ''))).map(c => c.name)).size;
-  document.getElementById('stats').textContent = `${total} cards with gameplay errata`;
   document.getElementById('bar').style.width = '0%';
 
-  // Builds the HTML for a single errata card tile
-  function errataCardHTML(c) {
-    const safeName    = c.name.replace(/"/g, '&quot;');
-    const img         = cardImage(c);
-    const isFlipped   = flippedCards.has(c.name);
-    const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
-    return `<div class="card" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
-      <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
-      <div class="badge-row"><button class="errata-badge errata-high">⚠ ERRATA</button></div>
-      ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
-      <div class="card-footer"><span class="card-num">#${c.collector_number}</span></div>
-      <div class="card-name">${displayName}</div>
-    </div>`;
-  }
-
   const items = [];
-  for (const cat of highCats) {
-    const group = byCategory[cat.id];
-    if (!group.length) continue;
-    const eKey      = `errata-${cat.id}`;
-    const collapsed = collapsedSections.has(eKey);
-    items.push(`<div class="section-header errata-high${collapsed ? ' sec-collapsed' : ''}" data-color-key="${eKey}">⚠ ${cat.label} (${group.length} cards)<span class="sec-chevron">▼</span></div>`);
-    if (!collapsed) for (const c of group) items.push(errataCardHTML(c));
+
+  // Draft archetypes block (full-width)
+  const archetypes = cube.archetypes ?? [];
+  const archetypeHtml = archetypes.length
+    ? `<div class="archetype-grid">${archetypes.map(a =>
+        `<div class="archetype-card">
+          <div class="archetype-name">${(a.colors ?? []).map(c => SYM(c)).join('')} ${a.name}</div>
+          ${a.description ? `<div class="archetype-desc">${a.description}</div>` : ''}
+        </div>`).join('')}
+      </div>`
+    : `<p class="info-empty">No archetypes added yet — populate the <code>archetypes</code> array for this set in CUBES.</p>`;
+
+  items.push(`<div class="info-section">
+    <div class="info-block">
+      <div class="info-block-title">Draft Archetypes</div>
+      ${archetypeHtml}
+    </div>
+  </div>`);
+
+  // Errata section — only for sets with errataCheck
+  if (cube.errataCheck) {
+    const highCats = ERRATA_CATEGORIES.filter(cat => cat.severity === 'high');
+    const byCategory = {};
+    highCats.forEach(cat => { byCategory[cat.id] = []; });
+    for (const c of cards) {
+      highCats.forEach(cat => { if (cat.test(oracleMap[c.name] ?? '')) byCategory[cat.id].push(c); });
+    }
+    for (const cat of highCats) {
+      byCategory[cat.id].sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
+    }
+    const total = new Set(cards.filter(c => highCats.some(cat => cat.test(oracleMap[c.name] ?? ''))).map(c => c.name)).size;
+    document.getElementById('stats').textContent = `${total} cards with gameplay errata`;
+
+    for (const cat of highCats) {
+      const group = byCategory[cat.id];
+      if (!group.length) continue;
+      const eKey      = `errata-${cat.id}`;
+      const collapsed = collapsedSections.has(eKey);
+      items.push(`<div class="section-header errata-high${collapsed ? ' sec-collapsed' : ''}" data-color-key="${eKey}">⚠ ${cat.label} (${group.length} cards)<span class="sec-chevron">▼</span></div>`);
+      if (!collapsed) for (const c of group) items.push(errataCardHTML(c));
+    }
+  } else {
+    document.getElementById('stats').textContent = cube.name;
   }
 
-  document.getElementById('grid').innerHTML = items.length
-    ? items.join('')
-    : '<div class="empty">No errata detected.</div>';
+  document.getElementById('grid').innerHTML = items.join('') || '<div class="empty">No info for this set yet.</div>';
 }
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CARD HTML HELPER (used by Cards and Errata views)
-// Builds the HTML string for a single card tile.
-// Template literals (backtick strings with ${}) are used to embed values
-// directly into HTML strings.
+// CARD HTML HELPER
 // ═══════════════════════════════════════════════════════════════════════════
 
 function cardHTML(c, cube, owned) {
@@ -1367,9 +1168,9 @@ function cardHTML(c, cube, owned) {
   const n           = owned[c.name] ?? 0;
   const cls         = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
   const lblCls      = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
-  const label       = `${n}/${target}`;
+  const label       = `${n} of ${target}`;
   const img         = cardImage(c);
-  const safeName    = c.name.replace(/"/g, '&quot;'); // quotes would break the data-name attribute
+  const safeName    = c.name.replace(/"/g, '&quot;');
   const isFlipped   = flippedCards.has(c.name);
   const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
   return `<div class="card ${cls}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
@@ -1386,8 +1187,6 @@ function cardHTML(c, cube, owned) {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // LOAD CUBE DATA
-// Fetches cards and tokens from Scryfall for a given cube key.
-// Also handles special guest sets (e.g. BLB Special Guests from set:spg).
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function loadCubeData(cubeKey) {
@@ -1395,19 +1194,16 @@ async function loadCubeData(cubeKey) {
   const code = cube.setCode;
   document.getElementById('grid').innerHTML = `<div class="loading">Fetching ${cube.name} cards from Scryfall…</div>`;
 
-  // Fetch main cards and tokens in parallel (Promise.all waits for both to finish)
   const [mainCards, tokens] = await Promise.all([
     fetchSetCards(code, { maxCN: cube.maxCN, noDFCLands: cube.noDFCLands }),
     fetchTokens(code),
   ]);
 
-  // Fetch and merge any special guest sets, deduplicating by Scryfall card ID.
-  // Each special entry may have a label so its cards display in their own section.
   let allCards = mainCards;
   if (cube.specials?.length) {
     const specialBatches = await Promise.all(
       cube.specials.map(sc => {
-        if (typeof sc === 'string') return fetchSetCards(sc);          // legacy plain code, no section label
+        if (typeof sc === 'string') return fetchSetCards(sc);
         if (sc.code)               return fetchSetCards(sc.code, {}, sc.label ?? null);
         return fetchByQuery(sc.q, sc.label ?? null);
       })
@@ -1423,14 +1219,12 @@ async function loadCubeData(cubeKey) {
   cardCache[cubeKey] = allCards;
   tokenPool[code]    = tokens;
 
-  // If this set is marked allOwned and hasn't been touched yet, pre-fill all counts
   if (cube.allOwned && !ownedMap[cubeKey]) {
     ownedMap[cubeKey] = {};
     allCards.forEach(c => { ownedMap[cubeKey][c.name] = cube.counts[c.rarity] ?? 1; });
     scheduleSave();
   }
 
-  // Default any unseen tokens to a count of 1
   if (!tokenOwned[cubeKey]) tokenOwned[cubeKey] = {};
   let needsSave = false;
   for (const t of tokenPool[code]) {
@@ -1444,31 +1238,16 @@ async function loadCubeData(cubeKey) {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// RESTORE UI STATE
-// Since tab buttons and filter rows are built dynamically or need syncing,
-// we apply the saved activeView/activeFilter state before the first render.
+// RESTORE UI STATE & INIT
 // ═══════════════════════════════════════════════════════════════════════════
 
 document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === activeView));
-document.getElementById('filterRow').style.display    = activeView === 'cards' ? 'flex' : 'none';
-document.getElementById('rarityRow').style.display    = activeView === 'cards' ? 'flex' : 'none';
-document.getElementById('progressWrap').style.display = activeView === 'tokens' ? 'none' : 'block';
-syncErrataTab();
-
-
-// ═══════════════════════════════════════════════════════════════════════════
-// INIT
-// Entry point — runs once when the page loads.
-// Loads saved data from the Gist, fetches the active set from Scryfall,
-// then renders the UI.
-// ═══════════════════════════════════════════════════════════════════════════
+updateViewUI();
 
 async function init() {
-  await loadCollection();       // load owned counts from GitHub Gist
-  await loadCubeData(activeCube); // fetch cards for the active set from Scryfall
+  await loadCollection();
+  await loadCubeData(activeCube);
 
-  // On the very first load for a set, snapshot the oracle text.
-  // This baseline lets us detect future Oracle changes (used by the Errata view).
   if (!oracleSnapshot[activeCube]) {
     oracleSnapshot[activeCube] = {};
     for (const c of cardCache[activeCube]) {
