@@ -477,7 +477,7 @@
       .set-sym { width: 16px; height: 16px; }
       .view-tab  { padding: 0.2rem 0.55rem; font-size: 0.68rem; white-space: nowrap; }
       .filter-btn { padding: 0.2rem 0.55rem; font-size: 0.68rem; }
-      .size-btn { width: 1.75rem; height: 1.75rem; font-size: 0.65rem; }
+      .size-btn { width: 2rem; height: 2rem; font-size: 0.65rem; }
       .stats { font-size: 0.72rem; }
       .token-input { font-size: 0.68rem; }
       .btn { padding: 0.22rem 0.5rem; font-size: 0.68rem; }
@@ -815,6 +815,8 @@ const FIVE_COLOR = `<span class="five-color-sym">${SYM('W')}${SYM('U')}${SYM('B'
 const COLOR_ICON = { C:SYM('C'), W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:FIVE_COLOR, A:SYM('C'), L:'🏔' };
 
 function colorKey(card) {
+  // Lands always go to the Land section, regardless of color identity (dual lands → L, not M).
+  if (card.type_line?.includes('Land')) return 'L';
   // Scryfall categorises DFCs by front-face color only; the top-level
   // card.colors merges all faces, which would wrongly land Avacyn in Multicolor.
   const c = card.card_faces?.length > 0
@@ -828,7 +830,6 @@ function colorKey(card) {
   const id = card.color_identity ?? [];
   if (id.length > 1) return 'M';
   if (id.length === 1) return id[0];
-  if (card.type_line?.includes('Land')) return 'L';
   if (card.type_line?.includes('Artifact')) return 'A';
   return 'C'; // truly colorless non-artifact: Eldrazi, etc.
 }
@@ -1122,7 +1123,7 @@ async function fetchTokens(setCode) {
       if (!data.data) break;
       for (const t of data.data) {
         const tl = t.type_line ?? '';
-        if (!tl.includes('Token') && !tl.includes('Emblem')) continue;
+        if (!tl.includes('Token') && !tl.includes('Emblem') && t.layout !== 'checklist') continue;
         tokens.push(t);
       }
       url = data.has_more ? data.next_page : null;
@@ -1211,13 +1212,13 @@ document.getElementById('grid').addEventListener('click', e => {
 
   const flipBtn = e.target.closest('.flip-btn');
   if (flipBtn) {
-    const card = flipBtn.closest('.card[data-name]');
+    const card = flipBtn.closest('.card[data-name]') ?? flipBtn.closest('.card[data-token-id]');
     if (!card) return;
-    const name = card.dataset.name;
-    if (flippedCards.has(name)) flippedCards.delete(name);
-    else flippedCards.add(name);
-    const flipped = flippedCards.has(name);
-    const img = card.querySelector('.card-img-wrap img');
+    const key = card.dataset.name ?? card.dataset.tokenId;
+    if (flippedCards.has(key)) flippedCards.delete(key);
+    else flippedCards.add(key);
+    const flipped = flippedCards.has(key);
+    const img = card.querySelector('.card-img-wrap img[data-face0]');
     if (img) {
       img.src = flipped ? (img.dataset.face1 ?? '') : (img.dataset.face0 ?? '');
       img.alt = flipped ? (img.dataset.alt1 ?? '') : (img.dataset.alt0 ?? '');
@@ -1279,11 +1280,38 @@ document.getElementById('grid').addEventListener('click', e => {
       tmp.innerHTML = statusCircle(newN, target);
       const newSym = tmp.firstChild;
       sym.replaceWith(newSym);
+      // Animate the newly-filled segment lighting up
+      if (newN > 0) {
+        if (target <= 1) {
+          const circle = newSym.querySelector('circle');
+          if (circle) circle.animate(
+            [{ stroke: 'rgba(190,60,60,0.4)' }, { stroke: '#52b788' }],
+            { duration: 350, easing: 'ease-out', fill: 'forwards' }
+          );
+        } else {
+          const paths = newSym.querySelectorAll('path');
+          const idx = newN - 1;
+          if (paths[idx]) {
+            const endFill = newN >= target ? '#52b788' : '#c9a84c';
+            paths[idx].animate(
+              [{ fill: 'rgba(190,60,60,0.3)' }, { fill: endFill }],
+              { duration: 380, easing: 'ease-out', fill: 'forwards' }
+            );
+          }
+        }
+      }
       // Spring bounce: scale up from small, overshoot slightly, settle at 1
       newSym.animate(
         [{ transform: 'scale(0.5)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }],
         { duration: 260, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
       );
+      // Haptic feedback — escalating by milestone
+      if (newN >= target) {
+        navigator.vibrate?.([50, 30, 80]); // completion: strong double pulse
+      } else if (newN > 0) {
+        const frac = newN / target;
+        navigator.vibrate?.(frac >= 0.6 ? [35] : [20]); // 2/3+ vs 1/3 milestone
+      }
     }
     card.classList.add('card-flashed');
     setTimeout(() => card.classList.remove('card-flashed'), 260);
@@ -1522,24 +1550,30 @@ function getTokenCreators(token) {
 
 function creatorLink(name) {
   const c = cardByName[name];
+  const owned = ownedMap[activeCube]?.[name] ?? 0;
+  const tgt = c?.rarity ? (CUBES[activeCube]?.counts[c.rarity] ?? 1) : 1;
+  const qtyColor = owned >= tgt ? '#52b788' : '#c9a84c';
+  const qtyBadge = `<span style="font-size:0.52rem;color:${qtyColor};margin-left:2px">${owned}/${tgt}</span>`;
   const imgSrc = c
     ? (c.image_uris?.normal ?? c.card_faces?.[0]?.image_uris?.normal ?? '')
     : `https://api.scryfall.com/cards/named?format=image&version=normal&exact=${encodeURIComponent(name)}`;
-  return `<span class="creator-link">${name}<img class="creator-preview" src="${imgSrc}" loading="lazy"></span>`;
+  return `<span class="creator-link">${name}${qtyBadge}<img class="creator-preview" src="${imgSrc}" loading="lazy"></span>`;
 }
 
 function tokenCardHTML(t) {
   const count = tokenOwned[activeCube]?.[t.id] ?? 1;
   const isDFT = t.card_faces?.length > 1;
 
-  let imgHtml;
+  let imgHtml, tokenFlipBtn = '';
   if (isDFT) {
-    const img0 = t.card_faces[0]?.image_uris?.normal ?? '';
-    const img1 = t.card_faces[1]?.image_uris?.normal ?? '';
-    imgHtml = `<div class="token-img-pair">
-      <div class="card-img-wrap"><img src="${img0}" loading="lazy" alt="${t.card_faces[0]?.name ?? t.name}"></div>
-      <div class="card-img-wrap"><img src="${img1}" loading="lazy" alt="${t.card_faces[1]?.name ?? t.name}"></div>
-    </div>`;
+    const f0 = t.card_faces[0], f1 = t.card_faces[1];
+    const src0 = f0?.image_uris?.normal ?? '';
+    const src1 = f1?.image_uris?.normal ?? '';
+    const name0 = f0?.name ?? t.name;
+    const name1 = f1?.name ?? t.name;
+    const tFlipped = flippedCards.has(t.id);
+    imgHtml = `<div class="card-img-wrap"><img src="${tFlipped ? src1 : src0}" loading="lazy" alt="${tFlipped ? name1 : name0}" data-face0="${src0}" data-face1="${src1}" data-alt0="${name0}" data-alt1="${name1}"></div>`;
+    tokenFlipBtn = `<button class="flip-btn" title="See ${tFlipped ? 'front' : 'back'} face">⟳</button>`;
   } else {
     imgHtml = `<div class="card-img-wrap"><img src="${t.image_uris?.normal ?? ''}" loading="lazy" alt="${t.name}"></div>`;
   }
@@ -1556,7 +1590,7 @@ function tokenCardHTML(t) {
 
   return `<div class="card token-card" data-token-id="${t.id}">
     <div class="token-row">
-      <div class="token-img-side">${imgHtml}</div>
+      <div class="token-img-side" style="position:relative">${imgHtml}${tokenFlipBtn}</div>
       <div class="token-info-side">
         <div class="token-info-name">${dispName}${pt}</div>
         <div class="token-counter">
@@ -1627,10 +1661,8 @@ function renderCards() {
   for (const k of COLOR_ORDER) groups[k].sort((a, b) => cnInt(a) - cnInt(b));
   for (const [, grp] of specialGroups) grp.sort((a, b) => cnInt(a) - cnInt(b));
 
-  // Order sections by minimum collector number so display matches set ordering.
-  const orderedKeys = COLOR_ORDER
-    .filter(k => groups[k].length > 0)
-    .sort((a, b) => Math.min(...groups[a].map(cnInt)) - Math.min(...groups[b].map(cnInt)));
+  // Keep sections in standard WUBRG order; cards within each section sort by collector number.
+  const orderedKeys = COLOR_ORDER.filter(k => groups[k].length > 0);
 
   const items = [];
   for (const key of orderedKeys) {
@@ -1782,7 +1814,7 @@ function statusCircle(n, total) {
     const midR = (outerR + innerR) / 2, sw = outerR - innerR;
     const color = n >= 1 ? '#52b788' : 'rgba(190,60,60,0.4)';
     // Notch: thin line from outer to inner edge at 12 o'clock, same color as card bg
-    const notch = `<line x1="${cx}" y1="${(cy - outerR).toFixed(2)}" x2="${cx}" y2="${(cy - innerR).toFixed(2)}" stroke="#1e1e1e" stroke-width="1.8" stroke-linecap="round"/>`;
+    const notch = `<line x1="${cx}" y1="${(cy - outerR).toFixed(2)}" x2="${cx}" y2="${(cy - innerR).toFixed(2)}" stroke="#1e1e1e" stroke-width="0.9" stroke-linecap="butt"/>`;
     return `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}" class="status-sym"><circle cx="${cx}" cy="${cy}" r="${midR}" fill="none" stroke="${color}" stroke-width="${sw}"/>${notch}</svg>`;
   }
   // total>1: segmented donut — gaps between segments are the "dividing lines"
@@ -1853,6 +1885,7 @@ function cardHTML(c, cube, owned) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function tokenIsFromCube(token, cubeCards) {
+  if (token.layout === 'checklist') return true; // always include DFC checklist helper cards
   const tl = token.type_line ?? '';
   const typeMatch = tl.match(/—\s*(.+)/);
   if (!typeMatch) {
@@ -1962,12 +1995,12 @@ init();
     if (y < 80) {
       hdr.classList.remove('header-hidden');
       btn.classList.remove('show');
-    } else if (dir === 1 && y - dirFromY > 40) {
-      // committed downward scroll (40px since last direction change)
+    } else if (dir === 1 && y - dirFromY > 60) {
+      // committed downward scroll (60px threshold to avoid re-hiding on small drift)
       hdr.classList.add('header-hidden');
       btn.classList.add('show');
-    } else if (dir === -1) {
-      // any upward movement — immediately reveal
+    } else if (dir === -1 && dirFromY - y > 12) {
+      // require 12px upward scroll before revealing (avoids flicker from momentum bounce)
       hdr.classList.remove('header-hidden');
     }
   }, { passive: true });
