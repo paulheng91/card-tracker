@@ -172,6 +172,17 @@
     }
     .view-tab.active { background: #c9a84c; color: #111; }
 
+    /* ── Lock bar (persistent header strip when set is locked) ──────────── */
+    .lock-bar {
+      display: none; width: 100%;
+      background: #181200; border-top: 1px solid #3a3010;
+      color: #a08030; font-size: 0.65rem; font-weight: 600;
+      text-align: center; padding: 0.2rem 1rem; letter-spacing: 0.04em;
+      cursor: pointer; user-select: none;
+    }
+    .lock-bar:hover { background: #201800; color: #c9a84c; }
+    .lock-bar.show { display: block; }
+
     /* ── Lock toast ─────────────────────────────────────────────────────── */
     .lock-toast {
       position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
@@ -559,6 +570,7 @@
       <button class="lock-btn" id="btnLock" title="Lock this set">🔓</button>
     </div>
   </div>
+  <div class="lock-bar" id="lockBar">🔒 This set is locked — click to unlock</div>
 
 </header>
 
@@ -1421,6 +1433,7 @@ function updateLockBtn() {
   btn.textContent = locked ? '🔒' : '🔓';
   btn.classList.toggle('locked', locked);
   btn.title = locked ? 'Locked — click to unlock' : 'Lock this set';
+  document.getElementById('lockBar').classList.toggle('show', locked);
 }
 
 function updateCubeTrigger(key) {
@@ -1524,14 +1537,20 @@ document.getElementById('unlockCancel').addEventListener('click', () => {
   document.getElementById('unlockDialog').classList.remove('open');
 });
 
+function openUnlockDialog() {
+  const phrase = `unlock ${CUBES[activeCube].name}`;
+  document.getElementById('unlockPhrase').textContent = phrase;
+  document.getElementById('unlockInput').value = '';
+  document.getElementById('unlockInput').classList.remove('shake');
+  document.getElementById('unlockDialog').classList.add('open');
+  setTimeout(() => document.getElementById('unlockInput').focus(), 50);
+}
+
+document.getElementById('lockBar').addEventListener('click', openUnlockDialog);
+
 document.getElementById('btnLock').addEventListener('click', () => {
   if (lockedCubes.has(activeCube)) {
-    const phrase = `unlock ${CUBES[activeCube].name}`;
-    document.getElementById('unlockPhrase').textContent = phrase;
-    document.getElementById('unlockInput').value = '';
-    document.getElementById('unlockInput').classList.remove('shake');
-    document.getElementById('unlockDialog').classList.add('open');
-    setTimeout(() => document.getElementById('unlockInput').focus(), 50);
+    openUnlockDialog();
   } else {
     lockedCubes.add(activeCube);
     localStorage.setItem('lockedCubes', JSON.stringify([...lockedCubes]));
