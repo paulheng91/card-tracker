@@ -290,7 +290,8 @@
     .card.partial  .card-img-wrap img { opacity: 0.65; }
 
     /* Excluded from draft — big red overlay spanning the full image */
-    .card.excluded .card-img-wrap::after {
+    .card.excluded > .card-img-wrap::after,
+    .card.excluded .token-img-pair::after {
       content: '✕';
       position: absolute; inset: 0;
       display: grid; place-items: center;
@@ -300,6 +301,7 @@
       pointer-events: none; z-index: 2;
       text-shadow: 0 2px 14px rgba(0,0,0,0.85);
     }
+    .card.excluded .token-img-pair { position: relative; }
 
     .status-sym { display: block; pointer-events: none; }
     .exclude-btn {
@@ -1076,10 +1078,7 @@ async function fetchSetCards(setCode, options = {}, specialLabel = null) {
 }
 
 function cardImage(card) {
-  if (card.image_uris) return card.image_uris.normal ?? '';
-  const faceIdx = flippedCards.has(card.name) ? 1 : 0;
-  if (card.card_faces?.length > 1) return card.card_faces[faceIdx]?.image_uris?.normal ?? '';
-  return '';
+  return card.image_uris?.normal ?? '';
 }
 
 function isDFC(card) {
@@ -1200,37 +1199,6 @@ document.getElementById('grid').addEventListener('click', e => {
 
   const badge = e.target.closest('.errata-badge');
   if (badge) { showErrataModal(badge.closest('.card').dataset.name); return; }
-
-  const flipBtn = e.target.closest('.flip-btn');
-  if (flipBtn) {
-    const cardEl  = flipBtn.closest('.card');
-    const tokenId = cardEl.dataset.tokenId;
-
-    if (tokenId) {
-      const faceKey = `token:${tokenId}`;
-      if (flippedCards.has(faceKey)) flippedCards.delete(faceKey); else flippedCards.add(faceKey);
-      const t = (tokenPool[CUBES[activeCube].setCode] ?? []).find(x => x.id === tokenId);
-      if (t?.card_faces) {
-        const face = t.card_faces[flippedCards.has(faceKey) ? 1 : 0];
-        cardEl.querySelector('.card-img-wrap img').src = face?.image_uris?.normal ?? '';
-        cardEl.querySelector('.card-name').textContent  = face?.name ?? t.name;
-        flipBtn.textContent = flippedCards.has(faceKey) ? '↺' : '↻';
-      }
-      return;
-    }
-
-    const name    = cardEl.dataset.name;
-    const cardObj = cardByName[name];
-    if (cardObj?.card_faces?.length > 1) {
-      if (flippedCards.has(name)) flippedCards.delete(name);
-      else flippedCards.add(name);
-      const face = cardObj.card_faces[flippedCards.has(name) ? 1 : 0];
-      cardEl.querySelector('.card-img-wrap img').src = face?.image_uris?.normal ?? '';
-      cardEl.querySelector('.card-name').textContent  = face?.name ?? name;
-      flipBtn.textContent = flippedCards.has(name) ? '↺' : '↻';
-    }
-    return;
-  }
 
   // Only increment qty when the tap lands on the card image, not the footer/name/button area.
   // This separates the qty tap zone (image) from the exclude button (bottom corner).
@@ -1625,14 +1593,23 @@ function renderCards() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function errataCardHTML(c) {
-  const safeName    = c.name.replace(/"/g, '&quot;');
-  const img         = cardImage(c);
-  const isFlipped   = flippedCards.has(c.name);
-  const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
+  const safeName = c.name.replace(/"/g, '&quot;');
+  let imgHtml, displayName;
+  if (isDFC(c)) {
+    const img0 = c.card_faces[0]?.image_uris?.normal ?? '';
+    const img1 = c.card_faces[1]?.image_uris?.normal ?? '';
+    displayName = `${c.card_faces[0]?.name ?? ''} // ${c.card_faces[1]?.name ?? ''}`;
+    imgHtml = `<div class="token-img-pair">
+      <div class="card-img-wrap"><img src="${img0}" loading="lazy" alt="${c.card_faces[0]?.name ?? c.name}"></div>
+      <div class="card-img-wrap"><img src="${img1}" loading="lazy" alt="${c.card_faces[1]?.name ?? c.name}"></div>
+    </div>`;
+  } else {
+    displayName = c.name;
+    imgHtml = `<div class="card-img-wrap"><img src="${cardImage(c)}" loading="lazy" alt="${c.name}"></div>`;
+  }
   return `<div class="card" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
-    <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+    ${imgHtml}
     <div class="badge-row"><button class="errata-badge errata-high">⚠ ERRATA</button></div>
-    ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
     <div class="card-footer"><span class="card-num">#${c.collector_number}</span></div>
     <div class="card-name">${displayName}</div>
   </div>`;
@@ -1752,19 +1729,30 @@ function statusCircle(n, total) {
 }
 
 function cardHTML(c, cube, owned) {
-  const target      = cube.counts[c.rarity] ?? 1;
-  const n           = owned[c.name] ?? 0;
-  const isExcluded  = !!excludedCards[activeCube]?.[c.name];
-  const cls         = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
-  const img         = cardImage(c);
-  const safeName    = c.name.replace(/"/g, '&quot;');
-  const isFlipped   = flippedCards.has(c.name);
-  const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
-  const flash       = justToggledCard === c.name ? ' card-flashed' : '';
-  const statusSym   = statusCircle(n, target);
+  const target     = cube.counts[c.rarity] ?? 1;
+  const n          = owned[c.name] ?? 0;
+  const isExcluded = !!excludedCards[activeCube]?.[c.name];
+  const cls        = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
+  const safeName   = c.name.replace(/"/g, '&quot;');
+  const flash      = justToggledCard === c.name ? ' card-flashed' : '';
+  const statusSym  = statusCircle(n, target);
+
+  let imgHtml, displayName;
+  if (isDFC(c)) {
+    const img0 = c.card_faces[0]?.image_uris?.normal ?? '';
+    const img1 = c.card_faces[1]?.image_uris?.normal ?? '';
+    displayName = `${c.card_faces[0]?.name ?? ''} // ${c.card_faces[1]?.name ?? ''}`;
+    imgHtml = `<div class="token-img-pair">
+      <div class="card-img-wrap"><img src="${img0}" loading="lazy" alt="${c.card_faces[0]?.name ?? c.name}"></div>
+      <div class="card-img-wrap"><img src="${img1}" loading="lazy" alt="${c.card_faces[1]?.name ?? c.name}"></div>
+    </div>`;
+  } else {
+    displayName = c.name;
+    imgHtml = `<div class="card-img-wrap"><img src="${cardImage(c)}" loading="lazy" alt="${c.name}"></div>`;
+  }
+
   return `<div class="card ${cls}${isExcluded ? ' excluded' : ''}${flash}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
-    <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
-    ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
+    ${imgHtml}
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
       ${statusSym}
