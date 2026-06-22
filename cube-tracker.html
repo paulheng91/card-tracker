@@ -162,6 +162,15 @@
     }
     .lock-btn:hover { background: #2e2e2e; color: #aaa; }
     .lock-btn.locked { color: #c9a84c; }
+    @keyframes lockPulse {
+      0%   { color: #c9a84c; box-shadow: 0 0 0 0 rgba(201,168,76,0.55); }
+      30%  { color: #e8c96a; box-shadow: 0 0 0 6px rgba(201,168,76,0.25); transform: translateX(-3px); }
+      50%  { transform: translateX(3px); }
+      70%  { transform: translateX(-2px); }
+      85%  { transform: translateX(1px); }
+      100% { color: #c9a84c; box-shadow: 0 0 0 0 rgba(201,168,76,0); transform: translateX(0); }
+    }
+    .lock-btn.pulse { animation: lockPulse 0.55s ease-out; }
 
     /* ── View tabs (Cards / Info) ───────────────────────────────────────── */
     .view-tab {
@@ -172,20 +181,6 @@
     }
     .view-tab.active { background: #c9a84c; color: #111; }
 
-    /* ── Lock notice (centered transient overlay) ───────────────────────── */
-    .lock-notice {
-      position: fixed; top: 50%; left: 50%;
-      transform: translate(-50%, -50%) scale(0.88);
-      background: #141008; border: 1px solid #3a3010;
-      border-radius: 14px; padding: 1.4rem 2.2rem;
-      text-align: center; z-index: 400; pointer-events: none;
-      opacity: 0; transition: opacity 0.22s, transform 0.22s;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.85);
-    }
-    .lock-notice.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    .lock-notice-icon { font-size: 1.6rem; line-height: 1; margin-bottom: 0.45rem; }
-    .lock-notice-title { font-size: 0.88rem; font-weight: 700; color: #c9a84c; }
-    .lock-notice-sub { font-size: 0.65rem; color: #6a5a30; margin-top: 0.3rem; letter-spacing: 0.03em; }
 
     .save-status { font-size: 0.73rem; color: #555; }
     .save-status.saving { color: #c9a84c; }
@@ -479,11 +474,7 @@
 </head>
 <body>
 
-<div class="lock-notice" id="lockNotice">
-  <div class="lock-notice-icon">🔒</div>
-  <div class="lock-notice-title">This set is locked</div>
-  <div class="lock-notice-sub">Tap 🔒 to unlock</div>
-</div>
+
 
 <div id="unlockDialog">
   <div class="unlock-box">
@@ -920,12 +911,12 @@ let lockedCubes   = new Set(JSON.parse(localStorage.getItem('lockedCubes') || '[
 let excludedCards = {}; // { [cubeKey]: { [cardName]: true } }
 function isLocked() { return lockedCubes.has(activeCube); }
 
-let lockNoticeTimer = null;
 function showLockNotice() {
-  const el = document.getElementById('lockNotice');
-  el.classList.add('show');
-  clearTimeout(lockNoticeTimer);
-  lockNoticeTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  const btn = document.getElementById('btnLock');
+  btn.classList.remove('pulse');
+  void btn.offsetWidth; // force reflow so animation restarts if already pulsing
+  btn.classList.add('pulse');
+  btn.addEventListener('animationend', () => btn.classList.remove('pulse'), { once: true });
 }
 
 let justToggledCard = null;
