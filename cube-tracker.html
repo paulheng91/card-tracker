@@ -128,7 +128,7 @@
       font-size: 0.73rem; font-weight: 700; background: #1e1e1e; color: #555;
       transition: all 0.15s;
     }
-    .view-tab.active { background: #2e2e2e; color: #aaa; }
+    .view-tab.active { background: #c9a84c; color: #111; }
 
     /* ── Lock toast ─────────────────────────────────────────────────────── */
     .lock-toast {
@@ -916,8 +916,11 @@ document.getElementById('grid').addEventListener('click', e => {
 
 function updateControlsForView() {
   const isInfo = activeView === 'info';
-  document.getElementById('filterRow').style.display = isInfo ? 'none' : '';
-  document.getElementById('rarityRow').style.display = isInfo ? 'none' : '';
+  ['filterRow', 'rarityRow'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.opacity      = isInfo ? '0.3' : '';
+    el.style.pointerEvents = isInfo ? 'none' : '';
+  });
 }
 
 document.querySelectorAll('.view-tab').forEach(btn => {
