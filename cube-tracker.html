@@ -170,6 +170,15 @@
     .save-status.saved  { color: #52b788; }
     .save-status.error  { color: #e05; }
 
+    .save-indicator {
+      display: block; text-align: right; font-size: 0.6rem;
+      margin-top: 2px; min-height: 0.75rem; line-height: 1;
+      color: transparent; transition: color 0.2s;
+    }
+    .save-indicator.saving { color: #c9a84c; }
+    .save-indicator.saved  { color: #52b788; }
+    .save-indicator.error  { color: #e05050; }
+
     /* ── Click feedback ─────────────────────────────────────────────────── */
     @keyframes bump-up   { 0%,100%{ transform:scale(1);  color:inherit;  } 50%{ transform:scale(1.55); color:#52b788; } }
     @keyframes bump-down { 0%,100%{ transform:scale(1);  color:inherit;  } 50%{ transform:scale(1.35); color:#cc4444; } }
@@ -428,6 +437,7 @@
     </div>
     <div class="gh-login-wrap" id="ghLoginWrap">
       <button class="gh-login-btn" id="ghLoginBtn">Login</button>
+      <span class="save-indicator" id="saveIndicator"></span>
       <div class="gh-login-panel" id="ghLoginPanel">
         <span class="gh-panel-label">GitHub personal access token</span>
         <input class="token-input" id="tokenInput" type="password" placeholder="ghp_…">
@@ -878,6 +888,11 @@ function setStatus(msg, cls = '') {
   const el = document.getElementById('saveStatus');
   el.textContent = msg;
   el.className = 'save-status ' + cls;
+  const ind = document.getElementById('saveIndicator');
+  if (ind && getToken()) {
+    ind.textContent = msg;
+    ind.className = 'save-indicator ' + cls;
+  }
 }
 
 
@@ -1379,11 +1394,6 @@ function tokenCardHTML(t) {
     ${imgHtml}
     <div class="card-footer">
       <span class="card-num">#${t.collector_number}</span>
-      <div class="token-counter">
-        <button class="count-btn" data-delta="-1">−</button>
-        <span class="count-display">${count}</span>
-        <button class="count-btn" data-delta="1">+</button>
-      </div>
     </div>
     <div class="card-name">${dispName}${pt}</div>
     ${creatorsHtml}
