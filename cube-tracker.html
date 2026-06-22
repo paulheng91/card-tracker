@@ -161,6 +161,38 @@
     .modal-text   { font-size: 0.8rem; color: #eee; line-height: 1.6; white-space: pre-wrap; background: #1a1a3e; border-radius: 6px; padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
     .modal-close  { background: #2d1b69; color: #9f7aea; border: none; padding: 0.4rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
     .modal-close:hover { background: #4c2889; }
+
+    /* ── Token view ── */
+    .token-counter { display: flex; align-items: center; gap: 0.3rem; }
+    .count-btn {
+      background: #2d1b69; border: none; color: #9f7aea;
+      width: 20px; height: 20px; border-radius: 4px; cursor: pointer;
+      font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      line-height: 1; transition: background 0.15s;
+    }
+    .count-btn:hover { background: #4c2889; }
+    .count-display { font-weight: 700; font-size: 0.82rem; color: #eee; min-width: 18px; text-align: center; }
+    .token-creators { padding: 0 0.5rem 0.4rem; font-size: 0.56rem; color: #666; line-height: 1.4; }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+      header { padding: 0.45rem 0.75rem; }
+      h1 { font-size: 1.05rem; margin-bottom: 0.35rem; }
+      .tab-row { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; margin-bottom: 0.3rem; }
+      .tab-row::-webkit-scrollbar { display: none; }
+      .cube-tab  { padding: 0.22rem 0.6rem; font-size: 0.7rem; white-space: nowrap; }
+      .view-tab  { padding: 0.2rem 0.55rem;  font-size: 0.68rem; white-space: nowrap; }
+      .filter-row { margin-bottom: 0.3rem; }
+      .filter-btn { padding: 0.2rem 0.55rem; font-size: 0.68rem; }
+      .size-row { margin-bottom: 0.25rem; }
+      .size-btn { padding: 0.15rem 0.45rem; font-size: 0.65rem; }
+      .stats-row { margin-bottom: 0.25rem; }
+      .stats { font-size: 0.72rem; }
+      .token-section { gap: 0.3rem; }
+      .token-input { width: 150px; font-size: 0.68rem; }
+      .btn { padding: 0.22rem 0.5rem; font-size: 0.68rem; }
+      .progress-wrap { margin-bottom: 0.3rem; }
+    }
   </style>
 </head>
 <body>
@@ -185,6 +217,7 @@
 
   <div class="tab-row" id="viewTabs">
     <button class="view-tab active" data-view="cards">Cards</button>
+    <button class="view-tab" data-view="tokens">Tokens</button>
     <button class="view-tab" data-view="errata">Errata</button>
     <button class="view-tab" data-view="pack">Pack Opener</button>
   </div>
@@ -220,7 +253,7 @@
 
 <script>
 // ── Card size preference ──────────────────────────────────────────────────────
-const CARD_SIZES = { s: 130, m: 170, l: 220 };
+const CARD_SIZES = { s: 110, m: 170, l: 230 };
 function applySize(key) {
   document.documentElement.style.setProperty('--card-min', CARD_SIZES[key] + 'px');
   document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === key));
@@ -325,6 +358,8 @@ let packState       = { cards: [], pick: null, packNum: 1 };
 let flippedCards    = new Set();  // card names currently showing back face
 let excludedFromDraft = {};       // { isd: Set(['Card Name', ...]) } — owned but skip in pack gen
 let basicLandPool   = [];         // Innistrad basic land cards (fetched separately)
+let tokenPool       = [];         // Innistrad token cards (fetched from tisd)
+let tokenOwned      = {};         // { isd: { scryfallId: count } } — default 1 per token
 
 // ── Token UI ──────────────────────────────────────────────────────────────────
 function getToken() { return localStorage.getItem('ghtoken') ?? ''; }
@@ -360,8 +395,10 @@ async function loadCollection() {
       const exclRaw  = data._excl ?? {};
       excludedFromDraft = {};
       for (const [k, arr] of Object.entries(exclRaw)) excludedFromDraft[k] = new Set(arr);
+      tokenOwned = data._tokens ?? {};
       delete data._oracle;
       delete data._excl;
+      delete data._tokens;
       ownedMap = data;
     }
   } catch (e) {}
@@ -382,7 +419,8 @@ async function pushCollection() {
       body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify({
         ...ownedMap,
         _oracle: oracleSnapshot,
-        _excl: Object.fromEntries(Object.entries(excludedFromDraft).map(([k, s]) => [k, [...s].sort()]))
+        _excl: Object.fromEntries(Object.entries(excludedFromDraft).map(([k, s]) => [k, [...s].sort()])),
+        _tokens: tokenOwned,
       }, null, 2) } } })
     });
     if (!res.ok) {
@@ -453,6 +491,21 @@ async function fetchBasicLands(setCode) {
     const data = await (await fetch(url)).json();
     return data.data ?? [];
   } catch { return []; }
+}
+
+async function fetchTokens(setCode) {
+  const tokens = [];
+  let url = `https://api.scryfall.com/cards/search?q=set:t${setCode}&order=collector&unique=prints`;
+  try {
+    while (url) {
+      const data = await (await fetch(url)).json();
+      if (!data.data) break;
+      tokens.push(...data.data);
+      url = data.has_more ? data.next_page : null;
+      if (data.has_more) await new Promise(r => setTimeout(r, 100));
+    }
+  } catch {}
+  return tokens;
 }
 
 function openNewPack() {
@@ -537,6 +590,21 @@ document.getElementById('modal').addEventListener('click', e => {
 // ── Grid interaction ──────────────────────────────────────────────────────────
 document.getElementById('grid').addEventListener('click', e => {
   // Errata badge → modal
+  // Token count buttons
+  const countBtn = e.target.closest('.count-btn');
+  if (countBtn) {
+    const tokenCard = countBtn.closest('[data-token-id]');
+    const id = tokenCard?.dataset.tokenId;
+    if (id) {
+      const delta = parseInt(countBtn.dataset.delta);
+      if (!tokenOwned[activeCube]) tokenOwned[activeCube] = {};
+      tokenOwned[activeCube][id] = Math.max(0, (tokenOwned[activeCube][id] ?? 1) + delta);
+      tokenCard.querySelector('.count-display').textContent = tokenOwned[activeCube][id];
+      scheduleSave();
+    }
+    return;
+  }
+
   const badge = e.target.closest('.errata-badge');
   if (badge) { showErrataModal(badge.closest('.card').dataset.name); return; }
 
@@ -590,7 +658,7 @@ document.querySelectorAll('.view-tab').forEach(btn => {
     activeView = btn.dataset.view;
     document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b === btn));
     document.getElementById('filterRow').style.display    = activeView === 'cards'  ? 'flex' : 'none';
-    document.getElementById('progressWrap').style.display = activeView === 'pack'   ? 'none' : 'block';
+    document.getElementById('progressWrap').style.display = ['pack','tokens'].includes(activeView) ? 'none' : 'block';
     render();
   });
 });
@@ -615,9 +683,59 @@ document.querySelectorAll('.cube-tab').forEach(btn => {
   });
 });
 
+// ── Token helpers ─────────────────────────────────────────────────────────────
+function getTokenCreators(token) {
+  const typeMatch = token.type_line?.match(/—\s*(.+)/);
+  if (!typeMatch) return [];
+  const types = typeMatch[1].trim().split(/\s+/).map(t => t.toLowerCase()).filter(t => t.length > 2);
+  return (cardCache[activeCube] ?? []).filter(c => {
+    const oracle = (oracleMap[c.name] ?? '').toLowerCase();
+    if (!oracle.includes('token')) return false;
+    return types.some(t => oracle.includes(t));
+  }).map(c => c.name);
+}
+
+function renderTokens() {
+  const tokens = tokenPool;
+  const total  = tokens.reduce((s, t) => s + (tokenOwned[activeCube]?.[t.id] ?? 1), 0);
+  document.getElementById('stats').textContent = `${tokens.length} token types · ${total} total`;
+  document.getElementById('bar').style.width = '0%';
+
+  if (!tokens.length) {
+    document.getElementById('grid').innerHTML = '<div class="empty">No tokens loaded yet.</div>';
+    return;
+  }
+
+  const items = tokens.map(t => {
+    const count    = tokenOwned[activeCube]?.[t.id] ?? 1;
+    const img      = t.image_uris?.normal ?? '';
+    const pt       = t.power !== undefined ? ` · ${t.power}/${t.toughness}` : '';
+    const creators = getTokenCreators(t);
+    const creatorsHtml = creators.length
+      ? `<div class="token-creators">Made by: ${creators.slice(0, 4).join(', ')}${creators.length > 4 ? ` +${creators.length - 4}` : ''}</div>`
+      : '';
+    return `<div class="card" data-token-id="${t.id}">
+      <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${t.name}"></div>
+      <div class="card-footer">
+        <span class="card-num">#${t.collector_number}</span>
+        <div class="token-counter">
+          <button class="count-btn" data-delta="-1">−</button>
+          <span class="count-display">${count}</span>
+          <button class="count-btn" data-delta="1">+</button>
+        </div>
+      </div>
+      <div class="card-name">${t.name}${pt}</div>
+      ${creatorsHtml}
+    </div>`;
+  });
+
+  document.getElementById('grid').innerHTML = items.join('');
+}
+
 // ── Render dispatcher ─────────────────────────────────────────────────────────
 function render() {
   if (activeView === 'cards')  renderCards();
+  else if (activeView === 'tokens') renderTokens();
   else if (activeView === 'errata') renderErrata();
   else if (activeView === 'pack')   renderPack();
 }
@@ -816,10 +934,22 @@ function cardHTML(c, cube, owned) {
 async function init() {
   await loadCollection();
   document.getElementById('grid').innerHTML = '<div class="loading">Fetching Innistrad cards from Scryfall…</div>';
-  [cardCache[activeCube], basicLandPool] = await Promise.all([
+  [cardCache[activeCube], basicLandPool, tokenPool] = await Promise.all([
     fetchSetCards(CUBES[activeCube].setCode),
     fetchBasicLands(CUBES[activeCube].setCode),
+    fetchTokens(CUBES[activeCube].setCode),
   ]);
+
+  // Default token counts to 1 for any new tokens not yet saved
+  if (!tokenOwned[activeCube]) tokenOwned[activeCube] = {};
+  let tokenDefaulted = false;
+  for (const t of tokenPool) {
+    if (tokenOwned[activeCube][t.id] === undefined) {
+      tokenOwned[activeCube][t.id] = 1;
+      tokenDefaulted = true;
+    }
+  }
+  if (tokenDefaulted) scheduleSave();
 
   // Establish oracle snapshot baseline on first load — used to detect future oracle changes
   if (!oracleSnapshot[activeCube]) {

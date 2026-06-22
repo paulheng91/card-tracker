@@ -196,6 +196,22 @@
     .overview-total { background: #16213e; border: 1px solid #ffd700; border-radius: 10px; padding: 0.75rem 1rem; }
     .overview-total .overview-name { color: #ffd700; }
     .overview-total .overview-bar { background: #ffd700; }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+      header { padding: 0.5rem 0.75rem; }
+      h1 { font-size: 1.05rem; margin-bottom: 0.35rem; }
+      .set-tabs { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; margin-bottom: 0.35rem; }
+      .set-tabs::-webkit-scrollbar { display: none; }
+      .set-tab { padding: 0.22rem 0.65rem; font-size: 0.7rem; white-space: nowrap; }
+      .size-row { margin-bottom: 0.25rem; }
+      .size-btn { padding: 0.15rem 0.45rem; font-size: 0.65rem; }
+      .stats-row { margin-bottom: 0.35rem; }
+      .stats { font-size: 0.72rem; }
+      .filters { gap: 0.3rem; }
+      .btn { padding: 0.22rem 0.5rem; font-size: 0.68rem; }
+      .progress-wrap { margin-bottom: 0.35rem; }
+    }
   </style>
 </head>
 <body>
@@ -253,7 +269,7 @@
 
 <script>
 // ── Card size preference ──────────────────────────────────────────────────────
-const CARD_SIZES = { s: 130, m: 170, l: 220 };
+const CARD_SIZES = { s: 110, m: 170, l: 230 };
 function applySize(key) {
   document.documentElement.style.setProperty('--card-min', CARD_SIZES[key] + 'px');
   document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === key));
