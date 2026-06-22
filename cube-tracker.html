@@ -90,8 +90,8 @@
     /* ── Set nav arrows ─────────────────────────────────────────────────── */
     .cube-nav-btn {
       background: transparent; border: none; cursor: pointer;
-      color: rgba(255,255,255,0.3); font-size: 1.35rem; line-height: 1;
-      padding: 0 0.1rem; transition: color 0.15s; flex-shrink: 0;
+      color: rgba(255,255,255,0.5); font-size: 0.85rem; line-height: 1;
+      padding: 0 0.3rem; transition: color 0.15s; flex-shrink: 0;
       display: flex; align-items: center;
     }
     .cube-nav-btn:hover { color: #c9a84c; }
@@ -413,7 +413,7 @@
   <div class="header-top">
     <div></div>
     <div class="header-center">
-      <button class="cube-nav-btn" id="cubeNavPrev" title="Previous set">&#8249;</button>
+      <button class="cube-nav-btn" id="cubeNavPrev" title="Previous set">◀</button>
       <div class="cube-dropdown" id="cubeDropdown">
         <button class="cube-trigger" id="cubeTrigger">
           <img class="set-sym" id="cubeSymImg" src="" alt="">
@@ -422,7 +422,7 @@
         </button>
         <div class="cube-menu" id="cubeMenu"></div>
       </div>
-      <button class="cube-nav-btn" id="cubeNavNext" title="Next set">&#8250;</button>
+      <button class="cube-nav-btn" id="cubeNavNext" title="Next set">▶</button>
     </div>
     <div class="gh-login-wrap" id="ghLoginWrap">
       <button class="gh-login-btn" id="ghLoginBtn">Login</button>
@@ -1304,8 +1304,14 @@ document.getElementById('cubeNavPrev').addEventListener('click', () => switchCub
 document.getElementById('cubeNavNext').addEventListener('click', () => switchCube(1));
 
 document.getElementById('btnLock').addEventListener('click', () => {
-  if (lockedCubes.has(activeCube)) lockedCubes.delete(activeCube);
-  else lockedCubes.add(activeCube);
+  if (lockedCubes.has(activeCube)) {
+    const setName = CUBES[activeCube].name;
+    const answer = prompt(`Type exactly to unlock (case sensitive):\n\nunlock ${setName}`);
+    if (answer !== `unlock ${setName}`) return;
+    lockedCubes.delete(activeCube);
+  } else {
+    lockedCubes.add(activeCube);
+  }
   localStorage.setItem('lockedCubes', JSON.stringify([...lockedCubes]));
   updateLockBtn();
   scheduleSave();
