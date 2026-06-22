@@ -104,7 +104,6 @@
       background: #242424; border: none; border-radius: 999px; cursor: pointer;
       font-size: 1rem; font-weight: 700; color: #c9a84c;
       height: 2rem; padding: 0 1rem 0 0.75rem; white-space: nowrap; outline: none;
-      min-width: 220px;
     }
     .cube-trigger:hover { background: #2e2e2e; }
     .set-sym { width: 24px; height: 24px; flex-shrink: 0; filter: brightness(0) invert(1); opacity: 0.85; }
@@ -1343,6 +1342,20 @@ sortedCubeEntries.forEach(([key, cube]) => {
 });
 
 updateCubeTrigger(activeCube);
+
+function calibrateTriggerWidth() {
+  const saved = cubeLabel.textContent;
+  cubeTrigger.style.minWidth = '';
+  let maxW = 0;
+  for (const [, cube] of Object.entries(CUBES)) {
+    cubeLabel.textContent = cube.name;
+    maxW = Math.max(maxW, cubeTrigger.scrollWidth);
+  }
+  cubeLabel.textContent = saved;
+  cubeTrigger.style.minWidth = maxW + 'px';
+}
+requestAnimationFrame(calibrateTriggerWidth);
+window.addEventListener('resize', calibrateTriggerWidth);
 
 cubeTrigger.addEventListener('click', e => {
   e.stopPropagation();
