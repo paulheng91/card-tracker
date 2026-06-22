@@ -440,15 +440,9 @@
     }
     .token-info-name { font-size: 0.72rem; font-weight: 700; color: #d0d0d0; line-height: 1.3; }
     .token-info-num  { font-size: 0.6rem; color: #555; }
-    .token-creators  { font-size: 0.6rem; color: #666; line-height: 1.5; margin-top: auto; padding: 0; }
-    .creator-link { position: relative; display: inline-block; color: #8a8a8a; cursor: default; white-space: nowrap; }
+    .token-creators  { font-size: 0.6rem; color: #666; line-height: 1.5; margin-top: auto; padding: 0; overflow-y: auto; max-height: 4rem; min-height: 0; }
+    .creator-link { display: inline-block; color: #8a8a8a; cursor: default; white-space: nowrap; }
     .creator-link:hover { color: #c9a84c; }
-    .creator-preview {
-      display: none; position: absolute; bottom: calc(100% + 6px); left: 0;
-      width: 150px; z-index: 200; pointer-events: none;
-      border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.95);
-    }
-    .creator-link:hover .creator-preview { display: block; }
 
     /* ── Info view ──────────────────────────────────────────────────────── */
     .info-section { grid-column: 1 / -1; padding: 0 0 0.5rem; }
@@ -1319,6 +1313,33 @@ document.getElementById('grid').addEventListener('click', e => {
   scheduleSave();
 });
 
+// Hover a creator link → swap the token image with the creator card preview; restore on leave.
+(function() {
+  const grid = document.getElementById('grid');
+  grid.addEventListener('mouseover', e => {
+    const link = e.target.closest('.creator-link');
+    if (!link) return;
+    if (e.relatedTarget?.closest('.creator-link') === link) return;
+    const tokenCard = link.closest('.token-card');
+    if (!tokenCard) return;
+    const img = tokenCard.querySelector('.token-img-side .card-img-wrap img');
+    if (!img || !link.dataset.img) return;
+    if (!img.dataset.tokenSrc) img.dataset.tokenSrc = img.src;
+    img.src = link.dataset.img;
+  });
+  grid.addEventListener('mouseout', e => {
+    const link = e.target.closest('.creator-link');
+    if (!link) return;
+    if (e.relatedTarget?.closest('.creator-link') === link) return;
+    const tokenCard = link.closest('.token-card');
+    if (!tokenCard) return;
+    const img = tokenCard.querySelector('.token-img-side .card-img-wrap img');
+    if (!img || !img.dataset.tokenSrc) return;
+    img.src = img.dataset.tokenSrc;
+    delete img.dataset.tokenSrc;
+  });
+})();
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // VIEW & FILTER TABS
@@ -1557,7 +1578,7 @@ function creatorLink(name) {
   const imgSrc = c
     ? (c.image_uris?.normal ?? c.card_faces?.[0]?.image_uris?.normal ?? '')
     : `https://api.scryfall.com/cards/named?format=image&version=normal&exact=${encodeURIComponent(name)}`;
-  return `<span class="creator-link">${name}${qtyBadge}<img class="creator-preview" src="${imgSrc}" loading="lazy"></span>`;
+  return `<span class="creator-link" data-img="${imgSrc}">${name}${qtyBadge}</span>`;
 }
 
 function tokenCardHTML(t) {
