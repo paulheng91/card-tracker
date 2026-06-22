@@ -68,10 +68,12 @@
     }
     .btn-group .view-tab,
     .btn-group .filter-btn,
-    .btn-group .size-btn  { background: transparent; }
+    .btn-group .size-btn,
+    .btn-group .lock-btn  { background: transparent; }
     .btn-group .view-tab:hover,
     .btn-group .filter-btn:hover,
-    .btn-group .size-btn:hover { background: #242424; }
+    .btn-group .size-btn:hover,
+    .btn-group .lock-btn:hover { background: #242424; }
 
     /* ── Custom set dropdown ────────────────────────────────────────────── */
     .cube-dropdown { position: relative; }
@@ -115,11 +117,13 @@
 
     /* ── Lock button ─────────────────────────────────────────────────────── */
     .lock-btn {
-      background: none; border: none; cursor: pointer; padding: 0.1rem 0.2rem;
-      font-size: 0.82rem; opacity: 0.3; transition: opacity 0.15s; line-height: 1;
+      height: 2rem; padding: 0 0.55rem; border: none; border-radius: 999px; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 0.82rem; background: #242424; color: #555;
+      transition: all 0.15s; line-height: 1;
     }
-    .lock-btn:hover { opacity: 0.7; }
-    .lock-btn.locked { opacity: 1; color: #c9a84c; }
+    .lock-btn:hover { background: #2e2e2e; color: #aaa; }
+    .lock-btn.locked { color: #c9a84c; }
 
     /* ── View tabs (Cards / Info) ───────────────────────────────────────── */
     .view-tab {
@@ -297,6 +301,21 @@
     }
     .creator-link:hover .creator-preview { display: block; }
 
+    /* ── Token list layout (one per row) ────────────────────────────────── */
+    .token-list { grid-column: 1/-1; display: flex; flex-direction: column; gap: 0.35rem; }
+    .token-card {
+      display: flex; flex-direction: row; align-items: center;
+      gap: 0.65rem; padding: 0.3rem 0.5rem; overflow: visible;
+    }
+    .token-thumb { position: relative; width: 60px; flex-shrink: 0; }
+    .token-thumb .card-img-wrap { aspect-ratio: 63/88; }
+    .token-thumb .flip-btn { width: 18px; height: 18px; font-size: 0.68rem; top: 2px; right: 2px; line-height: 18px; }
+    .token-card .card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+    .token-card .card-name { padding: 0; font-size: 0.72rem; }
+    .token-card .card-num { color: #666; font-size: 0.65rem; }
+    .token-card .token-creators { padding: 0; }
+    .token-card .token-counter { flex-shrink: 0; }
+
     /* ── Info view ──────────────────────────────────────────────────────── */
     .info-section { grid-column: 1 / -1; padding: 0 0 0.5rem; }
     .info-block { background: #1e1e1e; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; }
@@ -386,10 +405,10 @@
       <button class="size-btn" data-size="m">M</button>
       <button class="size-btn" data-size="l">L</button>
     </div>
-    <div class="ctrl-group">
+    <div class="ctrl-group btn-group">
       <button class="filter-btn" id="btnToggleAll">Collapse All</button>
     </div>
-    <div class="ctrl-group">
+    <div class="ctrl-group btn-group">
       <button class="lock-btn" id="btnLock" title="Lock this set">🔓</button>
     </div>
   </div>
@@ -1087,18 +1106,20 @@ function tokenCardHTML(t) {
     : '';
 
   return `<div class="card token-card" data-token-id="${t.id}">
-    <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${t.name}"></div>
-    ${isDFT ? `<button class="flip-btn" title="Flip">${flippedCards.has(faceKey) ? '↺' : '↻'}</button>` : ''}
-    <div class="card-footer">
-      <span class="card-num">#${t.collector_number}</span>
-      <div class="token-counter">
-        <button class="count-btn" data-delta="-1">−</button>
-        <span class="count-display">${count}</span>
-        <button class="count-btn" data-delta="1">+</button>
-      </div>
+    <div class="token-thumb">
+      <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${t.name}"></div>
+      ${isDFT ? `<button class="flip-btn" title="Flip">${flippedCards.has(faceKey) ? '↺' : '↻'}</button>` : ''}
     </div>
-    <div class="card-name">${dispName}${pt}</div>
-    ${creatorsHtml}
+    <div class="card-body">
+      <div class="card-name">${dispName}${pt}</div>
+      <div class="card-num">#${t.collector_number}</div>
+      ${creatorsHtml}
+    </div>
+    <div class="token-counter">
+      <button class="count-btn" data-delta="-1">−</button>
+      <span class="count-display">${count}</span>
+      <button class="count-btn" data-delta="1">+</button>
+    </div>
   </div>`;
 }
 
@@ -1181,7 +1202,7 @@ function renderCards() {
       const tKey      = 'tokens-section';
       const collapsed = collapsedSections.has(tKey);
       items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${tKey}">🎴 Tokens (${tokens.length})<span class="sec-chevron">▼</span></div>`);
-      if (!collapsed) for (const t of tokens) items.push(tokenCardHTML(t));
+      if (!collapsed) items.push(`<div class="token-list">${tokens.map(tokenCardHTML).join('')}</div>`);
     }
   }
 
