@@ -126,8 +126,8 @@
 
     .header-toggle {
       display: block; width: 100%; background: #1e1e1e; border: none; border-top: 1px solid #2a2a2a;
-      color: #555; cursor: pointer; font-size: 0.75rem; padding: 0.35rem 0;
-      transition: color 0.15s, background 0.15s; letter-spacing: 0.1em;
+      color: #666; cursor: pointer; font-size: 1.1rem; padding: 0.55rem 0;
+      transition: color 0.15s, background 0.15s;
     }
     .header-toggle:hover { color: #c9a84c; background: #242424; }
     .tab-year { font-size: 0.6rem; font-weight: 400; opacity: 0.6; margin-left: 0.2rem; }
@@ -149,33 +149,7 @@
 
     .card-name { padding: 0 0.5rem 0.35rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* ── Pack opener ── */
-    .pack-splash {
-      grid-column: 1 / -1; display: flex; flex-direction: column;
-      align-items: center; gap: 1rem; padding: 3rem 1rem; text-align: center;
-    }
-    .pack-splash h2 { color: #c9a84c; font-size: 1.2rem; }
-    .pack-splash p  { color: #888; font-size: 0.85rem; }
-    .btn-lg { padding: 0.6rem 1.8rem; font-size: 0.9rem; border-radius: 8px; }
-
-    .pack-banner {
-      grid-column: 1 / -1; background: #1e1e1e; border: 1px solid #c9a84c;
-      border-radius: 8px; padding: 0.5rem 1rem;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .pack-banner span { font-size: 0.85rem; color: #aaa; }
-    .pack-banner strong { color: #c9a84c; }
-
-    .pick-label {
-      position: absolute; bottom: 2.4rem; left: 0; right: 0;
-      text-align: center; font-size: 0.65rem; font-weight: 800;
-      color: #c9a84c; text-shadow: 0 0 6px rgba(201,168,76,0.8);
-      pointer-events: none;
-    }
-
-    .pack-actions { grid-column: 1 / -1; display: flex; justify-content: center; padding: 0.5rem 0; }
-
-    .loading { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; font-size: 0.9rem; }
+.loading { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; font-size: 0.9rem; }
     .empty   { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; }
 
     /* ── Modal ── */
@@ -253,7 +227,6 @@
     <button class="view-tab active" data-view="cards">Cards</button>
     <button class="view-tab" data-view="tokens">Tokens</button>
     <button class="view-tab" data-view="errata">Errata</button>
-    <button class="view-tab" data-view="pack">Pack Opener</button>
   </div>
 
   <button class="header-toggle" id="headerToggle">▴</button>
@@ -424,11 +397,8 @@ let oracleMap       = {};
 let oracleSnapshot  = {};  // { isd: { cardName: text } } — baseline for detecting future changes
 let ownedMap        = {};
 let saveTimer       = null;
-let packState       = { cards: [], pick: null, packNum: 1 };
 let flippedCards      = new Set();
 let collapsedSections = new Set(JSON.parse(localStorage.getItem('collapsedSections') || '[]'));
-let excludedFromDraft = {};       // { isd: Set(['Card Name', ...]) } — owned but skip in pack gen
-let basicLandPool   = {};         // { setCode: [...] } basic land cards per set
 let tokenPool       = {};         // { setCode: [...] } token cards per set
 let tokenOwned      = {};         // { cubeKey: { scryfallId: count } } — default 1 per token
 
@@ -463,19 +433,14 @@ async function loadCollection() {
     if (res.ok) {
       const data = await res.json();
       oracleSnapshot = data._oracle ?? {};
-      const exclRaw  = data._excl ?? {};
-      excludedFromDraft = {};
-      for (const [k, arr] of Object.entries(exclRaw)) excludedFromDraft[k] = new Set(arr);
       tokenOwned = data._tokens ?? {};
       delete data._oracle;
-      delete data._excl;
       delete data._tokens;
       ownedMap = data;
     }
   } catch (e) {}
   for (const key of Object.keys(CUBES)) {
     if (!ownedMap[key]) ownedMap[key] = {};
-    if (!excludedFromDraft[key]) excludedFromDraft[key] = new Set();
   }
 }
 
@@ -490,7 +455,6 @@ async function pushCollection() {
       body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify({
         ...ownedMap,
         _oracle: oracleSnapshot,
-        _excl: Object.fromEntries(Object.entries(excludedFromDraft).map(([k, s]) => [k, [...s].sort()])),
         _tokens: tokenOwned,
       }, null, 2) } } })
     });
@@ -556,32 +520,6 @@ function isDFC(card) {
   return card.card_faces?.length > 1;
 }
 
-// ── Pack generation ────────────────────────────────────────────────────────────
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function toggleExcluded(cardName) {
-  if (!excludedFromDraft[activeCube]) excludedFromDraft[activeCube] = new Set();
-  if (excludedFromDraft[activeCube].has(cardName)) excludedFromDraft[activeCube].delete(cardName);
-  else excludedFromDraft[activeCube].add(cardName);
-  render();
-  scheduleSave();
-}
-
-async function fetchBasicLands(setCode) {
-  try {
-    const url  = `https://api.scryfall.com/cards/search?q=set:${setCode}+type:basic+game:paper&order=collector&unique=prints`;
-    const data = await (await fetch(url)).json();
-    return data.data ?? [];
-  } catch { return []; }
-}
-
 async function fetchTokens(setCode) {
   const tokens = [];
   let url = `https://api.scryfall.com/cards/search?q=set:t${setCode}+game:paper&order=collector&unique=prints`;
@@ -597,46 +535,7 @@ async function fetchTokens(setCode) {
   return tokens;
 }
 
-function openNewPack() {
-  const cards = cardCache[activeCube] ?? [];
-  const excl  = excludedFromDraft[activeCube] ?? new Set();
 
-  // Separate DFC and non-DFC pools by rarity
-  const pool = { commonNorm: [], commonDFC: [], uncommonNorm: [], uncommonDFC: [], rare: [], mythic: [] };
-  for (const c of cards) {
-    if (excl.has(c.name)) continue;
-    const dfc = isDFC(c);
-    if (c.rarity === 'common')   { if (dfc) pool.commonDFC.push(c);   else pool.commonNorm.push(c); }
-    if (c.rarity === 'uncommon') { if (dfc) pool.uncommonDFC.push(c); else pool.uncommonNorm.push(c); }
-    if (c.rarity === 'rare')    pool.rare.push(c);
-    if (c.rarity === 'mythic')  pool.mythic.push(c);
-  }
-
-  const pack = [];
-
-  // 1 rare/mythic slot (1-in-8 chance of mythic)
-  const useMythic = pool.mythic.length && Math.random() < 0.125;
-  const rareSlot  = shuffle(useMythic ? pool.mythic : pool.rare);
-  if (rareSlot.length) pack.push(rareSlot[0]);
-
-  // 1 DFC slot only if this set has DFCs (e.g. Innistrad); otherwise fill with an extra common
-  const dfcSlot = shuffle([...pool.commonDFC, ...pool.uncommonDFC]);
-  const hasDFC  = dfcSlot.length > 0;
-  if (hasDFC) pack.push(dfcSlot[0]);
-
-  // 3 uncommons (non-DFC)
-  pack.push(...shuffle(pool.uncommonNorm).slice(0, 3));
-
-  // Commons: 9 if DFC filled a slot, 10 otherwise
-  pack.push(...shuffle(pool.commonNorm).slice(0, hasDFC ? 9 : 10));
-
-  // 1 basic land from the set
-  const basics = basicLandPool[CUBES[activeCube].setCode] ?? [];
-  if (basics.length) pack.push({ ...shuffle([...basics])[0], _isBasicLand: true });
-
-  packState = { cards: pack, pick: null, packNum: packState.packNum + (packState.pick ? 1 : 0) };
-  render();
-}
 
 // ── Errata modal ──────────────────────────────────────────────────────────────
 function showErrataModal(cardName) {
@@ -740,15 +639,6 @@ document.getElementById('grid').addEventListener('click', e => {
   const card = e.target.closest('.card[data-name]');
   if (!card) return;
 
-  if (activeView === 'pack') {
-    // Pack pick
-    if (!packState.pick) {
-      packState.pick = card.dataset.name;
-      render();
-    }
-    return;
-  }
-
   // Cards view — toggle owned count
   const name   = card.dataset.name;
   const rarity = card.dataset.rarity;
@@ -768,7 +658,7 @@ document.querySelectorAll('.view-tab').forEach(btn => {
     document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b === btn));
     document.getElementById('filterRow').style.display  = activeView === 'cards' ? 'flex' : 'none';
     document.getElementById('rarityRow').style.display  = activeView === 'cards' ? 'flex' : 'none';
-    document.getElementById('progressWrap').style.display = ['pack','tokens'].includes(activeView) ? 'none' : 'block';
+    document.getElementById('progressWrap').style.display = activeView === 'tokens' ? 'none' : 'block';
     render();
   });
 });
@@ -893,7 +783,6 @@ function render() {
   if (activeView === 'cards')  renderCards();
   else if (activeView === 'tokens') renderTokens();
   else if (activeView === 'errata') renderErrata();
-  else if (activeView === 'pack')   renderPack();
 }
 
 // ── Cards view ────────────────────────────────────────────────────────────────
@@ -1007,72 +896,6 @@ function renderErrata() {
   document.getElementById('grid').innerHTML = items.length ? items.join('') : '<div class="empty">No errata detected.</div>';
 }
 
-// ── Pack opener view ──────────────────────────────────────────────────────────
-function renderPack() {
-  const grid = document.getElementById('grid');
-  document.getElementById('stats').textContent = `Pack ${packState.packNum}`;
-
-  if (!packState.cards.length) {
-    grid.innerHTML = `<div class="pack-splash">
-      <h2>${CUBES[activeCube].name} Draft Simulator</h2>
-      <p>15 cards per pack · 1 rare/mythic · 3 uncommons · 10 commons · 1 basic land</p>
-      <button class="btn btn-lg" onclick="openNewPack()">Open Pack 1</button>
-    </div>`;
-    return;
-  }
-
-  // Sort: rare first, then DFC (uncommon/common), then uncommon, then common, then land
-  const rarityRank = { mythic: 0, rare: 1, uncommon: 2, common: 3 };
-  const sorted = [...packState.cards].sort((a, b) => {
-    if (a._isBasicLand && !b._isBasicLand) return 1;
-    if (!a._isBasicLand && b._isBasicLand) return -1;
-    if (isDFC(a) && !isDFC(b)) return -1;
-    if (!isDFC(a) && isDFC(b)) return 1;
-    const rd = (rarityRank[a.rarity] ?? 4) - (rarityRank[b.rarity] ?? 4);
-    return rd !== 0 ? rd : parseInt(a.collector_number) - parseInt(b.collector_number);
-  });
-
-  const { pick } = packState;
-  const items = [];
-
-  items.push(`<div class="pack-banner">
-    <span>Pack ${packState.packNum} · Pick 1</span>
-    ${pick ? `<strong>✓ ${pick}</strong>` : '<span style="color:#aaa">Tap a card to pick</span>'}
-  </div>`);
-
-  for (const c of sorted) {
-    if (c._isBasicLand) {
-      const img = c.image_uris?.normal ?? c.card_faces?.[0]?.image_uris?.normal ?? '';
-      const safeName = c.name.replace(/"/g, '&quot;');
-      items.push(`<div class="card basic-land" data-name="${safeName}">
-        <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
-        <div class="card-footer"><span class="card-num">Basic Land</span></div>
-        <div class="card-name">${c.name}</div>
-      </div>`);
-      continue;
-    }
-    const isPicked    = c.name === pick;
-    const isPassed    = pick && !isPicked;
-    const img         = cardImage(c);
-    const isFlipped   = flippedCards.has(c.name);
-    const safeName    = c.name.replace(/"/g, '&quot;');
-    const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
-    items.push(`<div class="card ${isPicked ? 'picked' : isPassed ? 'passed' : ''}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
-      <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
-      ${isPicked ? '<div class="pick-label">P1P1</div>' : ''}
-      ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
-      <div class="card-footer"><span class="card-num">${c.rarity[0].toUpperCase()} · #${c.collector_number}</span></div>
-      <div class="card-name">${displayName}</div>
-    </div>`);
-  }
-
-  if (pick) {
-    items.push(`<div class="pack-actions"><button class="btn btn-lg" onclick="openNewPack()">Open Next Pack</button></div>`);
-  }
-
-  grid.innerHTML = items.join('');
-}
-
 // ── Shared card HTML (cards view) ─────────────────────────────────────────────
 function cardHTML(c, cube, owned) {
   const target      = cube.counts[c.rarity] ?? 1;
@@ -1100,9 +923,8 @@ async function loadCubeData(cubeKey) {
   const cube = CUBES[cubeKey];
   const code = cube.setCode;
   document.getElementById('grid').innerHTML = `<div class="loading">Fetching ${cube.name} cards from Scryfall…</div>`;
-  const [mainCards, basics, tokens] = await Promise.all([
+  const [mainCards, tokens] = await Promise.all([
     fetchSetCards(code),
-    fetchBasicLands(code),
     fetchTokens(code),
   ]);
   // Fetch and merge special guest cards (dedup by Scryfall ID)
@@ -1117,7 +939,6 @@ async function loadCubeData(cubeKey) {
     }
   }
   cardCache[cubeKey]    = allCards;
-  basicLandPool[code]   = basics;
   tokenPool[code]       = tokens;
   // Auto-mark all owned for sets where the user has the full set
   if (cube.allOwned && !ownedMap[cubeKey]) {
@@ -1141,7 +962,7 @@ async function loadCubeData(cubeKey) {
 document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === activeView));
 document.getElementById('filterRow').style.display  = activeView === 'cards' ? 'flex' : 'none';
 document.getElementById('rarityRow').style.display  = activeView === 'cards' ? 'flex' : 'none';
-document.getElementById('progressWrap').style.display = ['pack','tokens'].includes(activeView) ? 'none' : 'block';
+document.getElementById('progressWrap').style.display = activeView === 'tokens' ? 'none' : 'block';
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
