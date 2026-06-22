@@ -343,7 +343,11 @@
     .lbl-own   { color: #52b788; font-weight: 700; text-align: right; }
     .lbl-part  { color: #c9a84c; font-weight: 700; text-align: right; }
     .lbl-need  { color: #cc4444; font-weight: 700; text-align: right; }
-    .card-name { padding: 0 0.5rem 0.35rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-name { padding: 0 1.75rem 0.35rem 0.5rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    @media (max-width: 699px) {
+      .card-footer { font-size: 0.62rem; }
+      .card-name   { font-size: 0.6rem; }
+    }
 
     .loading { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; font-size: 0.9rem; }
     .empty   { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; }
@@ -783,12 +787,12 @@ const CUBES = {
 // COLOUR GROUPING
 // ═══════════════════════════════════════════════════════════════════════════
 
-const COLOR_ORDER = ['W','U','B','R','G','M','A','L'];
-const COLOR_LABEL = { W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', M:'Multicolored', A:'Artifact', L:'Land' };
+const COLOR_ORDER = ['C','W','U','B','R','G','M','A','L'];
+const COLOR_LABEL = { C:'Colorless', W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', M:'Multicolored', A:'Artifact', L:'Land' };
 
 const SYM = s => `<img class="mana-sym" src="https://svgs.scryfall.io/card-symbols/${s}.svg" alt="{${s}}">`;
 const FIVE_COLOR = `<span class="five-color-sym">${SYM('W')}${SYM('U')}${SYM('B')}${SYM('R')}${SYM('G')}</span>`;
-const COLOR_ICON = { W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:FIVE_COLOR, A:SYM('C'), L:'🏔' };
+const COLOR_ICON = { C:SYM('C'), W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:FIVE_COLOR, A:'⚙', L:'🏔' };
 
 function colorKey(card) {
   // Scryfall categorises DFCs by front-face color only; the top-level
@@ -799,7 +803,8 @@ function colorKey(card) {
   if (c.length > 1) return 'M';
   if (c.length === 1) return c[0];
   if (card.type_line?.includes('Land')) return 'L';
-  return 'A';
+  if (card.type_line?.includes('Artifact')) return 'A';
+  return 'C'; // colorless non-artifact: Eldrazi, etc.
 }
 
 
@@ -1880,7 +1885,14 @@ init();
     }
   }, { passive: true });
 
-  btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Immediately restore header — mobile browsers may not fire scroll events
+    // during smooth-scroll animation, leaving the header stuck hidden.
+    hdr.classList.remove('header-hidden');
+    btn.classList.remove('show');
+    lastY = 0; dir = 0; dirFromY = 0;
+  });
 })();
 
 // Position pill indicators after layout is ready (no animation on first paint)
