@@ -213,6 +213,7 @@
 
   <div class="tab-row">
     <button class="cube-tab active" data-cube="isd">Innistrad</button>
+    <button class="cube-tab" data-cube="fdn">Foundations</button>
   </div>
 
   <div class="tab-row" id="viewTabs">
@@ -269,7 +270,8 @@ const GIST_RAW  = `https://gist.githubusercontent.com/${GIST_USER}/${GIST_ID}/ra
 const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
 
 const CUBES = {
-  isd: { name: 'Innistrad', setCode: 'isd', counts: { mythic: 1, rare: 1, uncommon: 2, common: 3 } }
+  isd: { name: 'Innistrad', setCode: 'isd', counts: { mythic: 1, rare: 1, uncommon: 2, common: 3 } },
+  fdn: { name: 'Foundations', setCode: 'fdn', counts: { mythic: 1, rare: 1, uncommon: 1, common: 1 } },
 };
 
 // ── Color grouping ────────────────────────────────────────────────────────────
@@ -357,9 +359,9 @@ let saveTimer       = null;
 let packState       = { cards: [], pick: null, packNum: 1 };
 let flippedCards    = new Set();  // card names currently showing back face
 let excludedFromDraft = {};       // { isd: Set(['Card Name', ...]) } — owned but skip in pack gen
-let basicLandPool   = [];         // Innistrad basic land cards (fetched separately)
-let tokenPool       = [];         // Innistrad token cards (fetched from tisd)
-let tokenOwned      = {};         // { isd: { scryfallId: count } } — default 1 per token
+let basicLandPool   = {};         // { setCode: [...] } basic land cards per set
+let tokenPool       = {};         // { setCode: [...] } token cards per set
+let tokenOwned      = {};         // { cubeKey: { scryfallId: count } } — default 1 per token
 
 // ── Token UI ──────────────────────────────────────────────────────────────────
 function getToken() { return localStorage.getItem('ghtoken') ?? ''; }
@@ -530,18 +532,19 @@ function openNewPack() {
   const rareSlot  = shuffle(useMythic ? pool.mythic : pool.rare);
   if (rareSlot.length) pack.push(rareSlot[0]);
 
-  // 1 guaranteed DFC slot (common DFC → uncommon DFC fallback)
+  // 1 DFC slot only if this set has DFCs (e.g. Innistrad); otherwise fill with an extra common
   const dfcSlot = shuffle([...pool.commonDFC, ...pool.uncommonDFC]);
-  if (dfcSlot.length) pack.push(dfcSlot[0]);
+  const hasDFC  = dfcSlot.length > 0;
+  if (hasDFC) pack.push(dfcSlot[0]);
 
   // 3 uncommons (non-DFC)
   pack.push(...shuffle(pool.uncommonNorm).slice(0, 3));
 
-  // Fill commons: 9 normal commons (+ 1 DFC = 10 non-rare slots)
-  pack.push(...shuffle(pool.commonNorm).slice(0, 9));
+  // Commons: 9 if DFC filled a slot, 10 otherwise
+  pack.push(...shuffle(pool.commonNorm).slice(0, hasDFC ? 9 : 10));
 
   // 1 basic land from the set
-  const basics = basicLandPool.length ? basicLandPool : [];
+  const basics = basicLandPool[CUBES[activeCube].setCode] ?? [];
   if (basics.length) pack.push({ ...shuffle([...basics])[0], _isBasicLand: true });
 
   packState = { cards: pack, pick: null, packNum: packState.packNum + (packState.pick ? 1 : 0) };
@@ -675,10 +678,7 @@ document.querySelectorAll('.cube-tab').forEach(btn => {
   btn.addEventListener('click', async () => {
     activeCube = btn.dataset.cube;
     document.querySelectorAll('.cube-tab').forEach(b => b.classList.toggle('active', b === btn));
-    if (!cardCache[activeCube]) {
-      document.getElementById('grid').innerHTML = `<div class="loading">Fetching ${CUBES[activeCube].name} cards from Scryfall…</div>`;
-      cardCache[activeCube] = await fetchSetCards(CUBES[activeCube].setCode);
-    }
+    if (!cardCache[activeCube]) await loadCubeData(activeCube);
     render();
   });
 });
@@ -696,7 +696,7 @@ function getTokenCreators(token) {
 }
 
 function renderTokens() {
-  const tokens = tokenPool;
+  const tokens = tokenPool[CUBES[activeCube].setCode] ?? [];
   const total  = tokens.reduce((s, t) => s + (tokenOwned[activeCube]?.[t.id] ?? 1), 0);
   document.getElementById('stats').textContent = `${tokens.length} token types · ${total} total`;
   document.getElementById('bar').style.width = '0%';
@@ -844,8 +844,8 @@ function renderPack() {
 
   if (!packState.cards.length) {
     grid.innerHTML = `<div class="pack-splash">
-      <h2>Innistrad Draft Simulator</h2>
-      <p>15 cards per pack · 1 rare/mythic · 3 uncommons · 9 commons · 1 DFC · 1 basic land</p>
+      <h2>${CUBES[activeCube].name} Draft Simulator</h2>
+      <p>15 cards per pack · 1 rare/mythic · 3 uncommons · 10 commons · 1 basic land</p>
       <button class="btn btn-lg" onclick="openNewPack()">Open Pack 1</button>
     </div>`;
     return;
@@ -930,26 +930,32 @@ function cardHTML(c, cube, owned) {
   </div>`;
 }
 
+// ── Load all Scryfall data for a cube (cards, basics, tokens) ─────────────────
+async function loadCubeData(cubeKey) {
+  const cube = CUBES[cubeKey];
+  const code = cube.setCode;
+  document.getElementById('grid').innerHTML = `<div class="loading">Fetching ${cube.name} cards from Scryfall…</div>`;
+  [cardCache[cubeKey], basicLandPool[code], tokenPool[code]] = await Promise.all([
+    fetchSetCards(code),
+    fetchBasicLands(code),
+    fetchTokens(code),
+  ]);
+  // Default token counts to 1 for new tokens
+  if (!tokenOwned[cubeKey]) tokenOwned[cubeKey] = {};
+  let needsSave = false;
+  for (const t of tokenPool[code]) {
+    if (tokenOwned[cubeKey][t.id] === undefined) {
+      tokenOwned[cubeKey][t.id] = 1;
+      needsSave = true;
+    }
+  }
+  if (needsSave) scheduleSave();
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
   await loadCollection();
-  document.getElementById('grid').innerHTML = '<div class="loading">Fetching Innistrad cards from Scryfall…</div>';
-  [cardCache[activeCube], basicLandPool, tokenPool] = await Promise.all([
-    fetchSetCards(CUBES[activeCube].setCode),
-    fetchBasicLands(CUBES[activeCube].setCode),
-    fetchTokens(CUBES[activeCube].setCode),
-  ]);
-
-  // Default token counts to 1 for any new tokens not yet saved
-  if (!tokenOwned[activeCube]) tokenOwned[activeCube] = {};
-  let tokenDefaulted = false;
-  for (const t of tokenPool) {
-    if (tokenOwned[activeCube][t.id] === undefined) {
-      tokenOwned[activeCube][t.id] = 1;
-      tokenDefaulted = true;
-    }
-  }
-  if (tokenDefaulted) scheduleSave();
+  await loadCubeData(activeCube);
 
   // Establish oracle snapshot baseline on first load — used to detect future oracle changes
   if (!oracleSnapshot[activeCube]) {
