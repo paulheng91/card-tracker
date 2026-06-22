@@ -172,26 +172,20 @@
     }
     .view-tab.active { background: #c9a84c; color: #111; }
 
-    /* ── Lock bar (persistent header strip when set is locked) ──────────── */
-    .lock-bar {
-      display: none; width: 100%;
-      background: #181200; border-top: 1px solid #3a3010;
-      color: #a08030; font-size: 0.65rem; font-weight: 600;
-      text-align: center; padding: 0.2rem 1rem; letter-spacing: 0.04em;
-      cursor: pointer; user-select: none;
+    /* ── Lock notice (centered transient overlay) ───────────────────────── */
+    .lock-notice {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.88);
+      background: #141008; border: 1px solid #3a3010;
+      border-radius: 14px; padding: 1.4rem 2.2rem;
+      text-align: center; z-index: 400; pointer-events: none;
+      opacity: 0; transition: opacity 0.22s, transform 0.22s;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.85);
     }
-    .lock-bar:hover { background: #201800; color: #c9a84c; }
-    .lock-bar.show { display: block; }
-
-    /* ── Lock toast ─────────────────────────────────────────────────────── */
-    .lock-toast {
-      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
-      background: #1a1200; border: 1px solid #c9a84c; color: #c9a84c;
-      font-size: 0.78rem; font-weight: 700; padding: 0.45rem 1.2rem;
-      border-radius: 999px; z-index: 400; white-space: nowrap;
-      opacity: 0; pointer-events: none; transition: opacity 0.18s;
-    }
-    .lock-toast.show { opacity: 1; }
+    .lock-notice.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    .lock-notice-icon { font-size: 1.6rem; line-height: 1; margin-bottom: 0.45rem; }
+    .lock-notice-title { font-size: 0.88rem; font-weight: 700; color: #c9a84c; }
+    .lock-notice-sub { font-size: 0.65rem; color: #6a5a30; margin-top: 0.3rem; letter-spacing: 0.03em; }
 
     .save-status { font-size: 0.73rem; color: #555; }
     .save-status.saving { color: #c9a84c; }
@@ -485,7 +479,11 @@
 </head>
 <body>
 
-<div class="lock-toast" id="lockToast">🔒 This set is locked</div>
+<div class="lock-notice" id="lockNotice">
+  <div class="lock-notice-icon">🔒</div>
+  <div class="lock-notice-title">This set is locked</div>
+  <div class="lock-notice-sub">Tap 🔒 to unlock</div>
+</div>
 
 <div id="unlockDialog">
   <div class="unlock-box">
@@ -570,7 +568,6 @@
       <button class="lock-btn" id="btnLock" title="Lock this set">🔓</button>
     </div>
   </div>
-  <div class="lock-bar" id="lockBar">🔒 This set is locked — click to unlock</div>
 
 </header>
 
@@ -923,12 +920,12 @@ let lockedCubes   = new Set(JSON.parse(localStorage.getItem('lockedCubes') || '[
 let excludedCards = {}; // { [cubeKey]: { [cardName]: true } }
 function isLocked() { return lockedCubes.has(activeCube); }
 
-let lockToastTimer = null;
-function showLockToast() {
-  const toast = document.getElementById('lockToast');
-  toast.classList.add('show');
-  clearTimeout(lockToastTimer);
-  lockToastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+let lockNoticeTimer = null;
+function showLockNotice() {
+  const el = document.getElementById('lockNotice');
+  el.classList.add('show');
+  clearTimeout(lockNoticeTimer);
+  lockNoticeTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
 
 let justToggledCard = null;
@@ -1199,7 +1196,7 @@ document.getElementById('grid').addEventListener('click', e => {
   if (footerEl) {
     const card = footerEl.closest('.card[data-name]');
     if (!card || activeView !== 'cards') return;
-    if (isLocked()) { showLockToast(); return; }
+    if (isLocked()) { showLockNotice(); return; }
     const name = card.dataset.name;
     if (!excludedCards[activeCube]) excludedCards[activeCube] = {};
     const nowExcluded = !excludedCards[activeCube][name];
@@ -1229,7 +1226,7 @@ document.getElementById('grid').addEventListener('click', e => {
 
   const countBtn = e.target.closest('.count-btn');
   if (countBtn) {
-    if (isLocked()) { showLockToast(); return; }
+    if (isLocked()) { showLockNotice(); return; }
     const tokenCard = countBtn.closest('[data-token-id]');
     const id = tokenCard?.dataset.tokenId;
     if (id) {
@@ -1255,7 +1252,7 @@ document.getElementById('grid').addEventListener('click', e => {
   const card = e.target.closest('.card[data-name]');
   if (!card) return;
   if (activeView !== 'cards') return;
-  if (isLocked()) { showLockToast(); return; }
+  if (isLocked()) { showLockNotice(); return; }
 
   const name   = card.dataset.name;
   const rarity = card.dataset.rarity;
@@ -1433,7 +1430,6 @@ function updateLockBtn() {
   btn.textContent = locked ? '🔒' : '🔓';
   btn.classList.toggle('locked', locked);
   btn.title = locked ? 'Locked — click to unlock' : 'Lock this set';
-  document.getElementById('lockBar').classList.toggle('show', locked);
 }
 
 function updateCubeTrigger(key) {
@@ -1443,6 +1439,7 @@ function updateCubeTrigger(key) {
   cubeLabel.textContent = cube.name;
   updateRaritySymbols(cube.setCode);
   updateLockBtn();
+  if (isLocked()) showLockNotice();
 }
 
 sortedCubeEntries.forEach(([key, cube]) => {
@@ -1545,8 +1542,6 @@ function openUnlockDialog() {
   document.getElementById('unlockDialog').classList.add('open');
   setTimeout(() => document.getElementById('unlockInput').focus(), 50);
 }
-
-document.getElementById('lockBar').addEventListener('click', openUnlockDialog);
 
 document.getElementById('btnLock').addEventListener('click', () => {
   if (lockedCubes.has(activeCube)) {
