@@ -260,12 +260,9 @@
       text-shadow: 0 2px 14px rgba(0,0,0,0.85);
     }
 
-    /* Status row — bottom-right corner: [✕ toggle] [✓ or ○] */
-    .card-status {
-      position: absolute; bottom: 4px; right: 5px;
-      display: flex; align-items: center; gap: 3px; z-index: 3;
-    }
+    /* ✕ exclude — pinned bottom-right, never moves */
     .exclude-btn {
+      position: absolute; bottom: 4px; right: 5px; z-index: 3;
       background: transparent; border: none; cursor: pointer;
       font-size: 0.75rem; font-weight: 900; line-height: 1;
       color: rgba(255,255,255,0.18); padding: 1px 2px;
@@ -273,9 +270,15 @@
     }
     .exclude-btn:hover { color: rgba(255,120,120,0.85); }
     .card.excluded .exclude-btn { color: rgba(255,130,130,0.9); }
-    .status-sym { font-size: 1rem; font-weight: 900; line-height: 1; pointer-events: none; }
+
+    /* Status symbol — pinned just left of ✕, never moves */
+    .status-sym {
+      position: absolute; bottom: 4px; right: 20px; z-index: 3;
+      font-size: 1rem; font-weight: 900; line-height: 1; pointer-events: none;
+    }
     .status-complete { color: #52b788; }
-    .status-missing  { color: rgba(190,65,65,0.7); }
+    .status-partial  { color: #c9a84c; }
+    .status-missing  { color: rgba(190,65,65,0.75); }
 
     .badge-row { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; gap: 3px; }
     .errata-badge {
@@ -334,14 +337,14 @@
     .creator-link { position: relative; display: inline-block; color: #8a8a8a; cursor: default; white-space: nowrap; }
     .creator-link:hover { color: #c9a84c; }
     .creator-preview {
-      display: none; position: absolute; bottom: calc(100% + 6px); left: 50%;
-      transform: translateX(-50%); width: 150px; z-index: 200; pointer-events: none;
+      display: none; position: absolute; bottom: calc(100% + 6px); left: 0;
+      width: 150px; z-index: 200; pointer-events: none;
       border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.95);
     }
     .creator-link:hover .creator-preview { display: block; }
 
     /* ── Token list layout (2-col grid; DFT shows both faces) ─────────── */
-    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); gap: 0.6rem; }
+    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: var(--card-min); gap: 0.6rem; }
     .token-card { overflow: visible; }
     .token-card > .card-img-wrap,
     .token-card > .token-img-pair { border-radius: 8px 8px 0 0; overflow: hidden; }
@@ -1386,7 +1389,8 @@ function cardHTML(c, cube, owned) {
   const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
   const flash       = justToggledCard === c.name ? ' card-flashed' : '';
   const statusSym = !isExcluded && cls === 'complete' ? '<span class="status-sym status-complete">✓</span>'
-                  : !isExcluded && cls === 'missing'  ? '<span class="status-sym status-missing">○</span>'
+                  : !isExcluded && cls === 'partial'   ? '<span class="status-sym status-partial">◑</span>'
+                  : !isExcluded && cls === 'missing'   ? '<span class="status-sym status-missing">✗</span>'
                   : '';
   return `<div class="card ${cls}${isExcluded ? ' excluded' : ''}${flash}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
@@ -1396,10 +1400,8 @@ function cardHTML(c, cube, owned) {
       <span class="${lblCls}">${label}</span>
     </div>
     <div class="card-name">${displayName}</div>
-    <div class="card-status">
-      <button class="exclude-btn" title="${isExcluded ? 'Restore to draft' : 'Exclude from draft'}">✕</button>
-      ${statusSym}
-    </div>
+    <button class="exclude-btn" title="${isExcluded ? 'Restore to draft' : 'Exclude from draft'}">✕</button>
+    ${statusSym}
   </div>`;
 }
 
