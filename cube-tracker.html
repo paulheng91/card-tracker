@@ -60,7 +60,6 @@
       padding: 0 0.5rem 0.4rem;
     }
     .ctrl-group { display: flex; align-items: center; gap: 0.3rem; }
-    .ctrl-sep { width: 1px; height: 1.1rem; background: #2e2e2e; flex-shrink: 0; align-self: center; }
 
     /* ── Custom set dropdown ────────────────────────────────────────────── */
     .cube-dropdown { position: relative; }
@@ -303,7 +302,6 @@
       h1 { font-size: 1.05rem; }
       .gh-login-btn { font-size: 0.65rem; padding: 0.2rem 0.5rem; }
       .controls-row { column-gap: 0.2rem; row-gap: 0.3rem; padding-bottom: 0.3rem; }
-      .ctrl-sep { display: none; }
       .cube-trigger { font-size: 0.7rem; padding: 0.22rem 0.65rem 0.22rem 0.5rem; }
       .set-sym { width: 16px; height: 16px; }
       .view-tab  { padding: 0.2rem 0.55rem; font-size: 0.68rem; white-space: nowrap; }
@@ -362,30 +360,25 @@
       <button class="view-tab active" data-view="cards">Cards</button>
       <button class="view-tab"        data-view="info">Info</button>
     </div>
-    <span class="ctrl-sep"></span>
     <div class="ctrl-group" id="filterRow">
       <button class="filter-btn active" data-filter="all">All</button>
       <button class="filter-btn"        data-filter="missing">Missing</button>
     </div>
-    <span class="ctrl-sep"></span>
     <div class="ctrl-group" id="rarityRow">
       <button class="filter-btn" data-rarity="common"   title="Common"><span class="rarity-sym-mask r-common"></span></button>
       <button class="filter-btn" data-rarity="uncommon" title="Uncommon"><span class="rarity-sym-mask r-uncommon"></span></button>
       <button class="filter-btn" data-rarity="rare"     title="Rare"><span class="rarity-sym-mask r-rare"></span></button>
       <button class="filter-btn" data-rarity="mythic"   title="Mythic"><span class="rarity-sym-mask r-mythic"></span></button>
     </div>
-    <span class="ctrl-sep"></span>
     <div class="ctrl-group size-row">
       <button class="size-btn" data-size="s">S</button>
       <button class="size-btn" data-size="m">M</button>
       <button class="size-btn" data-size="l">L</button>
     </div>
-    <span class="ctrl-sep"></span>
     <div class="ctrl-group">
       <button class="filter-btn" id="btnCollapseAll">Collapse All</button>
       <button class="filter-btn" id="btnExpandAll">Expand All</button>
     </div>
-    <span class="ctrl-sep"></span>
     <div class="ctrl-group">
       <button class="lock-btn" id="btnLock" title="Lock this set">🔓</button>
     </div>
