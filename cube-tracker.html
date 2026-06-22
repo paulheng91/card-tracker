@@ -556,12 +556,11 @@ const LAND_ROW = `<span class="ms-land-row">${['plains','island','swamp','mounta
 const COLOR_ICON = { W:SYM('W'), U:SYM('U'), B:SYM('B'), R:SYM('R'), G:SYM('G'), M:MS('m ms-cost'), A:SYM('C'), L:LAND_ROW };
 
 function colorKey(card) {
-  let c = card.colors ?? [];
-  if (c.length === 0 && card.card_faces?.length > 0) {
-    const all = new Set();
-    card.card_faces.forEach(f => (f.colors ?? []).forEach(x => all.add(x)));
-    c = [...all];
-  }
+  // Scryfall categorises DFCs by front-face color only; the top-level
+  // card.colors merges all faces, which would wrongly land Avacyn in Multicolor.
+  const c = card.card_faces?.length > 0
+    ? (card.card_faces[0].colors ?? [])
+    : (card.colors ?? []);
   if (c.length > 1) return 'M';
   if (c.length === 1) return c[0];
   if (card.type_line?.includes('Land')) return 'L';
