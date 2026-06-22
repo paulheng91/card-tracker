@@ -126,17 +126,28 @@
     .save-status.saved  { color: #52b788; }
     .save-status.error  { color: #e05; }
 
+    /* ── Click feedback ─────────────────────────────────────────────────── */
+    @keyframes bump-up   { 0%,100%{ transform:scale(1);  color:inherit;  } 50%{ transform:scale(1.55); color:#52b788; } }
+    @keyframes bump-down { 0%,100%{ transform:scale(1);  color:inherit;  } 50%{ transform:scale(1.35); color:#cc4444; } }
+    @keyframes card-flash{ 0%,100%{ filter:brightness(1);} 50%{ filter:brightness(1.45); } }
+    .count-bump-up   { animation: bump-up   0.22s ease; }
+    .count-bump-down { animation: bump-down 0.22s ease; }
+    .card-flashed    { animation: card-flash 0.22s ease; }
+    .filter-btn:active, .size-btn:active, .view-tab:active { transform: scale(0.88); }
+    .lock-btn:active { transform: scale(0.8); }
+
     /* ── Filter rows ────────────────────────────────────────────────────── */
     .filter-row { display: flex; gap: 0.4rem; justify-content: center; margin-bottom: 0.25rem; }
     .filter-btn {
       padding: 0.25rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
       font-size: 0.73rem; font-weight: 700; background: #242424; color: #777;
-      transition: all 0.15s;
+      transition: background 0.15s, color 0.15s, transform 0.1s;
     }
-    .filter-btn.active                            { background: #c9a84c; color: #111; }
-    .filter-btn[data-rarity="rare-mythic"].active { background: #8a6010; color: #ffd700; }
-    .filter-btn[data-rarity="uncommon"].active    { background: #2a3a4a; color: #8ab0c8; }
-    .filter-btn[data-rarity="common"].active      { background: #2a2a2a; color: #aaa; border: 1px solid #555; }
+    .filter-btn.active                         { background: #c9a84c; color: #111; }
+    .filter-btn[data-rarity="rare"].active     { background: #8a6010; color: #ffd700; }
+    .filter-btn[data-rarity="mythic"].active   { background: #6a2010; color: #e07020; }
+    .filter-btn[data-rarity="uncommon"].active { background: #2a3a4a; color: #8ab0c8; }
+    .filter-btn[data-rarity="common"].active   { background: #2a2a2a; color: #aaa; border: 1px solid #555; }
 
     /* Token input + generic button */
     .token-input { background: #0a0a0a; border: 1px solid #333; color: #aaa; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.73rem; width: 100%; }
@@ -351,9 +362,10 @@
     </div>
     <span class="ctrl-sep"></span>
     <div class="ctrl-group" id="rarityRow">
-      <button class="filter-btn" data-rarity="common"     title="Common"><span class="rarity-sym-mask r-common"></span></button>
-      <button class="filter-btn" data-rarity="uncommon"   title="Uncommon"><span class="rarity-sym-mask r-uncommon"></span></button>
-      <button class="filter-btn" data-rarity="rare-mythic" title="Rare / Mythic"><span class="rarity-sym-mask r-rare"></span><span class="rarity-sym-mask r-mythic"></span></button>
+      <button class="filter-btn" data-rarity="common"   title="Common"><span class="rarity-sym-mask r-common"></span></button>
+      <button class="filter-btn" data-rarity="uncommon" title="Uncommon"><span class="rarity-sym-mask r-uncommon"></span></button>
+      <button class="filter-btn" data-rarity="rare"     title="Rare"><span class="rarity-sym-mask r-rare"></span></button>
+      <button class="filter-btn" data-rarity="mythic"   title="Mythic"><span class="rarity-sym-mask r-mythic"></span></button>
     </div>
     <span class="ctrl-sep"></span>
     <div class="ctrl-group size-row">
@@ -549,6 +561,8 @@ let tokenOwned = {};
 let lockedCubes = new Set(JSON.parse(localStorage.getItem('lockedCubes') || '[]'));
 function isLocked() { return lockedCubes.has(activeCube); }
 
+let justToggledCard = null;
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GITHUB TOKEN / LOGIN UI
@@ -622,8 +636,10 @@ async function loadCollection() {
       const data = await res.json();
       oracleSnapshot = data._oracle  ?? {};
       tokenOwned     = data._tokens  ?? {};
+      lockedCubes    = new Set(data._locked ?? []);
       delete data._oracle;
       delete data._tokens;
+      delete data._locked;
       ownedMap = data;
     }
   } catch (e) {}
@@ -642,8 +658,9 @@ async function pushCollection() {
       headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify({
         ...ownedMap,
-        _oracle: oracleSnapshot,
-        _tokens: tokenOwned,
+        _oracle:  oracleSnapshot,
+        _tokens:  tokenOwned,
+        _locked:  [...lockedCubes],
       }, null, 2) } } })
     });
     if (!res.ok) {
@@ -810,7 +827,11 @@ document.getElementById('grid').addEventListener('click', e => {
       const delta = parseInt(countBtn.dataset.delta);
       if (!tokenOwned[activeCube]) tokenOwned[activeCube] = {};
       tokenOwned[activeCube][id] = Math.max(0, (tokenOwned[activeCube][id] ?? 1) + delta);
-      tokenCard.querySelector('.count-display').textContent = tokenOwned[activeCube][id];
+      const display = tokenCard.querySelector('.count-display');
+      display.textContent = tokenOwned[activeCube][id];
+      display.classList.remove('count-bump-up', 'count-bump-down');
+      void display.offsetWidth;
+      display.classList.add(delta > 0 ? 'count-bump-up' : 'count-bump-down');
       scheduleSave();
     }
     return;
@@ -860,7 +881,9 @@ document.getElementById('grid').addEventListener('click', e => {
   const cur    = ownedMap[activeCube]?.[name] ?? 0;
   if (!ownedMap[activeCube]) ownedMap[activeCube] = {};
   ownedMap[activeCube][name] = cur >= target ? 0 : cur + 1;
+  justToggledCard = name;
   render();
+  justToggledCard = null;
   scheduleSave();
 });
 
@@ -981,6 +1004,7 @@ document.getElementById('btnLock').addEventListener('click', () => {
   else lockedCubes.add(activeCube);
   localStorage.setItem('lockedCubes', JSON.stringify([...lockedCubes]));
   updateLockBtn();
+  scheduleSave();
 });
 
 
@@ -1082,9 +1106,10 @@ function renderCards() {
     const target = cube.counts[c.rarity] ?? 1;
     if (activeFilter === 'missing' && (owned[c.name] ?? 0) >= target) continue;
     if (activeRarityFilter.size > 0) {
-      const rm = (activeRarityFilter.has('common') && c.rarity === 'common')
-              || (activeRarityFilter.has('uncommon') && c.rarity === 'uncommon')
-              || (activeRarityFilter.has('rare-mythic') && (c.rarity === 'rare' || c.rarity === 'mythic'));
+      const rm = (activeRarityFilter.has('common')   && c.rarity === 'common')
+              || (activeRarityFilter.has('uncommon')  && c.rarity === 'uncommon')
+              || (activeRarityFilter.has('rare')      && c.rarity === 'rare')
+              || (activeRarityFilter.has('mythic')    && c.rarity === 'mythic');
       if (!rm) continue;
     }
     if (c._specialLabel) {
@@ -1221,7 +1246,8 @@ function cardHTML(c, cube, owned) {
   const safeName    = c.name.replace(/"/g, '&quot;');
   const isFlipped   = flippedCards.has(c.name);
   const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
-  return `<div class="card ${cls}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
+  const flash = justToggledCard === c.name ? ' card-flashed' : '';
+  return `<div class="card ${cls}${flash}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
     ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
     <div class="card-footer">
@@ -1294,6 +1320,7 @@ document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active',
 async function init() {
   await loadCollection();
   await loadCubeData(activeCube);
+  updateLockBtn(); // refresh after Gist data is loaded
 
   if (!oracleSnapshot[activeCube]) {
     oracleSnapshot[activeCube] = {};
