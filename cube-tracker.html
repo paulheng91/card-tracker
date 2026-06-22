@@ -525,6 +525,7 @@
           <button class="btn btn-danger" id="btnClearToken">Disconnect</button>
         </div>
         <span class="save-status" id="saveStatus"></span>
+        <span class="gh-panel-label" id="gitHashDisplay" style="font-family:monospace;letter-spacing:0.03em;"></span>
       </div>
     </div>
   </div>
@@ -939,6 +940,19 @@ function updateLoginBtn() {
   tokenInput.value = getToken();
 }
 updateLoginBtn();
+
+// Fetch and display the current deployed commit hash
+(async function() {
+  const el = document.getElementById('gitHashDisplay');
+  try {
+    const token = getToken();
+    const headers = token ? { Authorization: `token ${token}` } : {};
+    const r = await fetch('https://api.github.com/repos/paulheng91/card-tracker/commits/main', { headers });
+    if (!r.ok) return;
+    const { sha } = await r.json();
+    if (sha) el.textContent = `commit ${sha.slice(0, 7)}`;
+  } catch {}
+})();
 
 ghLoginBtn.addEventListener('click', e => {
   e.stopPropagation();
@@ -1990,28 +2004,12 @@ function constrainTokenCards() {
 }
 new ResizeObserver(constrainTokenCards).observe(document.getElementById('grid'));
 
-// ── Smart header hide/show + back-to-top ────────────────────────────────────
+// ── Back-to-top button ──────────────────────────────────────────────────────
 (function() {
-  const hdr = document.querySelector('header');
   const btn = document.getElementById('backToTop');
-  let lastY = window.scrollY;
-
   window.addEventListener('scroll', () => {
-    const y = window.scrollY;
-    const delta = y - lastY;
-
-    if (delta > 4) {
-      // scrolling down — hide header
-      hdr.style.transform = 'translateY(-110%)';
-    } else if (delta < -2) {
-      // scrolling up even a little — show header
-      hdr.style.transform = '';
-    }
-
-    btn.classList.toggle('show', y > 200);
-    lastY = y;
+    btn.classList.toggle('show', window.scrollY > 200);
   }, { passive: true });
-
   btn.addEventListener('click', () => {
     window.scrollTo(0, 0);
     btn.classList.remove('show');
