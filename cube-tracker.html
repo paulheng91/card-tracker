@@ -75,7 +75,8 @@
       overflow: hidden; cursor: pointer; transition: transform 0.15s, border-color 0.15s; position: relative;
     }
     .card:hover  { transform: scale(1.03); }
-    .card:active { transform: scale(0.93); }
+    .card:not(.token-card):active { transform: scale(0.93); }
+    .count-btn:active { transform: scale(0.75); background: #111; }
     .card.complete { border-color: #3a7a55; }
     .card.partial  { border-color: #b7791f; }
     .card.missing  { border-color: #8b2020; }
@@ -120,21 +121,12 @@
     #headerExtra { overflow: hidden; transition: max-height 0.25s ease, opacity 0.2s; max-height: 400px; opacity: 1; }
     #headerExtra.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
 
-    .excl-overlay {
-      position: absolute; top: 0; left: 0; right: 0; aspect-ratio: 63/88;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 4rem; font-weight: 900; line-height: 1;
-      color: rgba(210, 40, 40, 0.82); background: rgba(0,0,0,0.18);
-      pointer-events: none; z-index: 1;
+    .mark-all-btn {
+      padding: 0.25rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
+      font-size: 0.73rem; font-weight: 700; background: #2a2010; color: #c9a84c;
+      transition: background 0.15s; margin-left: 0.3rem;
     }
-    .excl-toggle-btn {
-      position: absolute; top: 4px; left: 4px; z-index: 2;
-      background: rgba(0,0,0,0.65); border: none; border-radius: 3px;
-      padding: 2px 5px; font-size: 0.55rem; font-weight: 800; letter-spacing: 0.04em;
-      cursor: pointer; color: #888; transition: background 0.15s;
-    }
-    .excl-toggle-btn:hover { background: rgba(0,0,0,0.88); color: #ccc; }
-    .card.excl .excl-toggle-btn { color: #cc4444; }
+    .mark-all-btn:hover { background: #3a3010; }
 
     .card-footer { padding: 0.3rem 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
     .card-num  { color: #666; }
@@ -187,10 +179,12 @@
     .token-counter { display: flex; align-items: center; gap: 0.3rem; }
     .count-btn {
       background: #242424; border: none; color: #c9a84c;
-      width: 30px; height: 30px; border-radius: 4px; cursor: pointer;
-      font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
-      line-height: 1; transition: background 0.15s; touch-action: manipulation; flex-shrink: 0;
+      width: 36px; height: 36px; border-radius: 4px; cursor: pointer;
+      font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      line-height: 1; transition: background 0.1s, transform 0.1s; touch-action: manipulation; flex-shrink: 0;
+      position: relative;
     }
+    .count-btn::after { content: ''; position: absolute; inset: -8px; }
     .count-btn:hover { background: #2e2e2e; }
     .count-display { font-weight: 700; font-size: 0.82rem; color: #d0d0d0; min-width: 18px; text-align: center; }
     .token-creators { padding: 0 0.5rem 0.4rem; font-size: 0.56rem; color: #666; line-height: 1.4; }
@@ -260,6 +254,7 @@
     <div class="filter-row" id="filterRow">
       <button class="filter-btn active" data-filter="all">All</button>
       <button class="filter-btn" data-filter="missing">Missing</button>
+      <button class="mark-all-btn" id="btnMarkAllOwned">Mark All Owned</button>
     </div>
     <div class="filter-row" id="rarityRow">
       <button class="filter-btn active" data-rarity="all">All Rarities</button>
@@ -311,8 +306,8 @@ const GIST_RAW  = `https://gist.githubusercontent.com/${GIST_USER}/${GIST_ID}/ra
 const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
 
 const CUBES = {
-  isd: { name: 'Innistrad',           setCode: 'isd', releaseDate: '2011-09-30', counts: { mythic:1, rare:1, uncommon:2, common:3 } },
-  ktk: { name: 'Khans of Tarkir',     setCode: 'ktk', releaseDate: '2014-09-26', counts: { mythic:1, rare:1, uncommon:1, common:1 } },
+  isd: { name: 'Innistrad',           setCode: 'isd', releaseDate: '2011-09-30', counts: { mythic:1, rare:1, uncommon:2, common:3 }, errataCheck: true },
+  ktk: { name: 'Khans of Tarkir',     setCode: 'ktk', releaseDate: '2014-09-26', counts: { mythic:1, rare:1, uncommon:1, common:1 }, errataCheck: true },
   neo: { name: 'Neon Dynasty',         setCode: 'neo', releaseDate: '2022-02-18', counts: { mythic:1, rare:1, uncommon:1, common:1 } },
   dmu: { name: 'Dominaria United',     setCode: 'dmu', releaseDate: '2022-09-09', counts: { mythic:1, rare:1, uncommon:1, common:1 }, specials: ['mul'] },
   ltr: { name: 'Lord of the Rings',    setCode: 'ltr', releaseDate: '2023-06-23', counts: { mythic:1, rare:1, uncommon:1, common:1 } },
@@ -661,9 +656,6 @@ document.getElementById('grid').addEventListener('click', e => {
   const badge = e.target.closest('.errata-badge');
   if (badge) { showErrataModal(badge.closest('.card').dataset.name); return; }
 
-  const exclToggle = e.target.closest('.excl-toggle-btn');
-  if (exclToggle) { toggleExcluded(exclToggle.closest('.card').dataset.name); return; }
-
   // Flip button → swap DFC image without re-rendering
   const flipBtn = e.target.closest('.flip-btn');
   if (flipBtn) {
@@ -733,8 +725,17 @@ document.querySelectorAll('#rarityRow .filter-btn').forEach(btn => {
   });
 });
 
+document.getElementById('btnMarkAllOwned').addEventListener('click', () => {
+  const cube  = CUBES[activeCube];
+  const cards = cardCache[activeCube] ?? [];
+  if (!ownedMap[activeCube]) ownedMap[activeCube] = {};
+  cards.forEach(c => { ownedMap[activeCube][c.name] = cube.counts[c.rarity] ?? 1; });
+  render();
+  scheduleSave();
+});
+
 // ── Cube tabs (dynamic, sorted newest-first) ──────────────────────────────────
-const sortedCubeEntries = Object.entries(CUBES).sort(([,a],[,b]) => new Date(b.releaseDate) - new Date(a.releaseDate));
+const sortedCubeEntries = Object.entries(CUBES).sort(([,a],[,b]) => new Date(a.releaseDate) - new Date(b.releaseDate));
 const cubeTabRow = document.getElementById('cubeTabs');
 sortedCubeEntries.forEach(([key, cube]) => {
   const year = cube.releaseDate.slice(0,4);
@@ -765,7 +766,7 @@ function getTokenCreators(token) {
 }
 
 function renderTokens() {
-  const tokens = tokenPool[CUBES[activeCube].setCode] ?? [];
+  const tokens = (tokenPool[CUBES[activeCube].setCode] ?? []).slice().sort((a,b) => parseInt(a.collector_number) - parseInt(b.collector_number));
   const total  = tokens.reduce((s, t) => s + (tokenOwned[activeCube]?.[t.id] ?? 1), 0);
   document.getElementById('stats').textContent = `${tokens.length} token types · ${total} total`;
   document.getElementById('bar').style.width = '0%';
@@ -783,7 +784,7 @@ function renderTokens() {
     const creatorsHtml = creators.length
       ? `<div class="token-creators">Made by: ${creators.slice(0, 4).join(', ')}${creators.length > 4 ? ` +${creators.length - 4}` : ''}</div>`
       : '';
-    return `<div class="card" data-token-id="${t.id}">
+    return `<div class="card token-card" data-token-id="${t.id}">
       <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${t.name}"></div>
       <div class="card-footer">
         <span class="card-num">#${t.collector_number}</span>
@@ -854,6 +855,13 @@ function renderCards() {
 
 // ── Errata view ───────────────────────────────────────────────────────────────
 function renderErrata() {
+  if (!CUBES[activeCube].errataCheck) {
+    document.getElementById('stats').textContent = 'Errata check N/A for this set';
+    document.getElementById('bar').style.width = '0%';
+    document.getElementById('grid').innerHTML = '<div class="empty">This set was printed with current Oracle wording — no errata to check.<br><br>Errata is only relevant for ISD and KTK.</div>';
+    return;
+  }
+
   const cards = cardCache[activeCube] ?? [];
 
   // Group cards per category (a card can appear in multiple categories)
@@ -980,8 +988,7 @@ function renderPack() {
 function cardHTML(c, cube, owned) {
   const target      = cube.counts[c.rarity] ?? 1;
   const n           = owned[c.name] ?? 0;
-  const isExcl      = (excludedFromDraft[activeCube] ?? new Set()).has(c.name);
-  const cls         = (n >= target ? 'complete' : n > 0 ? 'partial' : 'missing') + (isExcl ? ' excl' : '');
+  const cls         = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
   const lblCls      = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
   const label       = `${n}/${target}`;
   const img         = cardImage(c);
@@ -990,8 +997,6 @@ function cardHTML(c, cube, owned) {
   const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
   return `<div class="card ${cls}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
-    ${isExcl ? '<div class="excl-overlay">✕</div>' : ''}
-    ${n >= target ? `<button class="excl-toggle-btn">${isExcl ? 'INCL' : 'SKIP'}</button>` : ''}
     ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
