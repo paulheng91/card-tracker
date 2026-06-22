@@ -547,10 +547,12 @@ function updatePillSlide(groupEl) {
   const slide = groupEl.querySelector(':scope > .pill-slide');
   if (!slide) return;
   const active = groupEl.querySelector('.active');
-  if (!active) { slide.style.width = '0px'; return; }
-  const borderLeft = parseInt(getComputedStyle(groupEl).borderLeftWidth) || 0;
-  slide.style.width     = active.offsetWidth + 'px';
-  slide.style.transform = `translateX(${active.offsetLeft - borderLeft}px)`;
+  if (!active) { slide.style.width = '0'; return; }
+  const groupRect  = groupEl.getBoundingClientRect();
+  const activeRect = active.getBoundingClientRect();
+  const borderLeft = parseFloat(getComputedStyle(groupEl).borderLeftWidth) || 0;
+  slide.style.width     = activeRect.width + 'px';
+  slide.style.transform = `translateX(${activeRect.left - groupRect.left - borderLeft}px)`;
 }
 
 function updateAllPillSlides() {
