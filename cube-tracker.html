@@ -250,24 +250,23 @@
     .card.missing .card-img-wrap img { opacity: 0.2; filter: grayscale(80%); }
     .card.partial  .card-img-wrap img { opacity: 0.65; }
 
-    /* Complete checkmark — overlaid bottom-right of card art */
+    /* Complete checkmark — bottom-right corner of card (below 1 of 1) */
     .complete-check {
-      position: absolute; bottom: 5px; right: 5px;
-      color: #52b788; font-size: 1.25rem; font-weight: 900; line-height: 1;
-      pointer-events: none; z-index: 1;
-      text-shadow: 0 0 6px rgba(0,0,0,0.95), 0 1px 4px rgba(0,0,0,0.8);
+      position: absolute; bottom: 4px; right: 6px;
+      color: #52b788; font-size: 1rem; font-weight: 900; line-height: 1;
+      pointer-events: none; z-index: 3;
     }
 
-    /* Excluded from cube — red overlay + X on image */
+    /* Excluded from draft — big red overlay spanning the full image */
     .card.excluded .card-img-wrap::after {
       content: '✕';
       position: absolute; inset: 0;
       display: grid; place-items: center;
       background: rgba(100,20,20,0.52);
       color: rgba(255,100,100,0.95);
-      font-size: 2.6rem; font-weight: 900;
+      font-size: 5.5rem; font-weight: 900;
       pointer-events: none; z-index: 2;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+      text-shadow: 0 2px 14px rgba(0,0,0,0.85);
     }
 
     /* Exclude toggle button (top-left badge area, always faintly visible) */
@@ -1390,8 +1389,9 @@ function cardHTML(c, cube, owned) {
   const flash       = justToggledCard === c.name ? ' card-flashed' : '';
   const check       = cls === 'complete' && !isExcluded ? '<span class="complete-check">✓</span>' : '';
   return `<div class="card ${cls}${isExcluded ? ' excluded' : ''}${flash}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
-    <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}">${check}</div>
-    <div class="badge-row"><button class="exclude-btn" title="${isExcluded ? 'Restore to cube' : 'Remove from cube'}">✕</button></div>
+    <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+    <div class="badge-row"><button class="exclude-btn" title="${isExcluded ? 'Restore to draft' : 'Exclude from draft'}">✕</button></div>
+    ${check}
     ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
