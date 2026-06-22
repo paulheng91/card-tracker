@@ -1990,12 +1990,28 @@ function constrainTokenCards() {
 }
 new ResizeObserver(constrainTokenCards).observe(document.getElementById('grid'));
 
-// ── Back-to-top button ──────────────────────────────────────────────────────
+// ── Smart header hide/show + back-to-top ────────────────────────────────────
 (function() {
+  const hdr = document.querySelector('header');
   const btn = document.getElementById('backToTop');
+  let lastY = window.scrollY;
+
   window.addEventListener('scroll', () => {
-    btn.classList.toggle('show', window.scrollY > 200);
+    const y = window.scrollY;
+    const delta = y - lastY;
+
+    if (delta > 4) {
+      // scrolling down — hide header
+      hdr.style.transform = 'translateY(-110%)';
+    } else if (delta < -2) {
+      // scrolling up even a little — show header
+      hdr.style.transform = '';
+    }
+
+    btn.classList.toggle('show', y > 200);
+    lastY = y;
   }, { passive: true });
+
   btn.addEventListener('click', () => {
     window.scrollTo(0, 0);
     btn.classList.remove('show');
