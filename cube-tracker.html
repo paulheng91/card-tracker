@@ -64,16 +64,28 @@
     /* ── Segmented / exclusive button groups ────────────────────────────── */
     .btn-group {
       background: #161616; border: 1px solid #282828; border-radius: 999px;
-      padding: 3px; gap: 3px;
+      padding: 3px; gap: 3px; position: relative; overflow: hidden;
     }
     .btn-group .view-tab,
     .btn-group .filter-btn,
     .btn-group .size-btn,
-    .btn-group .lock-btn  { background: transparent; }
+    .btn-group .lock-btn  { background: transparent; position: relative; z-index: 1; }
     .btn-group .view-tab:hover,
     .btn-group .filter-btn:hover,
     .btn-group .size-btn:hover,
     .btn-group .lock-btn:hover { background: #242424; }
+
+    /* Sliding gold indicator (only for groups that have one) */
+    .pill-slide {
+      position: absolute; top: 3px; left: 0;
+      height: calc(100% - 6px); border-radius: 999px;
+      background: #c9a84c; pointer-events: none; z-index: 0;
+      transition: transform 0.18s ease, width 0.18s ease;
+    }
+    /* Active button in a slide-group: transparent bg, dark text (indicator provides color) */
+    #viewTabs .view-tab.active,
+    #filterRow .filter-btn.active,
+    .size-row  .size-btn.active  { background: transparent; color: #111; }
 
     /* ── Custom set dropdown ────────────────────────────────────────────── */
     .cube-dropdown { position: relative; }
@@ -388,10 +400,12 @@
 
   <div class="controls-row">
     <div class="ctrl-group btn-group" id="viewTabs">
+      <div class="pill-slide"></div>
       <button class="view-tab active" data-view="cards">Cards</button>
       <button class="view-tab"        data-view="info">Info</button>
     </div>
     <div class="ctrl-group btn-group" id="filterRow">
+      <div class="pill-slide"></div>
       <button class="filter-btn active" data-filter="all">All</button>
       <button class="filter-btn"        data-filter="missing">Missing</button>
     </div>
@@ -402,6 +416,7 @@
       <button class="filter-btn" data-rarity="mythic"   title="Mythic"><span class="rarity-sym-mask r-mythic"></span></button>
     </div>
     <div class="ctrl-group btn-group size-row">
+      <div class="pill-slide"></div>
       <button class="size-btn" data-size="s">S</button>
       <button class="size-btn" data-size="m">M</button>
       <button class="size-btn" data-size="l">L</button>
@@ -423,6 +438,29 @@
 <script>
 
 // ═══════════════════════════════════════════════════════════════════════════
+// SLIDING PILL INDICATOR
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updatePillSlide(groupEl) {
+  if (!groupEl) return;
+  const slide = groupEl.querySelector(':scope > .pill-slide');
+  if (!slide) return;
+  const active = groupEl.querySelector('.active');
+  if (!active) { slide.style.width = '0px'; return; }
+  const gr = groupEl.getBoundingClientRect();
+  const br = active.getBoundingClientRect();
+  slide.style.width     = br.width + 'px';
+  slide.style.transform = `translateX(${br.left - gr.left}px)`;
+}
+
+function updateAllPillSlides() {
+  updatePillSlide(document.getElementById('viewTabs'));
+  updatePillSlide(document.getElementById('filterRow'));
+  updatePillSlide(document.querySelector('.size-row'));
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
 // CARD SIZE PREFERENCE
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -432,6 +470,7 @@ function applySize(key) {
   document.documentElement.style.setProperty('--card-min', CARD_SIZES[key] + 'px');
   document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === key));
   localStorage.setItem('cardSize', key);
+  updatePillSlide(document.querySelector('.size-row'));
 }
 
 document.querySelectorAll('.size-btn').forEach(btn => btn.addEventListener('click', () => applySize(btn.dataset.size)));
@@ -946,6 +985,7 @@ document.querySelectorAll('.view-tab').forEach(btn => {
     activeView = btn.dataset.view;
     localStorage.setItem('activeView', activeView);
     document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b === btn));
+    updatePillSlide(document.getElementById('viewTabs'));
     updateControlsForView();
     render();
   });
@@ -955,6 +995,7 @@ document.querySelectorAll('#filterRow .filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     activeFilter = btn.dataset.filter;
     document.querySelectorAll('#filterRow .filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+    updatePillSlide(document.getElementById('filterRow'));
     render();
   });
 });
@@ -1386,6 +1427,16 @@ async function init() {
 }
 
 init();
+
+// Position pill indicators after layout is ready (no animation on first paint)
+requestAnimationFrame(() => {
+  document.querySelectorAll('.pill-slide').forEach(el => { el.style.transition = 'none'; });
+  updateAllPillSlides();
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.pill-slide').forEach(el => { el.style.transition = ''; });
+  });
+});
+window.addEventListener('resize', updateAllPillSlides);
 </script>
 </body>
 </html>
