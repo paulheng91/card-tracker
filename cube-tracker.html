@@ -32,9 +32,6 @@
       display: flex; align-items: center; justify-content: center;
       gap: 0.45rem; flex-wrap: wrap;
     }
-    .header-set-sym  { width: 18px; height: 18px; filter: brightness(0) invert(1); opacity: 0.85; flex-shrink: 0; }
-    .header-set-name { font-size: 0.92rem; font-weight: 700; color: #c9a84c; }
-    .header-stats    { font-size: 0.7rem; color: #888; white-space: nowrap; }
 
     .gh-login-wrap { position: relative; justify-self: end; }
     .gh-login-btn {
@@ -68,13 +65,13 @@
     /* ── Custom set dropdown ────────────────────────────────────────────── */
     .cube-dropdown { position: relative; }
     .cube-trigger {
-      display: inline-flex; align-items: center; gap: 0.4rem;
+      display: inline-flex; align-items: center; gap: 0.5rem;
       background: #242424; border: none; border-radius: 999px; cursor: pointer;
-      font-size: 0.78rem; font-weight: 700; color: #c9a84c;
-      padding: 0.3rem 0.85rem 0.3rem 0.6rem; white-space: nowrap; outline: none;
+      font-size: 1rem; font-weight: 700; color: #c9a84c;
+      padding: 0.35rem 1rem 0.35rem 0.75rem; white-space: nowrap; outline: none;
     }
     .cube-trigger:hover { background: #2e2e2e; }
-    .set-sym { width: 20px; height: 20px; flex-shrink: 0; filter: brightness(0) invert(1); opacity: 0.85; }
+    .set-sym { width: 24px; height: 24px; flex-shrink: 0; filter: brightness(0) invert(1); opacity: 0.85; }
     .cube-arr { font-size: 0.6rem; opacity: 0.6; margin-left: 0.15rem; }
     .cube-menu {
       display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 200;
@@ -334,9 +331,15 @@
   <div class="header-top">
     <div></div>
     <div class="header-center">
-      <img class="header-set-sym" id="headerSetSym" src="" alt="">
-      <span class="header-set-name" id="headerSetName"></span>
-      <span class="header-stats" id="stats"></span>
+      <div class="cube-dropdown" id="cubeDropdown">
+        <button class="cube-trigger" id="cubeTrigger">
+          <img class="set-sym" id="cubeSymImg" src="" alt="">
+          <span id="cubeLabel">…</span>
+          <span class="cube-arr">▼</span>
+        </button>
+        <div class="cube-menu" id="cubeMenu"></div>
+      </div>
+      <button class="lock-btn" id="btnLock" title="Lock this set">🔓</button>
     </div>
     <div class="gh-login-wrap" id="ghLoginWrap">
       <button class="gh-login-btn" id="ghLoginBtn">Login</button>
@@ -354,18 +357,6 @@
   </div>
 
   <div class="controls-row">
-    <div class="ctrl-group">
-      <div class="cube-dropdown" id="cubeDropdown">
-        <button class="cube-trigger" id="cubeTrigger">
-          <img class="set-sym" id="cubeSymImg" src="" alt="">
-          <span id="cubeLabel">…</span>
-          <span class="cube-arr">▼</span>
-        </button>
-        <div class="cube-menu" id="cubeMenu"></div>
-      </div>
-      <button class="lock-btn" id="btnLock" title="Lock this set">🔓</button>
-    </div>
-    <span class="ctrl-sep"></span>
     <div class="ctrl-group" id="viewTabs">
       <button class="view-tab active" data-view="cards">Cards</button>
       <button class="view-tab"        data-view="info">Info</button>
@@ -985,8 +976,6 @@ function updateCubeTrigger(key) {
   cubeSymImg.src = setSymUrl(cube.setCode);
   cubeSymImg.alt = cube.setCode;
   cubeLabel.textContent = cube.name;
-  document.getElementById('headerSetSym').src = setSymUrl(cube.setCode);
-  document.getElementById('headerSetName').textContent = cube.name;
   updateRaritySymbols(cube.setCode);
   updateLockBtn();
 }
@@ -1117,7 +1106,6 @@ function renderCards() {
     totalOwned  += Math.min(owned[c.name] ?? 0, t);
   });
   const pct = totalNeeded ? Math.round((totalOwned / totalNeeded) * 100) : 0;
-  document.getElementById('stats').textContent = `${totalOwned} of ${totalNeeded} cards collected (${pct}%)`;
 
   const groups = {};
   COLOR_ORDER.forEach(k => { groups[k] = []; });
@@ -1233,7 +1221,6 @@ function renderInfo() {
       byCategory[cat.id].sort((a, b) => parseInt(a.collector_number) - parseInt(b.collector_number));
     }
     const total = new Set(cards.filter(c => highCats.some(cat => cat.test(oracleMap[c.name] ?? ''))).map(c => c.name)).size;
-    document.getElementById('stats').textContent = `${total} cards with gameplay errata`;
 
     for (const cat of highCats) {
       const group = byCategory[cat.id];
@@ -1244,7 +1231,6 @@ function renderInfo() {
       if (!collapsed) for (const c of group) items.push(errataCardHTML(c));
     }
   } else {
-    document.getElementById('stats').textContent = '';
   }
 
   document.getElementById('grid').innerHTML = items.join('') || '<div class="empty">No info for this set yet.</div>';
