@@ -89,12 +89,13 @@
 
     /* ── Set nav arrows ─────────────────────────────────────────────────── */
     .cube-nav-btn {
-      background: transparent; border: none; cursor: pointer;
-      color: rgba(255,255,255,0.5); font-size: 0.85rem; line-height: 1;
-      padding: 0 0.3rem; transition: color 0.15s; flex-shrink: 0;
-      display: flex; align-items: center;
+      background: #242424; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.65); font-size: 1rem; line-height: 1;
+      padding: 0 0.55rem; height: 2rem; border-radius: 999px;
+      transition: color 0.15s, background 0.15s; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
     }
-    .cube-nav-btn:hover { color: #c9a84c; }
+    .cube-nav-btn:hover { color: #c9a84c; background: #2e2e2e; }
 
     /* ── Custom set dropdown ────────────────────────────────────────────── */
     .cube-dropdown { position: relative; }
@@ -331,6 +332,40 @@
     .loading { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; font-size: 0.9rem; }
     .empty   { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #555; }
 
+    /* ── Unlock dialog ───────────────────────────────────────────────────── */
+    #unlockDialog {
+      display: none; position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,0.88); align-items: center; justify-content: center;
+    }
+    #unlockDialog.open { display: flex; }
+    .unlock-box {
+      background: #1e1e1e; border: 1px solid #c9a84c; border-radius: 12px;
+      padding: 1.4rem 1.5rem; width: min(320px, 92vw);
+    }
+    .unlock-title { font-size: 0.95rem; font-weight: 800; color: #c9a84c; margin-bottom: 0.4rem; }
+    .unlock-hint  { font-size: 0.72rem; color: #888; margin-bottom: 0.75rem; line-height: 1.5; }
+    .unlock-hint strong { color: #d0d0d0; font-family: monospace; }
+    .unlock-input {
+      width: 100%; box-sizing: border-box;
+      background: #111; border: 1px solid #333; border-radius: 6px;
+      color: #d0d0d0; font-size: 0.8rem; padding: 0.45rem 0.65rem;
+      outline: none;
+    }
+    .unlock-input:focus { border-color: #c9a84c; }
+    .unlock-input.shake { animation: shake 0.35s ease; border-color: #e05; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
+    .unlock-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+    .unlock-btn-confirm {
+      flex: 1; background: #c9a84c; color: #111; border: none; border-radius: 6px;
+      padding: 0.4rem 0; font-weight: 800; font-size: 0.8rem; cursor: pointer;
+    }
+    .unlock-btn-confirm:hover { background: #d9b85c; }
+    .unlock-btn-cancel {
+      flex: 1; background: #242424; color: #888; border: none; border-radius: 6px;
+      padding: 0.4rem 0; font-weight: 700; font-size: 0.8rem; cursor: pointer;
+    }
+    .unlock-btn-cancel:hover { background: #2e2e2e; color: #bbb; }
+
     /* ── Info detail modal ──────────────────────────────────────────────── */
     #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; overflow-y: auto; padding: 1rem; }
     .modal-box { background: #1e1e1e; border: 1px solid #c9a84c; border-radius: 12px; padding: 1.25rem; max-width: 420px; margin: 2rem auto; }
@@ -409,6 +444,18 @@
 <body>
 
 <div class="lock-toast" id="lockToast">🔒 This set is locked</div>
+
+<div id="unlockDialog">
+  <div class="unlock-box">
+    <div class="unlock-title">🔒 Unlock Set</div>
+    <div class="unlock-hint">Type exactly to confirm (case sensitive):<br><strong id="unlockPhrase"></strong></div>
+    <input class="unlock-input" id="unlockInput" type="text" placeholder="unlock …" autocomplete="off" spellcheck="false">
+    <div class="unlock-row">
+      <button class="unlock-btn-confirm" id="unlockConfirm">Unlock</button>
+      <button class="unlock-btn-cancel"  id="unlockCancel">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <div id="modal">
   <div class="modal-box">
@@ -1320,18 +1367,50 @@ async function switchCube(delta) {
 document.getElementById('cubeNavPrev').addEventListener('click', () => switchCube(-1));
 document.getElementById('cubeNavNext').addEventListener('click', () => switchCube(1));
 
-document.getElementById('btnLock').addEventListener('click', () => {
-  if (lockedCubes.has(activeCube)) {
-    const setName = CUBES[activeCube].name;
-    const answer = prompt(`Type exactly to unlock (case sensitive):\n\nunlock ${setName}`);
-    if (answer !== `unlock ${setName}`) return;
-    lockedCubes.delete(activeCube);
-  } else {
-    lockedCubes.add(activeCube);
-  }
+function doUnlock() {
+  lockedCubes.delete(activeCube);
   localStorage.setItem('lockedCubes', JSON.stringify([...lockedCubes]));
   updateLockBtn();
   scheduleSave();
+  document.getElementById('unlockDialog').classList.remove('open');
+}
+
+document.getElementById('unlockConfirm').addEventListener('click', () => {
+  const phrase = `unlock ${CUBES[activeCube].name}`;
+  const val = document.getElementById('unlockInput').value;
+  if (val === phrase) {
+    doUnlock();
+  } else {
+    const inp = document.getElementById('unlockInput');
+    inp.classList.remove('shake');
+    void inp.offsetWidth;
+    inp.classList.add('shake');
+  }
+});
+
+document.getElementById('unlockInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('unlockConfirm').click();
+  if (e.key === 'Escape') document.getElementById('unlockCancel').click();
+});
+
+document.getElementById('unlockCancel').addEventListener('click', () => {
+  document.getElementById('unlockDialog').classList.remove('open');
+});
+
+document.getElementById('btnLock').addEventListener('click', () => {
+  if (lockedCubes.has(activeCube)) {
+    const phrase = `unlock ${CUBES[activeCube].name}`;
+    document.getElementById('unlockPhrase').textContent = phrase;
+    document.getElementById('unlockInput').value = '';
+    document.getElementById('unlockInput').classList.remove('shake');
+    document.getElementById('unlockDialog').classList.add('open');
+    setTimeout(() => document.getElementById('unlockInput').focus(), 50);
+  } else {
+    lockedCubes.add(activeCube);
+    localStorage.setItem('lockedCubes', JSON.stringify([...lockedCubes]));
+    updateLockBtn();
+    scheduleSave();
+  }
 });
 
 
@@ -1394,6 +1473,11 @@ function tokenCardHTML(t) {
     ${imgHtml}
     <div class="card-footer">
       <span class="card-num">#${t.collector_number}</span>
+      <div class="token-counter">
+        <button class="count-btn" data-delta="-1">−</button>
+        <span class="count-display">${count}</span>
+        <button class="count-btn" data-delta="1">+</button>
+      </div>
     </div>
     <div class="card-name">${dispName}${pt}</div>
     ${creatorsHtml}
@@ -1479,7 +1563,7 @@ function renderCards() {
     if (tokens.length) {
       const tKey      = 'tokens-section';
       const collapsed = collapsedSections.has(tKey);
-      items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${tKey}">Tokens (${tokens.length})<span class="sec-chevron">▼</span></div>`);
+      items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${tKey}">Tokens<span class="sec-chevron">▼</span></div>`);
       if (!collapsed) items.push(`<div class="token-list">${tokens.map(tokenCardHTML).join('')}</div>`);
     }
   }
