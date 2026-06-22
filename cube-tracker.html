@@ -19,7 +19,21 @@
       top: 0;
       z-index: 10;
       box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+      transition: transform 0.25s ease;
     }
+    header.header-hidden { transform: translateY(-110%); }
+
+    .back-to-top {
+      position: fixed; bottom: 1.5rem; right: 1.25rem; z-index: 50;
+      background: #c9a84c; color: #111; border: none; border-radius: 999px;
+      width: 2.4rem; height: 2.4rem; font-size: 1rem; font-weight: 800;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+      opacity: 0; pointer-events: none;
+      transform: translateY(0.75rem);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .back-to-top.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
     /* ── Header top row: (empty) · title+stats · GitHub login ─────────── */
     .header-top {
@@ -531,6 +545,8 @@
   </div>
 
 </header>
+
+<button class="back-to-top" id="backToTop" title="Back to top">↑</button>
 
 <div class="grid" id="grid">
   <div class="loading">Loading cards from Scryfall…</div>
@@ -1828,6 +1844,30 @@ async function init() {
 }
 
 init();
+
+// ── Hide header on scroll down, reveal on scroll up; back-to-top button ──
+(function() {
+  const hdr      = document.querySelector('header');
+  const btn      = document.getElementById('backToTop');
+  let lastY      = window.scrollY;
+
+  window.addEventListener('scroll', () => {
+    const y    = window.scrollY;
+    const down = y > lastY;
+    if (y < 60) {
+      hdr.classList.remove('header-hidden');
+      btn.classList.remove('show');
+    } else if (down) {
+      hdr.classList.add('header-hidden');
+      btn.classList.add('show');
+    } else {
+      hdr.classList.remove('header-hidden');
+    }
+    lastY = y;
+  }, { passive: true });
+
+  btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+})();
 
 // Position pill indicators after layout is ready (no animation on first paint)
 requestAnimationFrame(() => {
