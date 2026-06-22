@@ -6,11 +6,12 @@
   <title>Set Cube Tracker</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
+    html, body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: #111111;
       color: #d0d0d0;
       min-height: 100vh;
+      overflow-x: hidden;
     }
     header {
       background: #1a1a1a;
@@ -228,8 +229,11 @@
     .btn.btn-danger:hover { background: #2e1a1a; }
 
     /* ── Card grid ──────────────────────────────────────────────────────── */
-    :root { --grid-cols: 3; }
+    :root { --grid-cols: 3; --card-min: 110px; }
     .grid { display: grid; grid-template-columns: repeat(var(--grid-cols), 1fr); gap: 0.6rem; padding: 0.75rem; }
+    @media (min-width: 700px) {
+      .grid { grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); }
+    }
 
     .size-btn { width: 2rem; height: 2rem; padding: 0; border: none; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; background: transparent; color: #555; transition: all 0.15s; }
     .size-btn.active { background: transparent; color: #111; }
@@ -416,6 +420,9 @@
 
     /* ── Token list layout (2-col grid; DFT shows both faces) ─────────── */
     .token-list { grid-column: 1/-1; display: grid; grid-template-columns: repeat(var(--grid-cols), 1fr); gap: 0.6rem; }
+    @media (min-width: 700px) {
+      .token-list { grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); }
+    }
     .token-card { overflow: visible; }
     .token-card > .card-img-wrap,
     .token-card > .token-img-pair { border-radius: 8px 8px 0 0; overflow: hidden; }
@@ -582,10 +589,12 @@ function updateAllPillSlides() {
 // CARD SIZE PREFERENCE
 // ═══════════════════════════════════════════════════════════════════════════
 
-const CARD_SIZES = { s: 3, m: 2, l: 1 };
+const CARD_SIZES = { s: { cols: 3, min: 110 }, m: { cols: 2, min: 170 }, l: { cols: 1, min: 260 } };
 
 function applySize(key) {
-  document.documentElement.style.setProperty('--grid-cols', CARD_SIZES[key]);
+  const s = CARD_SIZES[key];
+  document.documentElement.style.setProperty('--grid-cols', s.cols);
+  document.documentElement.style.setProperty('--card-min', s.min + 'px');
   document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === key));
   localStorage.setItem('cardSize', key);
   updatePillSlide(document.querySelector('.size-row'));
