@@ -527,9 +527,9 @@ const CUBES = {
   fdn: { name: 'Foundations',          setCode: 'fdn', releaseDate: '2024-11-15', counts: { mythic:1, rare:1, uncommon:2, common:3 } },
   inr: { name: 'Innistrad Remastered', setCode: 'inr', releaseDate: '2025-01-17', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true },
   tdm: { name: 'Tarkir: Dragonstorm',  setCode: 'tdm', releaseDate: '2025-04-25', counts: { mythic:1, rare:1, uncommon:2, common:3 }, allOwned: true },
-  // maxCN: collector numbers above 400 are "Through the Ages" bonus-sheet cards, not regular draft cards
   // noDFCLands: FIN has adventure Town lands and a transform land (Balamb Garden) — exclude them
-  fin: { name: 'Final Fantasy',        setCode: 'fin', releaseDate: '2025-06-13', counts: { mythic:1, rare:1, uncommon:2, common:3 }, maxCN: 400, noDFCLands: true },
+  // (is:booster added globally handles Through the Ages bonus-sheet cards automatically)
+  fin: { name: 'Final Fantasy',        setCode: 'fin', releaseDate: '2025-06-13', counts: { mythic:1, rare:1, uncommon:2, common:3 }, noDFCLands: true },
 };
 
 
@@ -762,9 +762,15 @@ function scheduleSave() {
 
 // Generic query fetch — accepts a raw Scryfall search string (used for special guest sets).
 // specialLabel tags each returned card so renderCards can put them in their own section.
+//
+// URL encoding note: Scryfall uses '+' as its AND operator in query strings.
+// encodeURIComponent would encode '+' as '%2B', which Scryfall treats as a literal plus
+// (not AND), causing the wrong results.  We split on '+', encode each term separately,
+// then rejoin with raw '+' so Scryfall receives the correct AND-separated query.
 async function fetchByQuery(q, specialLabel = null) {
   const cards = [];
-  let url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(q + '+game:paper')}&order=collector&unique=cards`;
+  const qStr = (q + '+game:paper').split('+').map(p => encodeURIComponent(p)).join('+');
+  let url = `https://api.scryfall.com/cards/search?q=${qStr}&order=collector&unique=cards`;
   while (url) {
     const data = await (await fetch(url)).json();
     if (!data.data) break;
@@ -790,7 +796,9 @@ async function fetchSetCards(setCode, options = {}, specialLabel = null) {
   const cards = [];
   // not:extra excludes showcase / extended-art / borderless variants
   // game:paper excludes Arena/MTGO-only digital versions
-  let url = `https://api.scryfall.com/cards/search?q=set:${setCode}+not:extra+game:paper&order=collector&unique=cards`;
+  // is:booster restricts to cards that appear in play/draft boosters, excluding promo-only,
+  // commander-deck-only, and bonus-sheet overflow cards (e.g. FDN non-draft cards, FIN Through the Ages)
+  let url = `https://api.scryfall.com/cards/search?q=set:${setCode}+not:extra+game:paper+is:booster&order=collector&unique=cards`;
   while (url) {
     const data = await (await fetch(url)).json();
     if (!data.data) break;
