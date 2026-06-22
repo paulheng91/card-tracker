@@ -228,8 +228,8 @@
     .btn.btn-danger:hover { background: #2e1a1a; }
 
     /* ── Card grid ──────────────────────────────────────────────────────── */
-    :root { --card-min: 170px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); gap: 0.6rem; padding: 0.75rem; }
+    :root { --grid-cols: 3; }
+    .grid { display: grid; grid-template-columns: repeat(var(--grid-cols), 1fr); gap: 0.6rem; padding: 0.75rem; }
 
     .size-btn { width: 2rem; height: 2rem; padding: 0; border: none; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; background: transparent; color: #555; transition: all 0.15s; }
     .size-btn.active { background: transparent; color: #111; }
@@ -415,7 +415,7 @@
     .creator-link:hover .creator-preview { display: block; }
 
     /* ── Token list layout (2-col grid; DFT shows both faces) ─────────── */
-    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); gap: 0.6rem; }
+    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: repeat(var(--grid-cols), 1fr); gap: 0.6rem; }
     .token-card { overflow: visible; }
     .token-card > .card-img-wrap,
     .token-card > .token-img-pair { border-radius: 8px 8px 0 0; overflow: hidden; }
@@ -582,10 +582,10 @@ function updateAllPillSlides() {
 // CARD SIZE PREFERENCE
 // ═══════════════════════════════════════════════════════════════════════════
 
-const CARD_SIZES = { s: 110, m: 170, l: 230 };
+const CARD_SIZES = { s: 3, m: 2, l: 1 };
 
 function applySize(key) {
-  document.documentElement.style.setProperty('--card-min', CARD_SIZES[key] + 'px');
+  document.documentElement.style.setProperty('--grid-cols', CARD_SIZES[key]);
   document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === key));
   localStorage.setItem('cardSize', key);
   updatePillSlide(document.querySelector('.size-row'));
