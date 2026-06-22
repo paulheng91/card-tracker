@@ -36,6 +36,19 @@
     }
     .back-to-top.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
+    .float-lock {
+      position: fixed; top: 0.75rem; right: 1.25rem; z-index: 50;
+      background: #242424; color: #c9a84c; border: 1px solid #3a3010;
+      border-radius: 999px; padding: 0 0.7rem; height: 2rem; font-size: 0.88rem;
+      cursor: pointer; display: flex; align-items: center; gap: 0.3rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+      opacity: 0; pointer-events: none;
+      transform: translateY(-0.5rem);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .float-lock.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .float-lock.pulse { animation: lockPulse 0.55s ease-out; }
+
     /* ── Header top row: (empty) · title+stats · GitHub login ─────────── */
     .header-top {
       display: grid;
@@ -563,6 +576,7 @@
 </header>
 
 <button class="back-to-top" id="backToTop" title="Back to top">↑</button>
+<button class="float-lock" id="floatLock" title="Tap to unlock">🔒 Locked</button>
 
 <div class="grid" id="grid">
   <div class="loading">Loading cards from Scryfall…</div>
@@ -912,11 +926,12 @@ let excludedCards = {}; // { [cubeKey]: { [cardName]: true } }
 function isLocked() { return lockedCubes.has(activeCube); }
 
 function showLockNotice() {
-  const btn = document.getElementById('btnLock');
-  btn.classList.remove('pulse');
-  void btn.offsetWidth; // force reflow so animation restarts if already pulsing
-  btn.classList.add('pulse');
-  btn.addEventListener('animationend', () => btn.classList.remove('pulse'), { once: true });
+  const floatLock = document.getElementById('floatLock');
+  const target = floatLock.classList.contains('show') ? floatLock : document.getElementById('btnLock');
+  target.classList.remove('pulse');
+  void target.offsetWidth;
+  target.classList.add('pulse');
+  target.addEventListener('animationend', () => target.classList.remove('pulse'), { once: true });
 }
 
 let justToggledCard = null;
@@ -1417,10 +1432,13 @@ function updateRaritySymbols(code) {
 
 function updateLockBtn() {
   const btn = document.getElementById('btnLock');
+  const floatLock = document.getElementById('floatLock');
   const locked = isLocked();
+  const headerHidden = document.querySelector('header').classList.contains('header-hidden');
   btn.textContent = locked ? '🔒' : '🔓';
   btn.classList.toggle('locked', locked);
   btn.title = locked ? 'Locked — click to unlock' : 'Lock this set';
+  floatLock.classList.toggle('show', locked && headerHidden);
 }
 
 function updateCubeTrigger(key) {
@@ -1987,9 +2005,14 @@ init();
 (function() {
   const hdr = document.querySelector('header');
   const btn = document.getElementById('backToTop');
+  const floatLock = document.getElementById('floatLock');
   let lastY    = window.scrollY;
   let dir      = 0;       // 1 = down, -1 = up
   let dirFromY = 0;       // y position where current direction started
+
+  function syncFloatLock() {
+    floatLock.classList.toggle('show', isLocked() && hdr.classList.contains('header-hidden'));
+  }
 
   window.addEventListener('scroll', () => {
     const y = window.scrollY;
@@ -2011,6 +2034,7 @@ init();
       // require 12px upward scroll before revealing (avoids flicker from momentum bounce)
       hdr.classList.remove('header-hidden');
     }
+    syncFloatLock();
   }, { passive: true });
 
   btn.addEventListener('click', () => {
@@ -2019,8 +2043,11 @@ init();
     window.scrollTo(0, 0);
     hdr.classList.remove('header-hidden');
     btn.classList.remove('show');
+    floatLock.classList.remove('show');
     lastY = 0; dir = 0; dirFromY = 0;
   });
+
+  floatLock.addEventListener('click', () => openUnlockDialog());
 })();
 
 // Position pill indicators after layout is ready (no animation on first paint)
