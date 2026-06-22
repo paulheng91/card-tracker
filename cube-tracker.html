@@ -111,11 +111,12 @@
     .flip-btn:hover { background: rgba(0,0,0,0.85); }
 
     .header-toggle {
-      display: block; width: 100%; text-align: center; background: none; border: none;
-      color: #444; cursor: pointer; font-size: 0.6rem; padding: 0.15rem 0 0;
-      transition: color 0.15s; letter-spacing: 0.08em;
+      display: block; width: 100%; background: #1e1e1e; border: none; border-top: 1px solid #2a2a2a;
+      color: #555; cursor: pointer; font-size: 0.75rem; padding: 0.35rem 0;
+      transition: color 0.15s, background 0.15s; letter-spacing: 0.1em;
     }
-    .header-toggle:hover { color: #c9a84c; }
+    .header-toggle:hover { color: #c9a84c; background: #242424; }
+    .tab-year { font-size: 0.6rem; font-weight: 400; opacity: 0.6; margin-left: 0.2rem; }
     #headerExtra { overflow: hidden; transition: max-height 0.25s ease, opacity 0.2s; max-height: 400px; opacity: 1; }
     #headerExtra.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
 
@@ -186,9 +187,9 @@
     .token-counter { display: flex; align-items: center; gap: 0.3rem; }
     .count-btn {
       background: #242424; border: none; color: #c9a84c;
-      width: 20px; height: 20px; border-radius: 4px; cursor: pointer;
-      font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
-      line-height: 1; transition: background 0.15s;
+      width: 30px; height: 30px; border-radius: 4px; cursor: pointer;
+      font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      line-height: 1; transition: background 0.15s; touch-action: manipulation; flex-shrink: 0;
     }
     .count-btn:hover { background: #2e2e2e; }
     .count-display { font-weight: 700; font-size: 0.82rem; color: #d0d0d0; min-width: 18px; text-align: center; }
@@ -231,10 +232,7 @@
   <a class="nav-link" href="index.html">← Pokemon Card Tracker</a>
   <h1>MTG Cube Tracker</h1>
 
-  <div class="tab-row">
-    <button class="cube-tab active" data-cube="isd">Innistrad</button>
-    <button class="cube-tab" data-cube="fdn">Foundations</button>
-  </div>
+  <div class="tab-row" id="cubeTabs"></div>
 
   <div class="tab-row" id="viewTabs">
     <button class="view-tab active" data-view="cards">Cards</button>
@@ -313,8 +311,16 @@ const GIST_RAW  = `https://gist.githubusercontent.com/${GIST_USER}/${GIST_ID}/ra
 const GIST_API  = `https://api.github.com/gists/${GIST_ID}`;
 
 const CUBES = {
-  isd: { name: 'Innistrad', setCode: 'isd', counts: { mythic: 1, rare: 1, uncommon: 2, common: 3 } },
-  fdn: { name: 'Foundations', setCode: 'fdn', counts: { mythic: 1, rare: 1, uncommon: 1, common: 1 } },
+  isd: { name: 'Innistrad',           setCode: 'isd', releaseDate: '2011-09-30', counts: { mythic:1, rare:1, uncommon:2, common:3 } },
+  ktk: { name: 'Khans of Tarkir',     setCode: 'ktk', releaseDate: '2014-09-26', counts: { mythic:1, rare:1, uncommon:1, common:1 } },
+  neo: { name: 'Neon Dynasty',         setCode: 'neo', releaseDate: '2022-02-18', counts: { mythic:1, rare:1, uncommon:1, common:1 } },
+  dmu: { name: 'Dominaria United',     setCode: 'dmu', releaseDate: '2022-09-09', counts: { mythic:1, rare:1, uncommon:1, common:1 }, specials: ['mul'] },
+  ltr: { name: 'Lord of the Rings',    setCode: 'ltr', releaseDate: '2023-06-23', counts: { mythic:1, rare:1, uncommon:1, common:1 } },
+  blb: { name: 'Bloomburrow',          setCode: 'blb', releaseDate: '2024-08-02', counts: { mythic:1, rare:1, uncommon:1, common:1 }, specials: ['blbs'] },
+  fdn: { name: 'Foundations',          setCode: 'fdn', releaseDate: '2024-11-15', counts: { mythic:1, rare:1, uncommon:1, common:1 } },
+  inr: { name: 'Innistrad Remastered', setCode: 'inr', releaseDate: '2025-01-17', counts: { mythic:1, rare:1, uncommon:1, common:1 } },
+  tdm: { name: 'Tarkir: Dragonstorm',  setCode: 'tdm', releaseDate: '2025-04-25', counts: { mythic:1, rare:1, uncommon:1, common:1 } },
+  fin: { name: 'Final Fantasy',        setCode: 'fin', releaseDate: '2025-06-13', counts: { mythic:1, rare:1, uncommon:1, common:1 } },
 };
 
 // ── Color grouping ────────────────────────────────────────────────────────────
@@ -727,14 +733,23 @@ document.querySelectorAll('#rarityRow .filter-btn').forEach(btn => {
   });
 });
 
-document.querySelectorAll('.cube-tab').forEach(btn => {
+// ── Cube tabs (dynamic, sorted newest-first) ──────────────────────────────────
+const sortedCubeEntries = Object.entries(CUBES).sort(([,a],[,b]) => new Date(b.releaseDate) - new Date(a.releaseDate));
+const cubeTabRow = document.getElementById('cubeTabs');
+sortedCubeEntries.forEach(([key, cube]) => {
+  const year = cube.releaseDate.slice(0,4);
+  const btn  = document.createElement('button');
+  btn.className   = `cube-tab${key === activeCube ? ' active' : ''}`;
+  btn.dataset.cube = key;
+  btn.innerHTML   = `${cube.name}<span class="tab-year">'${year.slice(2)}</span>`;
   btn.addEventListener('click', async () => {
-    activeCube = btn.dataset.cube;
+    activeCube = key;
     localStorage.setItem('activeCube', activeCube);
     document.querySelectorAll('.cube-tab').forEach(b => b.classList.toggle('active', b === btn));
     if (!cardCache[activeCube]) await loadCubeData(activeCube);
     render();
   });
+  cubeTabRow.appendChild(btn);
 });
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
@@ -991,11 +1006,25 @@ async function loadCubeData(cubeKey) {
   const cube = CUBES[cubeKey];
   const code = cube.setCode;
   document.getElementById('grid').innerHTML = `<div class="loading">Fetching ${cube.name} cards from Scryfall…</div>`;
-  [cardCache[cubeKey], basicLandPool[code], tokenPool[code]] = await Promise.all([
+  const [mainCards, basics, tokens] = await Promise.all([
     fetchSetCards(code),
     fetchBasicLands(code),
     fetchTokens(code),
   ]);
+  // Fetch and merge special guest cards (dedup by Scryfall ID)
+  let allCards = mainCards;
+  if (cube.specials?.length) {
+    const specialBatches = await Promise.all(cube.specials.map(sc => fetchSetCards(sc)));
+    const seen = new Set(mainCards.map(c => c.id));
+    for (const batch of specialBatches) {
+      for (const c of batch) {
+        if (!seen.has(c.id)) { seen.add(c.id); allCards.push(c); }
+      }
+    }
+  }
+  cardCache[cubeKey]    = allCards;
+  basicLandPool[code]   = basics;
+  tokenPool[code]       = tokens;
   // Default token counts to 1 for new tokens
   if (!tokenOwned[cubeKey]) tokenOwned[cubeKey] = {};
   let needsSave = false;
@@ -1008,8 +1037,7 @@ async function loadCubeData(cubeKey) {
   if (needsSave) scheduleSave();
 }
 
-// Sync tab UI to restored state
-document.querySelectorAll('.cube-tab').forEach(b => b.classList.toggle('active', b.dataset.cube === activeCube));
+// Sync view tab UI to restored state (cube tabs already synced during generation above)
 document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === activeView));
 document.getElementById('filterRow').style.display  = activeView === 'cards' ? 'flex' : 'none';
 document.getElementById('rarityRow').style.display  = activeView === 'cards' ? 'flex' : 'none';
