@@ -119,6 +119,22 @@
     #headerExtra { overflow: hidden; transition: max-height 0.25s ease, opacity 0.2s; max-height: 400px; opacity: 1; }
     #headerExtra.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
 
+    .excl-overlay {
+      position: absolute; top: 0; left: 0; right: 0; aspect-ratio: 63/88;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 4rem; font-weight: 900; line-height: 1;
+      color: rgba(210, 40, 40, 0.82); background: rgba(0,0,0,0.18);
+      pointer-events: none; z-index: 1;
+    }
+    .excl-toggle-btn {
+      position: absolute; top: 4px; left: 4px; z-index: 2;
+      background: rgba(0,0,0,0.65); border: none; border-radius: 3px;
+      padding: 2px 5px; font-size: 0.55rem; font-weight: 800; letter-spacing: 0.04em;
+      cursor: pointer; color: #888; transition: background 0.15s;
+    }
+    .excl-toggle-btn:hover { background: rgba(0,0,0,0.88); color: #ccc; }
+    .card.excl .excl-toggle-btn { color: #cc4444; }
+
     .card-footer { padding: 0.3rem 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
     .card-num  { color: #666; }
     .lbl-own   { color: #52b788; font-weight: 700; }
@@ -374,8 +390,8 @@ function topSeverity(matches) {
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let activeCube        = 'isd';
-let activeView        = 'cards';
+let activeCube        = localStorage.getItem('activeCube') ?? 'isd';
+let activeView        = localStorage.getItem('activeView') ?? 'cards';
 let activeFilter      = 'all';
 let activeRarityFilter = 'all';
 let cardCache       = {};
@@ -639,6 +655,9 @@ document.getElementById('grid').addEventListener('click', e => {
   const badge = e.target.closest('.errata-badge');
   if (badge) { showErrataModal(badge.closest('.card').dataset.name); return; }
 
+  const exclToggle = e.target.closest('.excl-toggle-btn');
+  if (exclToggle) { toggleExcluded(exclToggle.closest('.card').dataset.name); return; }
+
   // Flip button → swap DFC image without re-rendering
   const flipBtn = e.target.closest('.flip-btn');
   if (flipBtn) {
@@ -683,6 +702,7 @@ document.getElementById('grid').addEventListener('click', e => {
 document.querySelectorAll('.view-tab').forEach(btn => {
   btn.addEventListener('click', () => {
     activeView = btn.dataset.view;
+    localStorage.setItem('activeView', activeView);
     document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b === btn));
     document.getElementById('filterRow').style.display  = activeView === 'cards' ? 'flex' : 'none';
     document.getElementById('rarityRow').style.display  = activeView === 'cards' ? 'flex' : 'none';
@@ -710,6 +730,7 @@ document.querySelectorAll('#rarityRow .filter-btn').forEach(btn => {
 document.querySelectorAll('.cube-tab').forEach(btn => {
   btn.addEventListener('click', async () => {
     activeCube = btn.dataset.cube;
+    localStorage.setItem('activeCube', activeCube);
     document.querySelectorAll('.cube-tab').forEach(b => b.classList.toggle('active', b === btn));
     if (!cardCache[activeCube]) await loadCubeData(activeCube);
     render();
@@ -944,7 +965,8 @@ function renderPack() {
 function cardHTML(c, cube, owned) {
   const target      = cube.counts[c.rarity] ?? 1;
   const n           = owned[c.name] ?? 0;
-  const cls         = n >= target ? 'complete' : n > 0 ? 'partial' : 'missing';
+  const isExcl      = (excludedFromDraft[activeCube] ?? new Set()).has(c.name);
+  const cls         = (n >= target ? 'complete' : n > 0 ? 'partial' : 'missing') + (isExcl ? ' excl' : '');
   const lblCls      = n >= target ? 'lbl-own'  : n > 0 ? 'lbl-part' : 'lbl-need';
   const label       = `${n}/${target}`;
   const img         = cardImage(c);
@@ -953,6 +975,8 @@ function cardHTML(c, cube, owned) {
   const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
   return `<div class="card ${cls}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
+    ${isExcl ? '<div class="excl-overlay">✕</div>' : ''}
+    ${n >= target ? `<button class="excl-toggle-btn">${isExcl ? 'INCL' : 'SKIP'}</button>` : ''}
     ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
@@ -983,6 +1007,13 @@ async function loadCubeData(cubeKey) {
   }
   if (needsSave) scheduleSave();
 }
+
+// Sync tab UI to restored state
+document.querySelectorAll('.cube-tab').forEach(b => b.classList.toggle('active', b.dataset.cube === activeCube));
+document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === activeView));
+document.getElementById('filterRow').style.display  = activeView === 'cards' ? 'flex' : 'none';
+document.getElementById('rarityRow').style.display  = activeView === 'cards' ? 'flex' : 'none';
+document.getElementById('progressWrap').style.display = ['pack','tokens'].includes(activeView) ? 'none' : 'block';
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
