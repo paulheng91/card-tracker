@@ -21,16 +21,20 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.6);
     }
 
-    /* ── Header top row: stats · title · GitHub login ──────────────────── */
+    /* ── Header top row: (empty) · title+stats · GitHub login ─────────── */
     .header-top {
       display: grid;
       grid-template-columns: 1fr auto 1fr;
       align-items: center;
       margin-bottom: 0.45rem;
     }
-    h1 { font-size: 1.3rem; color: #c9a84c; }
-
-    .header-mini-stats { font-size: 0.62rem; color: #555; justify-self: start; white-space: nowrap; }
+    .header-center {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.45rem; flex-wrap: wrap;
+    }
+    .header-set-sym  { width: 18px; height: 18px; filter: brightness(0) invert(1); opacity: 0.85; flex-shrink: 0; }
+    .header-set-name { font-size: 0.92rem; font-weight: 700; color: #c9a84c; }
+    .header-stats    { font-size: 0.7rem; color: #888; white-space: nowrap; }
 
     .gh-login-wrap { position: relative; justify-self: end; }
     .gh-login-btn {
@@ -118,8 +122,18 @@
     .view-tab.active { background: #2e2e2e; color: #aaa; }
 
     /* ── Progress bar ───────────────────────────────────────────────────── */
-    .progress-wrap { background: #242424; border-radius: 4px; height: 5px; margin-bottom: 0.4rem; }
-    .progress-bar  { background: #c9a84c; height: 5px; border-radius: 4px; transition: width 0.3s; }
+    .progress-wrap { background: rgba(255,255,255,0.05); border-radius: 2px; height: 3px; margin-bottom: 0.4rem; }
+    .progress-bar  { background: #3a7a55; height: 3px; border-radius: 2px; transition: width 0.4s; }
+
+    /* ── Lock toast ─────────────────────────────────────────────────────── */
+    .lock-toast {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+      background: #1a1200; border: 1px solid #c9a84c; color: #c9a84c;
+      font-size: 0.78rem; font-weight: 700; padding: 0.45rem 1.2rem;
+      border-radius: 999px; z-index: 400; white-space: nowrap;
+      opacity: 0; pointer-events: none; transition: opacity 0.18s;
+    }
+    .lock-toast.show { opacity: 1; }
 
     .save-status { font-size: 0.73rem; color: #555; }
     .save-status.saving { color: #c9a84c; }
@@ -309,6 +323,8 @@
 </head>
 <body>
 
+<div class="lock-toast" id="lockToast">🔒 This set is locked</div>
+
 <div id="modal">
   <div class="modal-box">
     <div class="modal-title"   id="modal-title"></div>
@@ -321,8 +337,12 @@
 
 <header>
   <div class="header-top">
-    <span class="header-mini-stats" id="stats"></span>
-    <h1>Set Cube Tracker</h1>
+    <div></div>
+    <div class="header-center">
+      <img class="header-set-sym" id="headerSetSym" src="" alt="">
+      <span class="header-set-name" id="headerSetName"></span>
+      <span class="header-stats" id="stats"></span>
+    </div>
     <div class="gh-login-wrap" id="ghLoginWrap">
       <button class="gh-login-btn" id="ghLoginBtn">Login</button>
       <div class="gh-login-panel" id="ghLoginPanel">
@@ -560,6 +580,14 @@ let tokenOwned = {};
 
 let lockedCubes = new Set(JSON.parse(localStorage.getItem('lockedCubes') || '[]'));
 function isLocked() { return lockedCubes.has(activeCube); }
+
+let lockToastTimer = null;
+function showLockToast() {
+  const toast = document.getElementById('lockToast');
+  toast.classList.add('show');
+  clearTimeout(lockToastTimer);
+  lockToastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+}
 
 let justToggledCard = null;
 
@@ -820,7 +848,7 @@ document.getElementById('grid').addEventListener('click', e => {
 
   const countBtn = e.target.closest('.count-btn');
   if (countBtn) {
-    if (isLocked()) return;
+    if (isLocked()) { showLockToast(); return; }
     const tokenCard = countBtn.closest('[data-token-id]');
     const id = tokenCard?.dataset.tokenId;
     if (id) {
@@ -873,7 +901,7 @@ document.getElementById('grid').addEventListener('click', e => {
 
   const card = e.target.closest('.card[data-name]');
   if (!card) return;
-  if (isLocked()) return;
+  if (isLocked()) { showLockToast(); return; }
 
   const name   = card.dataset.name;
   const rarity = card.dataset.rarity;
@@ -965,6 +993,8 @@ function updateCubeTrigger(key) {
   cubeSymImg.src = setSymUrl(cube.setCode);
   cubeSymImg.alt = cube.setCode;
   cubeLabel.textContent = cube.name;
+  document.getElementById('headerSetSym').src = setSymUrl(cube.setCode);
+  document.getElementById('headerSetName').textContent = cube.name;
   updateRaritySymbols(cube.setCode);
   updateLockBtn();
 }
@@ -1095,7 +1125,7 @@ function renderCards() {
     totalOwned  += Math.min(owned[c.name] ?? 0, t);
   });
   const pct = totalNeeded ? Math.round((totalOwned / totalNeeded) * 100) : 0;
-  document.getElementById('stats').textContent = `${totalOwned} of ${totalNeeded} copies collected (${pct}%)`;
+  document.getElementById('stats').textContent = `${totalOwned} of ${totalNeeded} cards collected (${pct}%)`;
   document.getElementById('bar').style.width = pct + '%';
 
   const groups = {};
@@ -1225,7 +1255,7 @@ function renderInfo() {
       if (!collapsed) for (const c of group) items.push(errataCardHTML(c));
     }
   } else {
-    document.getElementById('stats').textContent = cube.name;
+    document.getElementById('stats').textContent = '';
   }
 
   document.getElementById('grid').innerHTML = items.join('') || '<div class="empty">No info for this set yet.</div>';
