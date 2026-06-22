@@ -21,18 +21,18 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.6);
     }
 
-    /* ── Header top row: title + GitHub login ───────────────────────────── */
+    /* ── Header top row: stats · title · GitHub login ──────────────────── */
     .header-top {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      justify-content: center;
-      position: relative;
       margin-bottom: 0.45rem;
     }
     h1 { font-size: 1.3rem; color: #c9a84c; }
 
-    /* GitHub login in top-right corner */
-    .gh-login-wrap { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+    .header-mini-stats { font-size: 0.62rem; color: #555; justify-self: start; white-space: nowrap; }
+
+    .gh-login-wrap { position: relative; justify-self: end; }
     .gh-login-btn {
       padding: 0.25rem 0.65rem; border: none; border-radius: 999px; cursor: pointer;
       font-size: 0.72rem; font-weight: 700; background: #242424; color: #888;
@@ -70,7 +70,7 @@
       padding: 0.3rem 0.85rem 0.3rem 0.6rem; white-space: nowrap; outline: none;
     }
     .cube-trigger:hover { background: #2e2e2e; }
-    .set-sym { width: 20px; height: 20px; flex-shrink: 0; }
+    .set-sym { width: 20px; height: 20px; flex-shrink: 0; filter: brightness(0) invert(1); opacity: 0.85; }
     .cube-arr { font-size: 0.6rem; opacity: 0.6; margin-left: 0.15rem; }
     .cube-menu {
       display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 200;
@@ -100,8 +100,6 @@
     .progress-wrap { background: #242424; border-radius: 4px; height: 5px; margin-bottom: 0.4rem; }
     .progress-bar  { background: #c9a84c; height: 5px; border-radius: 4px; transition: width 0.3s; }
 
-    .stats-row { display: flex; justify-content: center; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
-    .stats       { font-size: 0.8rem; color: #888; }
     .save-status { font-size: 0.73rem; color: #555; }
     .save-status.saving { color: #c9a84c; }
     .save-status.saved  { color: #52b788; }
@@ -216,14 +214,7 @@
     #headerExtra { overflow: hidden; transition: max-height 0.25s ease, opacity 0.2s; max-height: 400px; opacity: 1; }
     #headerExtra.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
 
-    .mark-all-btn {
-      padding: 0.25rem 0.75rem; border: none; border-radius: 999px; cursor: pointer;
-      font-size: 0.73rem; font-weight: 700; background: #2a2010; color: #c9a84c;
-      transition: background 0.15s; margin-left: 0.3rem;
-    }
-    .mark-all-btn:hover { background: #3a3010; }
-
-    .card-footer { padding: 0.3rem 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
+.card-footer { padding: 0.3rem 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; }
     .card-num  { color: #666; }
     .lbl-own   { color: #52b788; font-weight: 700; }
     .lbl-part  { color: #c9a84c; font-weight: 700; }
@@ -309,6 +300,7 @@
 
 <header>
   <div class="header-top">
+    <span class="header-mini-stats" id="stats"></span>
     <h1>Set Cube Tracker</h1>
     <div class="gh-login-wrap" id="ghLoginWrap">
       <button class="gh-login-btn" id="ghLoginBtn">Login</button>
@@ -345,14 +337,12 @@
     <div class="ctrl-group" id="filterRow">
       <button class="filter-btn active" data-filter="all">All</button>
       <button class="filter-btn"        data-filter="missing">Missing</button>
-      <button class="mark-all-btn"      id="btnMarkAllOwned">Mark All Owned</button>
     </div>
     <span class="ctrl-sep"></span>
     <div class="ctrl-group" id="rarityRow">
-      <button class="filter-btn active" data-rarity="all">All Rarities</button>
-      <button class="filter-btn"        data-rarity="common">Common</button>
-      <button class="filter-btn"        data-rarity="uncommon">Uncommon</button>
-      <button class="filter-btn"        data-rarity="rare-mythic">Rare/Mythic</button>
+      <button class="filter-btn" data-rarity="common">Common</button>
+      <button class="filter-btn" data-rarity="uncommon">Uncommon</button>
+      <button class="filter-btn" data-rarity="rare-mythic">Rare/Mythic</button>
     </div>
     <span class="ctrl-sep"></span>
     <div class="ctrl-group size-row">
@@ -372,9 +362,6 @@
   <div id="headerExtra">
     <div class="progress-wrap" id="progressWrap">
       <div class="progress-bar" id="bar" style="width:0%"></div>
-    </div>
-    <div class="stats-row">
-      <span class="stats" id="stats">Loading…</span>
     </div>
   </div>
 </header>
@@ -555,7 +542,7 @@ if (activeView === 'errata') activeView = 'info';
 localStorage.setItem('activeView', activeView);
 
 let activeFilter       = 'all';
-let activeRarityFilter = 'all';
+let activeRarityFilter = new Set(); // empty = show all rarities
 
 let cardCache    = {};
 let cardByName   = {};
@@ -908,8 +895,10 @@ document.querySelectorAll('#filterRow .filter-btn').forEach(btn => {
 
 document.querySelectorAll('#rarityRow .filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    activeRarityFilter = btn.dataset.rarity;
-    document.querySelectorAll('#rarityRow .filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+    const r = btn.dataset.rarity;
+    if (activeRarityFilter.has(r)) activeRarityFilter.delete(r);
+    else activeRarityFilter.add(r);
+    document.querySelectorAll('#rarityRow .filter-btn').forEach(b => b.classList.toggle('active', activeRarityFilter.has(b.dataset.rarity)));
     render();
   });
 });
@@ -924,15 +913,6 @@ document.getElementById('btnExpandAll').addEventListener('click', () => {
   collapsedSections.clear();
   localStorage.setItem('collapsedSections', JSON.stringify([]));
   render();
-});
-
-document.getElementById('btnMarkAllOwned').addEventListener('click', () => {
-  const cube  = CUBES[activeCube];
-  const cards = cardCache[activeCube] ?? [];
-  if (!ownedMap[activeCube]) ownedMap[activeCube] = {};
-  cards.forEach(c => { ownedMap[activeCube][c.name] = cube.counts[c.rarity] ?? 1; });
-  render();
-  scheduleSave();
 });
 
 
@@ -1083,9 +1063,11 @@ function renderCards() {
   for (const c of cards) {
     const target = cube.counts[c.rarity] ?? 1;
     if (activeFilter === 'missing' && (owned[c.name] ?? 0) >= target) continue;
-    if (activeRarityFilter !== 'all') {
-      if (activeRarityFilter === 'rare-mythic') { if (c.rarity !== 'rare' && c.rarity !== 'mythic') continue; }
-      else if (c.rarity !== activeRarityFilter) continue;
+    if (activeRarityFilter.size > 0) {
+      const rm = (activeRarityFilter.has('common') && c.rarity === 'common')
+              || (activeRarityFilter.has('uncommon') && c.rarity === 'uncommon')
+              || (activeRarityFilter.has('rare-mythic') && (c.rarity === 'rare' || c.rarity === 'mythic'));
+      if (!rm) continue;
     }
     if (c._specialLabel) {
       if (!specialGroups.has(c._specialLabel)) specialGroups.set(c._specialLabel, []);
@@ -1115,7 +1097,7 @@ function renderCards() {
   }
 
   // Tokens section after Lands (and special sections)
-  if (activeFilter === 'all' && activeRarityFilter === 'all') {
+  if (activeFilter === 'all' && activeRarityFilter.size === 0) {
     const cnVal  = s => { const n = parseInt(s); return isNaN(n) ? 99999 : n; };
     const tokens = (tokenPool[cube.setCode] ?? [])
       .slice().sort((a, b) => cnVal(a.collector_number) - cnVal(b.collector_number));
