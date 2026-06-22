@@ -45,6 +45,10 @@
       font-size: 0.73rem; font-weight: 700; background: #2d1b69; color: #aaa; transition: all 0.15s;
     }
     .filter-btn.active { background: #9f7aea; color: #1a1a2e; }
+    .filter-btn[data-rarity="mythic"].active  { background: #b5460b; color: #fff; }
+    .filter-btn[data-rarity="rare"].active    { background: #7a6010; color: #ffd700; }
+    .filter-btn[data-rarity="uncommon"].active{ background: #2a4060; color: #a8c8e0; }
+    .filter-btn[data-rarity="common"].active  { background: #3a3a50; color: #ccc; }
 
     .token-section { display: flex; gap: 0.4rem; justify-content: center; align-items: center; flex-wrap: wrap; }
     .token-input { background: #0f0f2a; border: 1px solid #444; color: #eee; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.73rem; width: 190px; }
@@ -182,7 +186,7 @@
       .tab-row::-webkit-scrollbar { display: none; }
       .cube-tab  { padding: 0.22rem 0.6rem; font-size: 0.7rem; white-space: nowrap; }
       .view-tab  { padding: 0.2rem 0.55rem;  font-size: 0.68rem; white-space: nowrap; }
-      .filter-row { margin-bottom: 0.3rem; }
+      .filter-row { margin-bottom: 0.25rem; }
       .filter-btn { padding: 0.2rem 0.55rem; font-size: 0.68rem; }
       .size-row { margin-bottom: 0.25rem; }
       .size-btn { padding: 0.15rem 0.45rem; font-size: 0.65rem; }
@@ -239,6 +243,13 @@
   <div class="filter-row" id="filterRow">
     <button class="filter-btn active" data-filter="all">All</button>
     <button class="filter-btn" data-filter="missing">Missing</button>
+  </div>
+  <div class="filter-row" id="rarityRow">
+    <button class="filter-btn active" data-rarity="all">All Rarities</button>
+    <button class="filter-btn" data-rarity="mythic">Mythic</button>
+    <button class="filter-btn" data-rarity="rare">Rare</button>
+    <button class="filter-btn" data-rarity="uncommon">Uncommon</button>
+    <button class="filter-btn" data-rarity="common">Common</button>
   </div>
 
   <div class="token-section">
@@ -347,9 +358,10 @@ function topSeverity(matches) {
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let activeCube      = 'isd';
-let activeView      = 'cards';
-let activeFilter    = 'all';
+let activeCube        = 'isd';
+let activeView        = 'cards';
+let activeFilter      = 'all';
+let activeRarityFilter = 'all';
 let cardCache       = {};
 let cardByName      = {};  // flat lookup: cardName → scryfall object
 let oracleMap       = {};
@@ -660,16 +672,25 @@ document.querySelectorAll('.view-tab').forEach(btn => {
   btn.addEventListener('click', () => {
     activeView = btn.dataset.view;
     document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b === btn));
-    document.getElementById('filterRow').style.display    = activeView === 'cards'  ? 'flex' : 'none';
+    document.getElementById('filterRow').style.display  = activeView === 'cards' ? 'flex' : 'none';
+    document.getElementById('rarityRow').style.display  = activeView === 'cards' ? 'flex' : 'none';
     document.getElementById('progressWrap').style.display = ['pack','tokens'].includes(activeView) ? 'none' : 'block';
     render();
   });
 });
 
-document.querySelectorAll('.filter-btn').forEach(btn => {
+document.querySelectorAll('#filterRow .filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     activeFilter = btn.dataset.filter;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('#filterRow .filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+    render();
+  });
+});
+
+document.querySelectorAll('#rarityRow .filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeRarityFilter = btn.dataset.rarity;
+    document.querySelectorAll('#rarityRow .filter-btn').forEach(b => b.classList.toggle('active', b === btn));
     render();
   });
 });
@@ -761,6 +782,7 @@ function renderCards() {
   for (const c of cards) {
     const target = cube.counts[c.rarity] ?? 1;
     if (activeFilter === 'missing' && (owned[c.name] ?? 0) >= target) continue;
+    if (activeRarityFilter !== 'all' && c.rarity !== activeRarityFilter) continue;
     const key = colorKey(c);
     if (groups[key]) groups[key].push(c);
   }
