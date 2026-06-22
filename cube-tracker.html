@@ -916,6 +916,7 @@ let excludedCards = {}; // { [cubeKey]: { [cardName]: true } }
 function isLocked() { return lockedCubes.has(activeCube); }
 
 function showLockNotice() {
+  document.querySelector('header').style.transform = '';
   const btn = document.getElementById('btnLock');
   btn.classList.remove('pulse');
   void btn.offsetWidth;
