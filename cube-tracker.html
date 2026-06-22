@@ -1280,7 +1280,7 @@ document.getElementById('grid').addEventListener('click', e => {
           const circle = newSym.querySelector('circle');
           if (circle) circle.animate(
             [{ stroke: 'rgba(190,60,60,0.4)' }, { stroke: '#52b788' }],
-            { duration: 350, easing: 'ease-out', fill: 'forwards' }
+            { duration: 900, easing: 'ease-out', fill: 'forwards' }
           );
         } else {
           const paths = newSym.querySelectorAll('path');
@@ -1289,7 +1289,7 @@ document.getElementById('grid').addEventListener('click', e => {
             const endFill = newN >= target ? '#52b788' : '#c9a84c';
             paths[idx].animate(
               [{ fill: 'rgba(190,60,60,0.3)' }, { fill: endFill }],
-              { duration: 380, easing: 'ease-out', fill: 'forwards' }
+              { duration: 900, easing: 'ease-out', fill: 'forwards' }
             );
           }
         }
