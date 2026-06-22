@@ -301,18 +301,19 @@
     }
     .card.excluded .token-img-pair { position: relative; }
 
-    .status-sym { display: block; pointer-events: none; }
+    .status-sym { display: block; pointer-events: none; flex-shrink: 0; }
+    /* Exclude btn lives in the card-footer as the right-side flex:1 item.
+       The entire right half of the footer is tappable — far from the image. */
     .exclude-btn {
-      position: absolute; bottom: 2px; right: 2px; z-index: 4;
-      width: 22px; height: 22px; padding: 0;
-      display: flex; align-items: center; justify-content: center;
-      background: transparent; border: none; border-radius: 50%;
-      cursor: pointer; font-size: 0.58rem; font-weight: 900; line-height: 1;
-      color: rgba(255,255,255,0.13);
-      transition: color 0.15s, background 0.15s;
+      flex: 1; display: flex; justify-content: flex-end; align-items: center;
+      padding: 0; background: transparent; border: none;
+      cursor: pointer; font-size: 0.6rem; font-weight: 900; line-height: 1;
+      color: rgba(255,255,255,0.18);
+      transition: color 0.15s;
+      touch-action: manipulation;
     }
-    .exclude-btn:hover { color: rgba(255,80,80,0.9); background: rgba(160,20,20,0.22); }
-    .card.excluded .exclude-btn { color: rgba(255,120,120,0.75); background: rgba(130,15,15,0.18); }
+    .exclude-btn:hover { color: rgba(255,80,80,0.85); }
+    .card.excluded .exclude-btn { color: rgba(255,100,100,0.8); }
 
     .badge-row { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; gap: 3px; }
     .errata-badge {
@@ -334,12 +335,14 @@
     .flip-btn:hover { background: rgba(0,0,0,0.85); }
 
 
-.card-footer {
+    .card-footer {
       padding: 0.3rem 0.5rem; font-size: 0.7rem;
-      display: flex; justify-content: space-between; align-items: center;
+      display: flex; align-items: center; gap: 0.1rem;
     }
-    .card-num  { color: #666; }
-    .card-name { padding: 0 1.75rem 0.35rem 0.5rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* 3-col centering: card-num and exclude-btn both flex:1 → circle is
+       perfectly centered regardless of the width of the label text. */
+    .card-num  { flex: 1; color: #666; }
+    .card-name { padding: 0 0.5rem 0.35rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     @media (max-width: 699px) {
       .card-footer { font-size: 0.62rem; }
       .card-name   { font-size: 0.6rem; }
@@ -405,7 +408,38 @@
     .count-btn:hover { background: #2e2e2e; }
     .count-display { font-weight: 700; font-size: 0.82rem; color: #d0d0d0; min-width: 18px; text-align: center; }
 
-    .token-creators { padding: 0 0.5rem 0.4rem; font-size: 0.6rem; color: #666; line-height: 1.5; }
+    /* ── Token list layout — one wide card per row on mobile, auto-fill on desktop ── */
+    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: 1fr; gap: 0.6rem; }
+    @media (min-width: 700px) {
+      .token-list { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    }
+
+    /* Token card: image on the left, info on the right */
+    .token-card { overflow: hidden; cursor: default; }
+    .token-card:hover { transform: none; }
+    .token-row { display: flex; align-items: stretch; min-height: 0; }
+    .token-img-side {
+      flex: 0 0 38%; max-width: 160px;
+      display: flex; flex-direction: column;
+    }
+    .token-img-side .card-img-wrap {
+      flex: 1; aspect-ratio: unset; border-radius: 0;
+      overflow: hidden; background: #0a0a0a;
+    }
+    .token-img-side .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    /* DFT: two faces stacked vertically in the image column */
+    .token-img-pair { display: flex; flex-direction: column; flex: 1; }
+    .token-img-pair .card-img-wrap { flex: 1; border-radius: 0; aspect-ratio: unset; }
+
+    .token-info-side {
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column; gap: 0.3rem;
+      padding: 0.55rem 0.6rem;
+      border-left: 1px solid #2a2a2a;
+    }
+    .token-info-name { font-size: 0.72rem; font-weight: 700; color: #d0d0d0; line-height: 1.3; }
+    .token-info-num  { font-size: 0.6rem; color: #555; }
+    .token-creators  { font-size: 0.6rem; color: #666; line-height: 1.5; margin-top: auto; padding: 0; }
     .creator-link { position: relative; display: inline-block; color: #8a8a8a; cursor: default; white-space: nowrap; }
     .creator-link:hover { color: #c9a84c; }
     .creator-preview {
@@ -414,17 +448,6 @@
       border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.95);
     }
     .creator-link:hover .creator-preview { display: block; }
-
-    /* ── Token list layout (2-col grid; DFT shows both faces) ─────────── */
-    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: repeat(var(--grid-cols), minmax(0, 1fr)); gap: 0.6rem; }
-    @media (min-width: 700px) {
-      .token-list { grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); }
-    }
-    .token-card { overflow: visible; }
-    .token-card > .card-img-wrap,
-    .token-card > .token-img-pair { border-radius: 8px 8px 0 0; overflow: hidden; }
-    .token-img-pair { display: flex; gap: 3px; }
-    .token-img-pair .card-img-wrap { flex: 1; min-width: 0; border-radius: 0; }
 
     /* ── Info view ──────────────────────────────────────────────────────── */
     .info-section { grid-column: 1 / -1; padding: 0 0 0.5rem; }
@@ -1522,21 +1545,23 @@ function tokenCardHTML(t) {
 
   const creators = getTokenCreators(t);
   const creatorsHtml = creators.length
-    ? `<div class="token-creators">Made by: ${creators.slice(0, 5).map(creatorLink).join(', ')}${creators.length > 5 ? ` +${creators.length - 5}` : ''}</div>`
+    ? `<div class="token-creators"><strong style="color:#555">Made by:</strong> ${creators.map(creatorLink).join(', ')}</div>`
     : '';
 
   return `<div class="card token-card" data-token-id="${t.id}">
-    ${imgHtml}
-    <div class="card-footer">
-      <span class="card-num">#${t.collector_number}</span>
-      <div class="token-counter">
-        <button class="count-btn" data-delta="-1">−</button>
-        <span class="count-display">${count}</span>
-        <button class="count-btn" data-delta="1">+</button>
+    <div class="token-row">
+      <div class="token-img-side">${imgHtml}</div>
+      <div class="token-info-side">
+        <div class="token-info-name">${dispName}${pt}</div>
+        <div class="token-counter">
+          <button class="count-btn" data-delta="-1">−</button>
+          <span class="count-display">${count}</span>
+          <button class="count-btn" data-delta="1">+</button>
+        </div>
+        ${creatorsHtml}
+        <div class="token-info-num">#${t.collector_number}</div>
       </div>
     </div>
-    <div class="card-name">${dispName}${pt}</div>
-    ${creatorsHtml}
   </div>`;
 }
 
@@ -1804,13 +1829,13 @@ function cardHTML(c, cube, owned) {
 
   return `<div class="card ${cls}${isExcluded ? ' excluded' : ''}${flash}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     ${imgHtml}
+    ${flipBtn}
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
       ${statusSym}
+      <button class="exclude-btn" title="${isExcluded ? 'Restore to draft' : 'Exclude from draft'}">✕</button>
     </div>
     <div class="card-name">${displayName}</div>
-    <button class="exclude-btn" title="${isExcluded ? 'Restore to draft' : 'Exclude from draft'}">✕</button>
-    ${flipBtn}
   </div>`;
 }
 
