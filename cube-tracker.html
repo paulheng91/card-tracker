@@ -61,6 +61,18 @@
     }
     .ctrl-group { display: flex; align-items: center; gap: 0.3rem; }
 
+    /* ── Segmented / exclusive button groups ────────────────────────────── */
+    .btn-group {
+      background: #161616; border: 1px solid #282828; border-radius: 999px;
+      padding: 3px; gap: 3px;
+    }
+    .btn-group .view-tab,
+    .btn-group .filter-btn,
+    .btn-group .size-btn  { background: transparent; }
+    .btn-group .view-tab:hover,
+    .btn-group .filter-btn:hover,
+    .btn-group .size-btn:hover { background: #242424; }
+
     /* ── Custom set dropdown ────────────────────────────────────────────── */
     .cube-dropdown { position: relative; }
     .cube-trigger {
@@ -356,21 +368,21 @@
   </div>
 
   <div class="controls-row">
-    <div class="ctrl-group" id="viewTabs">
+    <div class="ctrl-group btn-group" id="viewTabs">
       <button class="view-tab active" data-view="cards">Cards</button>
       <button class="view-tab"        data-view="info">Info</button>
     </div>
-    <div class="ctrl-group" id="filterRow">
+    <div class="ctrl-group btn-group" id="filterRow">
       <button class="filter-btn active" data-filter="all">All</button>
       <button class="filter-btn"        data-filter="missing">Missing</button>
     </div>
-    <div class="ctrl-group" id="rarityRow">
+    <div class="ctrl-group btn-group" id="rarityRow">
       <button class="filter-btn" data-rarity="common"   title="Common"><span class="rarity-sym-mask r-common"></span></button>
       <button class="filter-btn" data-rarity="uncommon" title="Uncommon"><span class="rarity-sym-mask r-uncommon"></span></button>
       <button class="filter-btn" data-rarity="rare"     title="Rare"><span class="rarity-sym-mask r-rare"></span></button>
       <button class="filter-btn" data-rarity="mythic"   title="Mythic"><span class="rarity-sym-mask r-mythic"></span></button>
     </div>
-    <div class="ctrl-group size-row">
+    <div class="ctrl-group btn-group size-row">
       <button class="size-btn" data-size="s">S</button>
       <button class="size-btn" data-size="m">M</button>
       <button class="size-btn" data-size="l">L</button>
