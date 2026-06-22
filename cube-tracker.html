@@ -272,13 +272,8 @@
     .card.excluded .exclude-btn { color: rgba(255,130,130,0.9); }
 
     /* Status symbol — pinned just left of ✕, never moves */
-    .status-sym {
-      position: absolute; bottom: 4px; right: 20px; z-index: 3;
-      font-size: 1rem; font-weight: 900; line-height: 1; pointer-events: none;
-    }
-    .status-complete { color: #52b788; }
-    .status-partial  { color: #c9a84c; }
-    .status-missing  { color: rgba(190,65,65,0.75); }
+    .status-sym { position: absolute; bottom: 4px; right: 20px; z-index: 3; pointer-events: none; }
+    .status-complete { color: #52b788; font-size: 1rem; font-weight: 900; line-height: 1; }
 
     .badge-row { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; gap: 3px; }
     .errata-badge {
@@ -344,7 +339,7 @@
     .creator-link:hover .creator-preview { display: block; }
 
     /* ── Token list layout (2-col grid; DFT shows both faces) ─────────── */
-    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: var(--card-min); gap: 0.6rem; }
+    .token-list { grid-column: 1/-1; display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr)); gap: 0.6rem; }
     .token-card { overflow: visible; }
     .token-card > .card-img-wrap,
     .token-card > .token-img-pair { border-radius: 8px 8px 0 0; overflow: hidden; }
@@ -1376,6 +1371,23 @@ function renderInfo() {
 // CARD HTML HELPER
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Pie-slice SVG circle: empty (red) → partial fill (gold) → ✓ checkmark (green).
+// n = owned, total = target copies needed.
+function statusCircle(n, total) {
+  if (n >= total) return '<span class="status-sym status-complete">✓</span>';
+  const cx = 6, cy = 6, r = 4.5, sw = 1.5;
+  const stroke = n === 0 ? 'rgba(190,60,60,0.8)' : '#c9a84c';
+  let pie = '';
+  if (n > 0) {
+    const frac = n / total;
+    const a1 = -Math.PI / 2, a2 = a1 + frac * 2 * Math.PI;
+    const x1 = (cx + r * Math.cos(a1)).toFixed(3), y1 = (cy + r * Math.sin(a1)).toFixed(3);
+    const x2 = (cx + r * Math.cos(a2)).toFixed(3), y2 = (cy + r * Math.sin(a2)).toFixed(3);
+    pie = `<path d="M${cx},${cy}L${x1},${y1}A${r},${r} 0 ${frac > 0.5 ? 1 : 0},1 ${x2},${y2}Z" fill="#c9a84c"/>`;
+  }
+  return `<svg width="12" height="12" viewBox="0 0 12 12" class="status-sym"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${stroke}" stroke-width="${sw}"/>${pie}</svg>`;
+}
+
 function cardHTML(c, cube, owned) {
   const target      = cube.counts[c.rarity] ?? 1;
   const n           = owned[c.name] ?? 0;
@@ -1388,10 +1400,7 @@ function cardHTML(c, cube, owned) {
   const isFlipped   = flippedCards.has(c.name);
   const displayName = isDFC(c) ? (c.card_faces[isFlipped ? 1 : 0]?.name ?? c.name) : c.name;
   const flash       = justToggledCard === c.name ? ' card-flashed' : '';
-  const statusSym = !isExcluded && cls === 'complete' ? '<span class="status-sym status-complete">✓</span>'
-                  : !isExcluded && cls === 'partial'   ? '<span class="status-sym status-partial">◑</span>'
-                  : !isExcluded && cls === 'missing'   ? '<span class="status-sym status-missing">✗</span>'
-                  : '';
+  const statusSym   = statusCircle(n, target);
   return `<div class="card ${cls}${isExcluded ? ' excluded' : ''}${flash}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     <div class="card-img-wrap"><img src="${img}" loading="lazy" alt="${c.name}"></div>
     ${isDFC(c) ? `<button class="flip-btn" title="Flip card">${isFlipped ? '↺' : '↻'}</button>` : ''}
