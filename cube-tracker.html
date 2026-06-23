@@ -1645,11 +1645,15 @@ document.getElementById('btnLock').addEventListener('click', () => {
 function getTokenCreators(token) {
   const tl = token.type_line ?? '';
 
-  if (tl.includes('Emblem')) {
-    const pwFirst = tl.replace(/Emblem\s*[—–-]?\s*/i, '').trim().toLowerCase().split(/[,\s]/)[0] ?? '';
+  if (tl.includes('Emblem') || token.name?.toLowerCase().includes('emblem')) {
+    // token.name is e.g. "Kaito Shizuki Emblem" — strip the suffix for an exact PW name match
+    const pwName  = (token.name ?? '').replace(/\s*Emblem\s*$/i, '').trim().toLowerCase();
+    const pwFirst = pwName.split(/[,\s]/)[0] ?? '';
     return (cardCache[activeCube] ?? []).filter(c => {
       const oracle = (oracleMap[c.name] ?? '').toLowerCase();
-      return oracle.includes('emblem') && (!pwFirst || c.name.toLowerCase().startsWith(pwFirst));
+      if (!oracle.includes('emblem')) return false;
+      const cn = c.name.toLowerCase();
+      return cn === pwName || (pwFirst.length >= 4 && cn.startsWith(pwFirst) && pwName.startsWith(cn.split(/[,\s]/)[0]));
     }).map(c => c.name);
   }
 
@@ -2014,12 +2018,15 @@ function tokenIsFromCube(token, cubeCards) {
   if (token.layout === 'checklist') return true;
   const tl = token.type_line ?? '';
 
-  // Emblems say "get an emblem" not "create a token" — match on planeswalker first name
-  if (tl.includes('Emblem')) {
-    const pwFirst = tl.replace(/Emblem\s*[—–-]?\s*/i, '').trim().toLowerCase().split(/[,\s]/)[0] ?? '';
+  // Emblems say "get an emblem" not "create a token" — match via token name ("Kaito Shizuki Emblem")
+  if (tl.includes('Emblem') || token.name?.toLowerCase().includes('emblem')) {
+    const pwName  = (token.name ?? '').replace(/\s*Emblem\s*$/i, '').trim().toLowerCase();
+    const pwFirst = pwName.split(/[,\s]/)[0] ?? '';
     return cubeCards.some(c => {
       const oracle = (oracleMap[c.name] ?? '').toLowerCase();
-      return oracle.includes('emblem') && (!pwFirst || c.name.toLowerCase().startsWith(pwFirst));
+      if (!oracle.includes('emblem')) return false;
+      const cn = c.name.toLowerCase();
+      return cn === pwName || (pwFirst.length >= 4 && cn.startsWith(pwFirst) && pwName.startsWith(cn.split(/[,\s]/)[0]));
     });
   }
 
