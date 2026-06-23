@@ -452,6 +452,7 @@
     .archetype-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem; align-items: start; }
     .archetype-card { background: #141414; border: 1px solid #2a2a2a; border-radius: 6px; padding: 0.6rem 0.75rem; }
     .archetype-name { font-size: 0.78rem; font-weight: 700; color: #d0d0d0; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.35rem; }
+    .archetype-colors { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; }
     .archetype-desc { font-size: 0.72rem; color: #888; line-height: 1.5; }
     .info-empty { font-size: 0.8rem; color: #555; font-style: italic; }
     .archetype-group-label { font-size: 0.65rem; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.4rem; }
@@ -1829,7 +1830,7 @@ function renderInfo() {
   const renderArchetypeGrid = (list) =>
     `<div class="archetype-grid">${list.map(a =>
       `<div class="archetype-card">
-        <div class="archetype-name">${(a.colors ?? []).map(c => SYM(c)).join('')} ${a.name}</div>
+        <div class="archetype-name"><span class="archetype-colors">${(a.colors ?? []).map(c => SYM(c)).join('')}</span>${a.name}</div>
         ${a.description ? `<div class="archetype-desc">${a.description}</div>` : ''}
       </div>`).join('')}</div>`;
 
