@@ -415,7 +415,7 @@
     /* ── Token list layout — one wide card per row on mobile, auto-fill on desktop ── */
     .token-list { grid-column: 1/-1; display: grid; grid-template-columns: 1fr; gap: 0.6rem; }
     @media (min-width: 700px) {
-      .token-list { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+      .token-list { grid-template-columns: repeat(auto-fill, minmax(var(--token-min, 280px), 1fr)); }
     }
 
     /* Token card: image on the left, info on the right */
@@ -607,15 +607,21 @@ function updateAllPillSlides() {
 // CARD SIZE PREFERENCE
 // ═══════════════════════════════════════════════════════════════════════════
 
-const CARD_SIZES = { s: { cols: 3, min: 110 }, m: { cols: 2, min: 170 }, l: { cols: 1, min: 260 } };
+const CARD_SIZES = {
+  s: { cols: 3, min: 110, tokenMin: 180 },
+  m: { cols: 2, min: 170, tokenMin: 280 },
+  l: { cols: 1, min: 260, tokenMin: 400 },
+};
 
 function applySize(key) {
   const s = CARD_SIZES[key];
   document.documentElement.style.setProperty('--grid-cols', s.cols);
   document.documentElement.style.setProperty('--card-min', s.min + 'px');
+  document.documentElement.style.setProperty('--token-min', s.tokenMin + 'px');
   document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === key));
   localStorage.setItem('cardSize', key);
   updatePillSlide(document.querySelector('.size-row'));
+  requestAnimationFrame(constrainTokenCards);
 }
 
 document.querySelectorAll('.size-btn').forEach(btn => btn.addEventListener('click', () => applySize(btn.dataset.size)));
