@@ -1643,7 +1643,17 @@ document.getElementById('btnLock').addEventListener('click', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function getTokenCreators(token) {
-  const typeMatch = token.type_line?.match(/—\s*(.+)/);
+  const tl = token.type_line ?? '';
+
+  if (tl.includes('Emblem')) {
+    const pwFirst = tl.replace(/Emblem\s*[—–-]?\s*/i, '').trim().toLowerCase().split(/[,\s]/)[0] ?? '';
+    return (cardCache[activeCube] ?? []).filter(c => {
+      const oracle = (oracleMap[c.name] ?? '').toLowerCase();
+      return oracle.includes('emblem') && (!pwFirst || c.name.toLowerCase().startsWith(pwFirst));
+    }).map(c => c.name);
+  }
+
+  const typeMatch = tl.match(/—\s*(.+)/);
   if (!typeMatch) {
     const searchFor = (token.card_faces?.[0]?.name ?? token.name).toLowerCase();
     if (!searchFor) return [];
