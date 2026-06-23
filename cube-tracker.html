@@ -1275,23 +1275,50 @@ document.getElementById('grid').addEventListener('click', e => {
       tmp.innerHTML = statusCircle(newN, target);
       const newSym = tmp.firstChild;
       sym.replaceWith(newSym);
-      // Animate the newly-filled segment lighting up
+      // Animate the newly-filled segment — clockwise sweep via stroke-dashoffset
       if (newN > 0) {
+        const cx = 10, cy = 10, outerR = 8.5, innerR = 4.5, midR = (outerR + innerR) / 2;
         if (target <= 1) {
           const circle = newSym.querySelector('circle');
-          if (circle) circle.animate(
-            [{ stroke: 'rgba(190,60,60,0.4)' }, { stroke: '#52b788' }],
-            { duration: 1800, easing: 'ease-out', fill: 'forwards' }
-          );
+          if (circle) {
+            const circ = 2 * Math.PI * midR;
+            circle.setAttribute('transform', 'rotate(-90 10 10)');
+            circle.style.strokeDasharray = circ;
+            circle.style.strokeDashoffset = circ;
+            circle.animate(
+              [{ strokeDashoffset: circ }, { strokeDashoffset: 0 }],
+              { duration: 1800, easing: 'ease-in-out', fill: 'forwards' }
+            );
+          }
         } else {
           const paths = newSym.querySelectorAll('path');
           const idx = newN - 1;
-          if (paths[idx]) {
+          const seg = paths[idx];
+          if (seg) {
             const endFill = newN >= target ? '#52b788' : '#c9a84c';
-            paths[idx].animate(
-              [{ fill: 'rgba(190,60,60,0.3)' }, { fill: endFill }],
-              { duration: 1800, easing: 'ease-out', fill: 'forwards' }
+            const gapRad = 8 * Math.PI / 180;
+            const segSpan = (2 * Math.PI - target * gapRad) / target;
+            const a1 = (-Math.PI / 2 + gapRad / 2) + idx * (segSpan + gapRad);
+            const a2 = a1 + segSpan;
+            const large = segSpan > Math.PI ? 1 : 0;
+            const p = v => v.toFixed(3);
+            const arcD = `M${p(cx+midR*Math.cos(a1))},${p(cy+midR*Math.sin(a1))}A${midR},${midR} 0 ${large},1 ${p(cx+midR*Math.cos(a2))},${p(cy+midR*Math.sin(a2))}`;
+            const arcLen = segSpan * midR;
+            seg.setAttribute('fill', 'transparent');
+            const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            arc.setAttribute('d', arcD);
+            arc.setAttribute('fill', 'none');
+            arc.setAttribute('stroke', endFill);
+            arc.setAttribute('stroke-width', String(outerR - innerR));
+            arc.setAttribute('stroke-linecap', 'butt');
+            arc.style.strokeDasharray = arcLen;
+            arc.style.strokeDashoffset = arcLen;
+            newSym.appendChild(arc);
+            const anim = arc.animate(
+              [{ strokeDashoffset: arcLen }, { strokeDashoffset: 0 }],
+              { duration: 1800, easing: 'ease-in-out', fill: 'forwards' }
             );
+            anim.onfinish = () => { arc.remove(); seg.setAttribute('fill', endFill); };
           }
         }
       }
