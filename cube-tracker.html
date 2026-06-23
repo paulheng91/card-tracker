@@ -304,18 +304,15 @@
 
     .status-sym { display: block; pointer-events: none; flex-shrink: 0; }
 
-    /* The entire .card-footer is the exclude tap zone (much larger than a tiny button).
-       .footer-excl is a non-interactive visual indicator only. */
-    .card[data-name] .card-footer { cursor: pointer; }
-    .card-footer:hover { background: rgba(255,255,255,0.03); }
     .card.excluded .card-footer { background: rgba(80,10,10,0.22); }
     .footer-excl {
       flex: 1; display: flex; justify-content: flex-end; align-items: center;
-      font-size: 0.62rem; font-weight: 900; pointer-events: none;
+      font-size: 0.62rem; font-weight: 900;
       color: rgba(255,255,255,0.2);
       transition: color 0.15s;
+      cursor: pointer;
     }
-    .card-footer:hover .footer-excl { color: rgba(255,80,80,0.6); }
+    .footer-excl:hover { color: rgba(255,80,80,0.6); }
     .card.excluded .footer-excl { color: rgba(255,100,100,0.85); }
 
     .badge-row { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; gap: 3px; }
@@ -1194,9 +1191,8 @@ document.getElementById('grid').addEventListener('click', e => {
     return;
   }
 
-  // Entire card-footer is the exclude zone — much larger target than any button.
-  // Only fires in cards view; tokens have no .card-footer; errata cards blocked by view check.
-  const footerEl = e.target.closest('.card-footer');
+  // Only the X icon (.footer-excl) triggers exclude.
+  const footerEl = e.target.closest('.footer-excl');
   if (footerEl) {
     const card = footerEl.closest('.card[data-name]');
     if (!card || activeView !== 'cards') return;
