@@ -45,8 +45,10 @@
       margin-bottom: 0.45rem;
     }
     .header-center {
-      display: flex; align-items: center; justify-content: center;
-      gap: 0.45rem; flex-wrap: wrap;
+      display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+    }
+    .cube-nav-row {
+      display: flex; align-items: center; gap: 0.45rem;
     }
 
     .gh-login-wrap { position: relative; justify-self: end; }
@@ -470,7 +472,6 @@
       .filter-btn { padding: 0.2rem 0.55rem; font-size: 0.68rem; }
       .size-btn { width: 2rem; height: 2rem; font-size: 0.65rem; }
       .stats { font-size: 0.72rem; }
-      .card-count-stat { font-size: 0.68rem; }
       .token-input { font-size: 0.68rem; }
       .btn { padding: 0.22rem 0.5rem; font-size: 0.68rem; }
     }
@@ -506,16 +507,19 @@
   <div class="header-top">
     <div></div>
     <div class="header-center">
-      <button class="cube-nav-btn" id="cubeNavPrev" title="Previous set">◀</button>
-      <div class="cube-dropdown" id="cubeDropdown">
-        <button class="cube-trigger" id="cubeTrigger">
-          <img class="set-sym" id="cubeSymImg" src="" alt="">
-          <span id="cubeLabel">…</span>
-          <span class="cube-arr">▼</span>
-        </button>
-        <div class="cube-menu" id="cubeMenu"></div>
+      <div class="cube-nav-row">
+        <button class="cube-nav-btn" id="cubeNavPrev" title="Previous set">◀</button>
+        <div class="cube-dropdown" id="cubeDropdown">
+          <button class="cube-trigger" id="cubeTrigger">
+            <img class="set-sym" id="cubeSymImg" src="" alt="">
+            <span id="cubeLabel">…</span>
+            <span class="cube-arr">▼</span>
+          </button>
+          <div class="cube-menu" id="cubeMenu"></div>
+        </div>
+        <button class="cube-nav-btn" id="cubeNavNext" title="Next set">▶</button>
       </div>
-      <button class="cube-nav-btn" id="cubeNavNext" title="Next set">▶</button>
+      <span id="cardCount" class="card-count-stat"></span>
     </div>
     <div class="gh-login-wrap" id="ghLoginWrap">
       <button class="gh-login-btn" id="ghLoginBtn">Login</button>
@@ -559,9 +563,6 @@
     </div>
     <div class="ctrl-group btn-group">
       <button class="filter-btn" id="btnToggleAll">Collapse All</button>
-    </div>
-    <div class="ctrl-group">
-      <span class="stats card-count-stat" id="cardCount"></span>
     </div>
     <div class="ctrl-group btn-group">
       <button class="lock-btn" id="btnLock" title="Lock this set">🔓</button>
@@ -1819,7 +1820,7 @@ function renderCards() {
   const filteredCards = COLOR_ORDER.reduce((s, k) => s + groups[k].length, 0)
                       + [...specialGroups.values()].reduce((s, g) => s + g.length, 0);
   const countEl = document.getElementById('cardCount');
-  if (countEl) countEl.textContent = isFiltered ? `${filteredCards} / ${totalCards}` : `${totalCards}`;
+  if (countEl) countEl.textContent = `${filteredCards} / ${totalCards}`;
 }
 
 
