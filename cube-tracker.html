@@ -1815,7 +1815,7 @@ function renderCards() {
     if (tokens.length) {
       const tKey      = 'tokens-section';
       const collapsed = collapsedSections.has(tKey);
-      items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${tKey}">Tokens<span class="sec-chevron">▼</span></div>`);
+      items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${tKey}">Tokens <span class="sec-count">(${tokens.length})</span><span class="sec-chevron">▼</span></div>`);
       if (!collapsed) items.push(`<div class="token-list">${tokens.map(tokenCardHTML).join('')}</div>`);
     }
   }
