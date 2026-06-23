@@ -76,6 +76,7 @@
       padding: 0 0.5rem 0.4rem;
     }
     .ctrl-group { display: flex; align-items: center; gap: 0.3rem; }
+    .card-count-stat { font-size: 0.75rem; color: #666; white-space: nowrap; }
 
     /* ── Segmented / exclusive button groups ────────────────────────────── */
     .btn-group {
@@ -469,6 +470,7 @@
       .filter-btn { padding: 0.2rem 0.55rem; font-size: 0.68rem; }
       .size-btn { width: 2rem; height: 2rem; font-size: 0.65rem; }
       .stats { font-size: 0.72rem; }
+      .card-count-stat { font-size: 0.68rem; }
       .token-input { font-size: 0.68rem; }
       .btn { padding: 0.22rem 0.5rem; font-size: 0.68rem; }
     }
@@ -557,6 +559,9 @@
     </div>
     <div class="ctrl-group btn-group">
       <button class="filter-btn" id="btnToggleAll">Collapse All</button>
+    </div>
+    <div class="ctrl-group">
+      <span class="stats card-count-stat" id="cardCount"></span>
     </div>
     <div class="ctrl-group btn-group">
       <button class="lock-btn" id="btnLock" title="Lock this set">🔓</button>
@@ -1429,6 +1434,7 @@ function updateControlsForView() {
     el.style.opacity      = isInfo ? '0.3' : '';
     el.style.pointerEvents = isInfo ? 'none' : '';
   });
+  if (isInfo) { const el = document.getElementById('cardCount'); if (el) el.textContent = ''; }
 }
 
 document.querySelectorAll('.view-tab').forEach(btn => {
@@ -1807,6 +1813,13 @@ function renderCards() {
     ? items.join('')
     : '<div class="empty">No cards match this filter.</div>';
   requestAnimationFrame(constrainTokenCards);
+
+  const totalCards    = COLOR_ORDER.reduce((s, k) => s + totals[k], 0)
+                      + [...specialTotals.values()].reduce((s, n) => s + n, 0);
+  const filteredCards = COLOR_ORDER.reduce((s, k) => s + groups[k].length, 0)
+                      + [...specialGroups.values()].reduce((s, g) => s + g.length, 0);
+  const countEl = document.getElementById('cardCount');
+  if (countEl) countEl.textContent = isFiltered ? `${filteredCards} / ${totalCards}` : `${totalCards}`;
 }
 
 
