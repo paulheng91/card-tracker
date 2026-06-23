@@ -1129,7 +1129,7 @@ async function fetchTokens(setCode) {
       if (!data.data) break;
       for (const t of data.data) {
         const tl = t.type_line ?? '';
-        if (!tl.includes('Token') && !tl.includes('Emblem') && t.layout !== 'checklist') continue;
+        if (!tl.includes('Token') && !tl.includes('Emblem') && t.layout !== 'checklist' && t.layout !== 'token') continue;
         tokens.push(t);
       }
       url = data.has_more ? data.next_page : null;
