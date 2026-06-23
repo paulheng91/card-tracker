@@ -1276,8 +1276,44 @@ document.getElementById('grid').addEventListener('click', e => {
       const newSym = tmp.firstChild;
       sym.replaceWith(newSym);
       // Animate the newly-filled segment — clockwise sweep via stroke-dashoffset
-      if (newN > 0) {
-        const cx = 10, cy = 10, outerR = 8.5, innerR = 4.5, midR = (outerR + innerR) / 2;
+      const cx = 10, cy = 10, outerR = 8.5, innerR = 4.5, midR = (outerR + innerR) / 2;
+      if (newN === 0) {
+        // Counter-clockwise unfill: overlay old color and sweep it away
+        if (target <= 1) {
+          const circ = 2 * Math.PI * midR;
+          const ov = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          ov.setAttribute('cx', cx); ov.setAttribute('cy', cy); ov.setAttribute('r', midR);
+          ov.setAttribute('fill', 'none'); ov.setAttribute('stroke', '#52b788');
+          ov.setAttribute('stroke-width', String(outerR - innerR));
+          ov.setAttribute('transform', 'rotate(-90 10 10)');
+          ov.style.strokeDasharray = circ; ov.style.strokeDashoffset = 0;
+          newSym.appendChild(ov);
+          const a = ov.animate([{ strokeDashoffset: 0 }, { strokeDashoffset: circ }],
+            { duration: 300, easing: 'ease-in-out', fill: 'forwards' });
+          a.onfinish = () => ov.remove();
+        } else {
+          const gapRad = 8 * Math.PI / 180;
+          const segSpan = (2 * Math.PI - target * gapRad) / target;
+          const p = v => v.toFixed(3);
+          newSym.querySelectorAll('path').forEach((seg, i) => {
+            const a1 = (-Math.PI / 2 + gapRad / 2) + i * (segSpan + gapRad);
+            const a2 = a1 + segSpan;
+            const arcD = `M${p(cx+midR*Math.cos(a1))},${p(cy+midR*Math.sin(a1))}A${midR},${midR} 0 ${segSpan > Math.PI ? 1 : 0},1 ${p(cx+midR*Math.cos(a2))},${p(cy+midR*Math.sin(a2))}`;
+            const arcLen = segSpan * midR;
+            seg.setAttribute('fill', 'transparent');
+            const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            arc.setAttribute('d', arcD); arc.setAttribute('fill', 'none');
+            arc.setAttribute('stroke', '#52b788');
+            arc.setAttribute('stroke-width', String(outerR - innerR));
+            arc.setAttribute('stroke-linecap', 'butt');
+            arc.style.strokeDasharray = arcLen; arc.style.strokeDashoffset = 0;
+            newSym.appendChild(arc);
+            const a = arc.animate([{ strokeDashoffset: 0 }, { strokeDashoffset: arcLen }],
+              { duration: 300, easing: 'ease-in-out', fill: 'forwards' });
+            a.onfinish = () => { arc.remove(); seg.setAttribute('fill', 'rgba(190,60,60,0.3)'); };
+          });
+        }
+      } else if (newN > 0) {
         if (target <= 1) {
           const circle = newSym.querySelector('circle');
           if (circle) {
