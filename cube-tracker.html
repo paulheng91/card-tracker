@@ -1459,11 +1459,20 @@ document.querySelectorAll('.view-tab').forEach(btn => {
 document.querySelectorAll('#filterRow .filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     activeFilter = btn.dataset.filter;
+    localStorage.setItem('activeFilter', activeFilter);
     document.querySelectorAll('#filterRow .filter-btn').forEach(b => b.classList.toggle('active', b === btn));
     updatePillSlide(document.getElementById('filterRow'));
     render();
   });
 });
+(function() {
+  const saved = localStorage.getItem('activeFilter');
+  if (saved) {
+    activeFilter = saved;
+    document.querySelectorAll('#filterRow .filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === saved));
+    updatePillSlide(document.getElementById('filterRow'));
+  }
+})();
 
 document.querySelectorAll('#rarityRow .filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
