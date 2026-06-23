@@ -262,6 +262,7 @@
     .section-header.errata-low[data-color-key]:hover  { background: #142030; }
 
     /* Chevron — fixed square so rotation has a stable center */
+    .sec-count { font-size: 0.65rem; font-weight: 400; opacity: 0.5; margin-left: 0.25rem; }
     .sec-chevron {
       margin-left: auto; flex-shrink: 0;
       width: 1.1rem; height: 1.1rem;
@@ -1735,10 +1736,18 @@ function renderCards() {
   const pct = totalNeeded ? Math.round((totalOwned / totalNeeded) * 100) : 0;
 
   const groups = {};
-  COLOR_ORDER.forEach(k => { groups[k] = []; });
+  const totals = {};
+  COLOR_ORDER.forEach(k => { groups[k] = []; totals[k] = 0; });
   const specialGroups = new Map();
+  const specialTotals = new Map();
+
+  const isFiltered = activeFilter !== 'all' || activeRarityFilter.size > 0;
 
   for (const c of cards) {
+    // Unfiltered totals — always count every card for the header denominator
+    if (!c._specialLabel) totals[colorKey(c)] = (totals[colorKey(c)] ?? 0) + 1;
+    else specialTotals.set(c._specialLabel, (specialTotals.get(c._specialLabel) ?? 0) + 1);
+
     const target = cube.counts[c.rarity] ?? 1;
     if (activeFilter === 'missing' && (owned[c.name] ?? 0) >= target) continue;
     if (activeRarityFilter.size > 0) {
@@ -1760,21 +1769,24 @@ function renderCards() {
   for (const k of COLOR_ORDER) groups[k].sort((a, b) => cnInt(a) - cnInt(b));
   for (const [, grp] of specialGroups) grp.sort((a, b) => cnInt(a) - cnInt(b));
 
+  const secCount = (n, total) => isFiltered && n !== total ? `(${n}/${total})` : `(${n})`;
+
   // Keep sections in standard WUBRG order; cards within each section sort by collector number.
-  const orderedKeys = COLOR_ORDER.filter(k => groups[k].length > 0);
+  const orderedKeys = COLOR_ORDER.filter(k => totals[k] > 0);
 
   const items = [];
   for (const key of orderedKeys) {
     const group = groups[key];
     const collapsed = collapsedSections.has(key);
-    items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${key}">${COLOR_ICON[key]} ${COLOR_LABEL[key]}<span class="sec-chevron">▼</span></div>`);
+    items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${key}">${COLOR_ICON[key]} ${COLOR_LABEL[key]} <span class="sec-count">${secCount(group.length, totals[key])}</span><span class="sec-chevron">▼</span></div>`);
     if (!collapsed) for (const c of group) items.push(cardHTML(c, cube, owned));
   }
 
-  for (const [label, group] of specialGroups) {
+  for (const [label, total] of specialTotals) {
+    const group    = specialGroups.get(label) ?? [];
     const sKey     = `special-${label}`;
     const collapsed = collapsedSections.has(sKey);
-    items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${sKey}">★ ${label} (${group.length})<span class="sec-chevron">▼</span></div>`);
+    items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${sKey}">★ ${label} <span class="sec-count">${secCount(group.length, total)}</span><span class="sec-chevron">▼</span></div>`);
     if (!collapsed) for (const c of group) items.push(cardHTML(c, cube, owned));
   }
 
