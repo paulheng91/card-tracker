@@ -1287,7 +1287,7 @@ document.getElementById('grid').addEventListener('click', e => {
             circle.style.strokeDashoffset = circ;
             circle.animate(
               [{ strokeDashoffset: circ }, { strokeDashoffset: 0 }],
-              { duration: 600, easing: 'ease-in-out', fill: 'forwards' }
+              { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
             );
           }
         } else {
@@ -1316,7 +1316,7 @@ document.getElementById('grid').addEventListener('click', e => {
             newSym.appendChild(arc);
             const anim = arc.animate(
               [{ strokeDashoffset: arcLen }, { strokeDashoffset: 0 }],
-              { duration: 600, easing: 'ease-in-out', fill: 'forwards' }
+              { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
             );
             anim.onfinish = () => { arc.remove(); seg.setAttribute('fill', endFill); };
           }
