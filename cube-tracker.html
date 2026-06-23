@@ -1543,7 +1543,6 @@ function updateCubeTrigger(key) {
   cubeLabel.textContent = cube.name;
   updateRaritySymbols(cube.setCode);
   updateLockBtn();
-  if (isLocked()) showLockNotice();
 }
 
 sortedCubeEntries.forEach(([key, cube]) => {
