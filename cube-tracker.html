@@ -1987,11 +1987,22 @@ function cardHTML(c, cube, owned) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function tokenIsFromCube(token, cubeCards) {
-  if (token.layout === 'checklist') return true; // always include DFC checklist helper cards
+  if (token.layout === 'checklist') return true;
   const tl = token.type_line ?? '';
+
+  // Emblems say "get an emblem" not "create a token" — match on planeswalker first name
+  if (tl.includes('Emblem')) {
+    const pwFirst = tl.replace(/Emblem\s*[—–-]?\s*/i, '').trim().toLowerCase().split(/[,\s]/)[0] ?? '';
+    return cubeCards.some(c => {
+      const oracle = (oracleMap[c.name] ?? '').toLowerCase();
+      return oracle.includes('emblem') && (!pwFirst || c.name.toLowerCase().startsWith(pwFirst));
+    });
+  }
+
   const typeMatch = tl.match(/—\s*(.+)/);
   if (!typeMatch) {
-    const searchFor = (token.card_faces?.[0]?.name ?? token.name).toLowerCase();
+    // Token with no subtype — search oracle for the token name (e.g. "Morph", "Manifest")
+    const searchFor = token.name.toLowerCase();
     if (!searchFor) return false;
     return cubeCards.some(c => (oracleMap[c.name] ?? '').toLowerCase().includes(searchFor));
   }
