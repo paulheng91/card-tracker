@@ -1654,12 +1654,19 @@ function getTokenCreators(token) {
     // token.name is e.g. "Kaito Shizuki Emblem" — strip the suffix for an exact PW name match
     const pwName  = (token.name ?? '').replace(/\s*Emblem\s*$/i, '').trim().toLowerCase();
     const pwFirst = pwName.split(/[,\s]/)[0] ?? '';
-    return (cardCache[activeCube] ?? []).filter(c => {
+    const pwCreators = (cardCache[activeCube] ?? []).filter(c => {
       const oracle = (oracleMap[c.name] ?? '').toLowerCase();
       if (!oracle.includes('emblem')) return false;
       const cn = c.name.toLowerCase();
       return cn === pwName || (pwFirst.length >= 4 && cn.startsWith(pwFirst) && pwName.startsWith(cn.split(/[,\s]/)[0]));
     }).map(c => c.name);
+    if (pwCreators.length) return pwCreators;
+    // Fallback for mechanic cards like "The Ring": find cards that mention the first face name
+    const faceName = (token.card_faces?.[0]?.name ?? token.name).toLowerCase();
+    if (faceName.length < 3) return [];
+    return (cardCache[activeCube] ?? []).filter(c =>
+      (oracleMap[c.name] ?? '').toLowerCase().includes(faceName)
+    ).map(c => c.name);
   }
 
   const typeMatch = tl.match(/—\s*(.+)/);
@@ -2027,12 +2034,16 @@ function tokenIsFromCube(token, cubeCards) {
   if (tl.includes('Emblem') || token.name?.toLowerCase().includes('emblem')) {
     const pwName  = (token.name ?? '').replace(/\s*Emblem\s*$/i, '').trim().toLowerCase();
     const pwFirst = pwName.split(/[,\s]/)[0] ?? '';
-    return cubeCards.some(c => {
+    const pwMatch = cubeCards.some(c => {
       const oracle = (oracleMap[c.name] ?? '').toLowerCase();
       if (!oracle.includes('emblem')) return false;
       const cn = c.name.toLowerCase();
       return cn === pwName || (pwFirst.length >= 4 && cn.startsWith(pwFirst) && pwName.startsWith(cn.split(/[,\s]/)[0]));
     });
+    if (pwMatch) return true;
+    // Fallback for mechanic cards like "The Ring": search oracle for the first face name
+    const faceName = (token.card_faces?.[0]?.name ?? token.name).toLowerCase();
+    return faceName.length >= 3 && cubeCards.some(c => (oracleMap[c.name] ?? '').toLowerCase().includes(faceName));
   }
 
   const typeMatch = tl.match(/—\s*(.+)/);
