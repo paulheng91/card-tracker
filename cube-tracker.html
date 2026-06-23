@@ -308,10 +308,11 @@
     .card.excluded .card-footer { background: rgba(80,10,10,0.22); }
     .footer-excl {
       flex: 1; display: flex; justify-content: flex-end; align-items: center;
-      font-size: 0.62rem; font-weight: 900;
+      background: none; border: none; padding: 0.25rem 0.35rem;
+      font-size: 0.75rem; font-weight: 900;
       color: rgba(255,255,255,0.2);
       transition: color 0.15s;
-      cursor: pointer;
+      cursor: pointer; line-height: 1; min-width: 28px;
     }
     .footer-excl:hover { color: rgba(255,80,80,0.6); }
     .card.excluded .footer-excl { color: rgba(255,100,100,0.85); }
@@ -1192,8 +1193,16 @@ document.getElementById('grid').addEventListener('click', e => {
     return;
   }
 
-  // Only the X icon (.footer-excl) triggers exclude.
-  const footerEl = e.target.closest('.footer-excl');
+  // Only the X button (.footer-excl) triggers exclude.
+  // Fallback: clicks that pass through the pointer-events:none SVG land on .card-footer —
+  // treat those as exclude if they're in the right third of the footer.
+  const footerExcl = e.target.closest('.footer-excl');
+  const footerEl = footerExcl ?? (() => {
+    const f = e.target.closest('.card-footer');
+    if (!f) return null;
+    const r = f.getBoundingClientRect();
+    return e.clientX >= r.right - r.width * 0.38 ? f : null;
+  })();
   if (footerEl) {
     const card = footerEl.closest('.card[data-name]');
     if (!card || activeView !== 'cards') return;
@@ -1954,7 +1963,7 @@ function cardHTML(c, cube, owned) {
     <div class="card-footer">
       <span class="card-num">#${c.collector_number}</span>
       ${statusSym}
-      <span class="footer-excl">✕</span>
+      <button class="footer-excl" type="button" aria-label="Exclude from draft">✕</button>
     </div>
     <div class="card-name">${displayName}</div>
   </div>`;
