@@ -1861,7 +1861,12 @@ function renderCards() {
   const filteredCards = COLOR_ORDER.reduce((s, k) => s + groups[k].length, 0)
                       + [...specialGroups.values()].reduce((s, g) => s + g.length, 0);
   const countEl = document.getElementById('cardCount');
-  if (countEl) countEl.textContent = `${filteredCards} / ${totalCards}`;
+  if (countEl) {
+    const rel = CUBES[activeCube]?.releaseDate
+      ? new Date(CUBES[activeCube].releaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : '';
+    countEl.textContent = rel ? `${filteredCards} / ${totalCards} · ${rel}` : `${filteredCards} / ${totalCards}`;
+  }
 }
 
 
