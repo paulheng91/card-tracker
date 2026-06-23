@@ -1827,14 +1827,18 @@ function renderCards() {
   }
 
   // Tokens section after Lands (and special sections)
-  if (activeFilter === 'all' && activeRarityFilter.size === 0) {
+  if (activeRarityFilter.size === 0 && (activeFilter === 'all' || activeFilter === 'missing')) {
     const cnVal  = s => { const n = parseInt(s); return isNaN(n) ? 99999 : n; };
-    const tokens = (tokenPool[cube.setCode] ?? [])
+    const allTokens = (tokenPool[cube.setCode] ?? [])
       .slice().sort((a, b) => cnVal(a.collector_number) - cnVal(b.collector_number));
+    const tokens = activeFilter === 'missing'
+      ? allTokens.filter(t => (tokenOwned[activeCube]?.[t.id] ?? 1) === 0)
+      : allTokens;
     if (tokens.length) {
       const tKey      = 'tokens-section';
       const collapsed = collapsedSections.has(tKey);
-      items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${tKey}">Tokens <span class="sec-count">(${tokens.length})</span><span class="sec-chevron">▼</span></div>`);
+      const countLabel = activeFilter === 'missing' ? `${tokens.length}/${allTokens.length}` : tokens.length;
+      items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${tKey}">Tokens <span class="sec-count">(${countLabel})</span><span class="sec-chevron">▼</span></div>`);
       if (!collapsed) items.push(`<div class="token-list">${tokens.map(tokenCardHTML).join('')}</div>`);
     }
   }
