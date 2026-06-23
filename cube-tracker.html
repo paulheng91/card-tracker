@@ -1123,6 +1123,7 @@ function isDFC(card) {
 
 async function fetchTokens(setCode) {
   const tokens = [];
+  const seen   = new Set();
   let url = `https://api.scryfall.com/cards/search?q=set:t${setCode}+game:paper&order=collector&unique=prints`;
   try {
     while (url) {
@@ -1131,6 +1132,10 @@ async function fetchTokens(setCode) {
       for (const t of data.data) {
         const tl = t.type_line ?? '';
         if (!tl.includes('Token') && !tl.includes('Emblem') && t.layout !== 'checklist' && t.layout !== 'token') continue;
+        // Deduplicate by illustration_id: same art repeated on both sides of a token sheet
+        const key = t.illustration_id ?? t.oracle_id ?? t.id;
+        if (seen.has(key)) continue;
+        seen.add(key);
         tokens.push(t);
       }
       url = data.has_more ? data.next_page : null;
