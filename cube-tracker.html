@@ -943,10 +943,11 @@ function showLockNotice() {
   btn.addEventListener('animationend', () => btn.classList.remove('pulse'), { once: true });
 }
 
-let justToggledCard = null;
-let searchQuery     = '';
-let loadingCubes    = new Set();
-let failedCubes     = new Set();
+let justToggledCard     = null;
+let searchQuery         = '';
+let loadingCubes        = new Set();
+let failedCubes         = new Set();
+let dashboardLoaderRunning = false;
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1429,7 +1430,7 @@ document.querySelectorAll('.view-tab').forEach(btn => {
     updatePillSlide(document.getElementById('viewTabs'));
     updateControlsForView();
     render();
-    if (activeView === 'all') loadAllCubesForDashboard();
+    if (activeView === 'all') { dashboardLoaderRunning = false; loadAllCubesForDashboard(); }
   });
 });
 
@@ -2014,23 +2015,47 @@ function renderInfo() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function loadAllCubesForDashboard() {
-  // Prioritize activeCube first so the Cards view works immediately if user switches
+  if (dashboardLoaderRunning) return; // prevent concurrent instances
+  dashboardLoaderRunning = true;
+
   const ordered = [
     ...sortedCubeEntries.filter(([k]) => k === activeCube),
     ...sortedCubeEntries.filter(([k]) => k !== activeCube),
   ];
-  for (const [key] of ordered) {
-    if (activeView !== 'all') return;
-    if (cardCache[key] || loadingCubes.has(key)) continue;
-    loadingCubes.add(key);
-    failedCubes.delete(key);
-    if (activeView === 'all') renderDashboard();
-    const ok = await loadCubeData(key, true);
-    loadingCubes.delete(key);
-    if (!ok) failedCubes.add(key);
-    if (activeView === 'all') renderDashboard();
-    await new Promise(r => setTimeout(r, 250)); // breathe between sets — helps on slow mobile
+
+  for (let pass = 0; pass < 3; pass++) {
+    if (activeView !== 'all') { dashboardLoaderRunning = false; return; }
+
+    // On retry passes, wait longer before hammering the API again
+    if (pass > 0) {
+      const waitMs = pass * 3000;
+      await new Promise(r => setTimeout(r, waitMs));
+      if (activeView !== 'all') { dashboardLoaderRunning = false; return; }
+    }
+
+    let attempted = 0;
+    for (const [key] of ordered) {
+      if (activeView !== 'all') { dashboardLoaderRunning = false; return; }
+      if (cardCache[key] || loadingCubes.has(key)) continue;
+      attempted++;
+      loadingCubes.add(key);
+      failedCubes.delete(key);
+      if (activeView === 'all') renderDashboard();
+      const ok = await loadCubeData(key, true);
+      loadingCubes.delete(key);
+      if (!ok) failedCubes.add(key);
+      else failedCubes.delete(key);
+      if (activeView === 'all') renderDashboard();
+      if (attempted < ordered.length) await new Promise(r => setTimeout(r, 400));
+    }
+
+    // If nothing left to attempt, we're done
+    if (!sortedCubeEntries.some(([k]) => !cardCache[k] && !loadingCubes.has(k))) break;
+    // If all remaining failed and no more passes, give up
+    if (pass === 2) break;
   }
+
+  dashboardLoaderRunning = false;
 }
 
 function renderDashboard() {
@@ -2081,6 +2106,7 @@ function renderDashboard() {
   document.querySelectorAll('.dash-cube:not(.dash-loading)').forEach(el => {
     el.addEventListener('click', async () => {
       const key = el.dataset.cubeKey;
+      const wasRetry = failedCubes.has(key);
 
       if (cardCache[key]) {
         // Already loaded — switch straight to Cards view
@@ -2096,16 +2122,26 @@ function renderDashboard() {
         return;
       }
 
-      // Not loaded yet — load silently within the dashboard, never leave this view
+      // Show loading state immediately
       loadingCubes.add(key);
       failedCubes.delete(key);
       renderDashboard();
+
+      // Brief pause before hitting the API — helps when Scryfall rate-limited the background pass
+      if (wasRetry) await new Promise(r => setTimeout(r, 1500));
+
       const ok = await loadCubeData(key, true);
       loadingCubes.delete(key);
       if (!ok) { failedCubes.add(key); renderDashboard(); return; }
       failedCubes.delete(key);
 
-      // Success — now switch to Cards view
+      if (wasRetry) {
+        // Retry succeeded — stay in dashboard so user can see all progress bars
+        renderDashboard();
+        return;
+      }
+
+      // First-time open — switch to Cards view
       activeCube = key;
       localStorage.setItem('activeCube', activeCube);
       updateCubeTrigger(key);
