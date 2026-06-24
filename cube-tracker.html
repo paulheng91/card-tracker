@@ -864,13 +864,6 @@ const ERRATA_CATEGORIES = [
   },
 ];
 
-function getErrataMatches(cardName) {
-  const t = oracleMap[cardName] ?? '';
-  return ERRATA_CATEGORIES.filter(cat => cat.test(t));
-}
-
-
-
 // ═══════════════════════════════════════════════════════════════════════════
 // APPLICATION STATE
 // ═══════════════════════════════════════════════════════════════════════════
@@ -891,7 +884,6 @@ let sortByPrice        = localStorage.getItem('sortByPrice') === 'true';
 let cardCache    = {};
 let cardByName   = {};
 let oracleMap    = {};
-let oracleSnapshot = {};
 let ownedMap     = {};
 
 let saveTimer    = null;
@@ -995,7 +987,6 @@ async function loadCollection() {
     const res = await fetch(GIST_RAW + '?t=' + Date.now());
     if (res.ok) {
       const data = await res.json();
-      oracleSnapshot = data._oracle    ?? {};
       tokenOwned     = data._tokens    ?? {};
       lockedCubes    = new Set(data._locked ?? []);
       excludedCards  = data._excluded  ?? {};
@@ -1021,7 +1012,6 @@ async function pushCollection() {
       headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify({
         ...ownedMap,
-        _oracle:    oracleSnapshot,
         _tokens:    tokenOwned,
         _locked:    [...lockedCubes],
         _excluded:  excludedCards,
@@ -2090,11 +2080,6 @@ async function loadCubeData(cubeKey) {
       let ns = false;
       for (const t of filteredTokens) { if (tokenOwned[cubeKey][t.id] === undefined) { tokenOwned[cubeKey][t.id] = 1; ns = true; } }
       if (ns) scheduleSave();
-      if (!oracleSnapshot[cubeKey]) {
-        oracleSnapshot[cubeKey] = {};
-        for (const c of cachedCards) oracleSnapshot[cubeKey][c.name] = oracleMap[c.name] ?? '';
-        scheduleSave();
-      }
       return true;
     }
   } catch {}
@@ -2158,11 +2143,6 @@ async function loadCubeData(cubeKey) {
   }
   if (needsSave) scheduleSave();
 
-  if (!oracleSnapshot[cubeKey]) {
-    oracleSnapshot[cubeKey] = {};
-    for (const c of allCards) oracleSnapshot[cubeKey][c.name] = oracleMap[c.name] ?? '';
-    scheduleSave();
-  }
 }
 
 
