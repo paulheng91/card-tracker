@@ -347,10 +347,11 @@
     }
     .card-num  { color: #666; }
     .card-name  { padding: 0 0.5rem 0.25rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .card-price { padding: 0 0.5rem 0.3rem; font-size: 0.62rem; font-weight: 700; color: #555; white-space: nowrap; }
+    .card-price { padding: 0 0.5rem 0.3rem; font-size: 0.62rem; font-weight: 700; color: #555; white-space: nowrap; text-decoration: none; display: block; }
     .card-price.price-mid  { color: #999; }
     .card-price.price-high { color: #c9a84c; }
     .card-price.price-top  { color: #e8820a; }
+    .card-price:hover { text-decoration: underline; }
     @media (max-width: 699px) {
       .card-footer { font-size: 0.62rem; }
       .card-name   { font-size: 0.6rem; }
@@ -2087,7 +2088,10 @@ function cardHTML(c, cube, owned) {
     const usd = parseFloat(c.prices?.usd);
     if (!isNaN(usd)) {
       const cls2 = usd >= 20 ? 'price-top' : usd >= 5 ? 'price-high' : usd >= 1 ? 'price-mid' : '';
-      priceHtml = `<div class="card-price${cls2 ? ' ' + cls2 : ''}">$${usd.toFixed(2)}</div>`;
+      const tcg  = c.purchase_uris?.tcgplayer ?? '';
+      const tag  = tcg ? `a href="${tcg}" target="_blank" rel="noopener"` : 'span';
+      const end  = tcg ? 'a' : 'span';
+      priceHtml = `<${tag} class="card-price${cls2 ? ' ' + cls2 : ''}">$${usd.toFixed(2)}</${end}>`;
     }
   }
 
@@ -2144,9 +2148,43 @@ function tokenIsFromCube(token, cubeCards) {
   });
 }
 
+function slimCard(c) {
+  return {
+    id: c.id, name: c.name, oracle_text: c.oracle_text, type_line: c.type_line,
+    rarity: c.rarity, collector_number: c.collector_number, layout: c.layout,
+    power: c.power, toughness: c.toughness, _specialLabel: c._specialLabel,
+    image_uris: c.image_uris ? { normal: c.image_uris.normal } : undefined,
+    prices: c.prices ? { usd: c.prices.usd } : undefined,
+    purchase_uris: c.purchase_uris?.tcgplayer ? { tcgplayer: c.purchase_uris.tcgplayer } : undefined,
+    card_faces: c.card_faces?.map(f => ({
+      name: f.name, oracle_text: f.oracle_text, type_line: f.type_line,
+      image_uris: f.image_uris ? { normal: f.image_uris.normal } : undefined,
+    })),
+  };
+}
+
 async function loadCubeData(cubeKey) {
   const cube = CUBES[cubeKey];
   const code = cube.setCode;
+
+  // Try sessionStorage cache first — avoids re-fetching on refresh
+  const cacheKey = `scry_v1_${cubeKey}`;
+  try {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      const { cards: cachedCards, filteredTokens } = JSON.parse(cached);
+      cachedCards.forEach(c => { cardByName[c.name] = c; oracleMap[c.name] = c.oracle_text ?? c.card_faces?.map(f => f.oracle_text || '').join('\n\n──\n\n') ?? ''; });
+      cardCache[cubeKey] = cachedCards;
+      tokenPool[code]    = filteredTokens;
+      if (cube.allOwned && !ownedMap[cubeKey]) { ownedMap[cubeKey] = {}; cachedCards.forEach(c => { ownedMap[cubeKey][c.name] = cube.counts[c.rarity] ?? 1; }); scheduleSave(); }
+      if (!tokenOwned[cubeKey]) tokenOwned[cubeKey] = {};
+      let ns = false;
+      for (const t of filteredTokens) { if (tokenOwned[cubeKey][t.id] === undefined) { tokenOwned[cubeKey][t.id] = 1; ns = true; } }
+      if (ns) scheduleSave();
+      render(); return;
+    }
+  } catch {}
+
   document.getElementById('grid').innerHTML = `<div class="loading">Fetching ${cube.name} cards from Scryfall…</div>`;
 
   const [mainCards, tokens] = await Promise.all([
@@ -2174,6 +2212,11 @@ async function loadCubeData(cubeKey) {
   cardCache[cubeKey] = allCards;
   // Drop tokens whose only creators are Commander cards (not in this cube's booster pool)
   tokenPool[code] = tokens.filter(t => tokenIsFromCube(t, allCards));
+
+  // Cache slimmed data in sessionStorage for fast subsequent loads
+  try {
+    sessionStorage.setItem(cacheKey, JSON.stringify({ cards: allCards.map(slimCard), filteredTokens: tokenPool[code] }));
+  } catch {}
 
   if (cube.allOwned && !ownedMap[cubeKey]) {
     ownedMap[cubeKey] = {};
