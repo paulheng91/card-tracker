@@ -321,15 +321,8 @@
     .footer-excl:hover { color: rgba(255,80,80,0.6); }
     .card.excluded .footer-excl { color: rgba(255,100,100,0.85); }
 
-    .badge-row { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; gap: 3px; }
-    .errata-badge {
-      border: none; border-radius: 4px; font-size: 0.55rem; font-weight: 800;
-      padding: 2px 4px; cursor: pointer; letter-spacing: 0.04em; line-height: 1.2;
-    }
     .errata-high { background: #221e1a; color: #7a6a55; border: 1px solid #38322a; }
-    .errata-high:hover { background: #2c2820; }
     .errata-low  { background: #0a1a2a; color: #6aa0b8; border: 1px solid #2a5060; }
-    .errata-low:hover { background: #142030; }
 
     .flip-btn {
       position: absolute; top: 4px; right: 4px; z-index: 2;
@@ -394,16 +387,6 @@
       padding: 0.4rem 0; font-weight: 700; font-size: 0.8rem; cursor: pointer;
     }
     .unlock-btn-cancel:hover { background: #2e2e2e; color: #bbb; }
-
-    /* ── Info detail modal ──────────────────────────────────────────────── */
-    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; overflow-y: auto; padding: 1rem; }
-    .modal-box { background: #1e1e1e; border: 1px solid #c9a84c; border-radius: 12px; padding: 1.25rem; max-width: 420px; margin: 2rem auto; }
-    .modal-title   { font-size: 1rem; font-weight: 800; color: #c9a84c; margin-bottom: 0.5rem; }
-    .modal-reasons { margin-bottom: 0.75rem; }
-    .modal-label   { font-size: 0.68rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
-    .modal-text    { font-size: 0.8rem; color: #d0d0d0; line-height: 1.6; white-space: pre-wrap; background: #141414; border-radius: 6px; padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
-    .modal-close   { background: #242424; color: #c9a84c; border: none; padding: 0.4rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.8rem; }
-    .modal-close:hover { background: #2e2e2e; }
 
     /* ── Token +/− counter ──────────────────────────────────────────────── */
     .token-counter { display: flex; align-items: center; gap: 0.3rem; }
@@ -496,16 +479,6 @@
       <button class="unlock-btn-confirm" id="unlockConfirm">Unlock</button>
       <button class="unlock-btn-cancel"  id="unlockCancel">Cancel</button>
     </div>
-  </div>
-</div>
-
-<div id="modal">
-  <div class="modal-box">
-    <div class="modal-title"   id="modal-title"></div>
-    <div class="modal-reasons" id="modal-reasons"></div>
-    <div class="modal-label">Current Oracle Text</div>
-    <div class="modal-text"    id="modal-oracle"></div>
-    <button class="modal-close" onclick="document.getElementById('modal').style.display='none'">Close</button>
   </div>
 </div>
 
@@ -896,18 +869,6 @@ function getErrataMatches(cardName) {
   return ERRATA_CATEGORIES.filter(cat => cat.test(t));
 }
 
-function hasUncategorizedChange(cardName) {
-  const snap = oracleSnapshot[activeCube]?.[cardName];
-  if (snap === undefined) return false;
-  if (snap === (oracleMap[cardName] ?? '')) return false;
-  return getErrataMatches(cardName).length === 0;
-}
-
-function topSeverity(matches) {
-  if (matches.some(m => m.severity === 'high')) return 'high';
-  if (matches.length) return 'low';
-  return null;
-}
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1168,43 +1129,6 @@ async function fetchTokens(setCode) {
 // INFO DETAIL MODAL (errata cards)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function showErrataModal(cardName) {
-  const matches  = getErrataMatches(cardName);
-  const oracle   = oracleMap[cardName] ?? '(no oracle text)';
-  const snap     = oracleSnapshot[activeCube]?.[cardName];
-  const isUncategorized = snap !== undefined && snap !== oracle && matches.length === 0;
-
-  document.getElementById('modal-title').textContent = cardName;
-
-  let reasonsHtml = matches.map(m => {
-    const color = m.severity === 'high' ? '#e07020' : '#6aa0b8';
-    const label = m.severity === 'high' ? '⚠ HIGH' : 'ℹ LOW';
-    return `<div style="margin-bottom:0.4rem;font-size:0.75rem;font-weight:700;color:${color}">${label} — ${m.detail}</div>`;
-  }).join('');
-
-  if (isUncategorized) {
-    reasonsHtml += `<div style="color:#6aa06a;font-size:0.75rem;font-weight:700;margin-bottom:0.4rem">? Oracle text changed since baseline — no category matched yet</div>`;
-  }
-  document.getElementById('modal-reasons').innerHTML = reasonsHtml;
-
-  const oracleEl = document.getElementById('modal-oracle');
-  oracleEl.textContent = oracle;
-
-  if (isUncategorized && snap) {
-    oracleEl.insertAdjacentHTML('afterend',
-      `<div class="modal-label" style="margin-top:0.5rem;color:#7ab47a">Previous text (baseline)</div>
-       <div class="modal-text" id="modal-oracle-snap" style="opacity:0.55">${snap}</div>`);
-  } else {
-    document.getElementById('modal-oracle-snap')?.remove();
-  }
-
-  document.getElementById('modal').style.display = 'block';
-}
-
-document.getElementById('modal').addEventListener('click', e => {
-  if (e.target === document.getElementById('modal'))
-    document.getElementById('modal').style.display = 'none';
-});
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1278,9 +1202,6 @@ document.getElementById('grid').addEventListener('click', e => {
     }
     return;
   }
-
-  const badge = e.target.closest('.errata-badge');
-  if (badge) { showErrataModal(badge.closest('.card').dataset.name); return; }
 
   // Only increment qty when the tap lands on the card image, not the footer/name/button area.
   // This separates the qty tap zone (image) from the exclude button (bottom corner).
