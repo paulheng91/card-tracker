@@ -251,8 +251,6 @@
       display: flex; align-items: center; gap: 0.35rem;
     }
     .section-header.errata-high { background: #181614; color: #6a5f50; border: 1px solid #2e2a24; }
-    .section-header.errata-low  { background: #0a1a2a; color: #6aa0b8; border: 1px solid #2a5060; }
-    .section-header.errata-unknown { background: #0a1a0a; color: #6aa06a; border: 1px solid #2a5030; }
     .errata-rule-detail { grid-column: 1 / -1; font-size: 0.72rem; color: #6a5f50; background: #111; border: 1px solid #2e2a24; border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 0.25rem; line-height: 1.5; }
 
     .mana-sym { width: 18px; height: 18px; display: inline-block; vertical-align: middle; flex-shrink: 0; }
@@ -321,8 +319,6 @@
     .footer-excl:hover { color: rgba(255,80,80,0.6); }
     .card.excluded .footer-excl { color: rgba(255,100,100,0.85); }
 
-    .errata-high { background: #221e1a; color: #7a6a55; border: 1px solid #38322a; }
-    .errata-low  { background: #0a1a2a; color: #6aa0b8; border: 1px solid #2a5060; }
 
     .flip-btn {
       position: absolute; top: 4px; right: 4px; z-index: 2;
@@ -990,7 +986,6 @@ async function loadCollection() {
       tokenOwned     = data._tokens    ?? {};
       lockedCubes    = new Set(data._locked ?? []);
       excludedCards  = data._excluded  ?? {};
-      delete data._oracle;
       delete data._tokens;
       delete data._locked;
       delete data._excluded;
