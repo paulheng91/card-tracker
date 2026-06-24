@@ -2070,7 +2070,7 @@ async function loadAllCubesForDashboard() {
       if (!ok) failedCubes.add(key);
       else failedCubes.delete(key);
       if (activeView === 'all') renderDashboard();
-      if (attempted < ordered.length) await new Promise(r => setTimeout(r, 400));
+      if (attempted < ordered.length) await new Promise(r => setTimeout(r, 100));
     }
 
     // If nothing left to attempt, we're done
