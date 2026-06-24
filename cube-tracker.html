@@ -346,7 +346,11 @@
       display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
     }
     .card-num  { color: #666; }
-    .card-name { padding: 0 0.5rem 0.35rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-name  { padding: 0 0.5rem 0.25rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-price { padding: 0 0.5rem 0.3rem; font-size: 0.62rem; font-weight: 700; color: #555; white-space: nowrap; }
+    .card-price.price-mid  { color: #999; }
+    .card-price.price-high { color: #c9a84c; }
+    .card-price.price-top  { color: #e8820a; }
     @media (max-width: 699px) {
       .card-footer { font-size: 0.62rem; }
       .card-name   { font-size: 0.6rem; }
@@ -554,6 +558,10 @@
       <button class="filter-btn" data-rarity="uncommon" title="Uncommon"><span class="rarity-sym-mask r-uncommon"></span></button>
       <button class="filter-btn" data-rarity="rare"     title="Rare"><span class="rarity-sym-mask r-rare"></span></button>
       <button class="filter-btn" data-rarity="mythic"   title="Mythic"><span class="rarity-sym-mask r-mythic"></span></button>
+    </div>
+    <div class="ctrl-group btn-group" id="priceRow">
+      <button class="filter-btn" id="btnShowPrices" title="Show card prices">$</button>
+      <button class="filter-btn" id="btnSortPrice"  title="Sort by price">↓$</button>
     </div>
     <div class="ctrl-group btn-group size-row">
       <div class="pill-slide"></div>
@@ -914,6 +922,8 @@ document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active',
 
 let activeFilter       = 'all';
 let activeRarityFilter = new Set(); // empty = show all rarities
+let showPrices         = localStorage.getItem('showPrices') === 'true';
+let sortByPrice        = localStorage.getItem('sortByPrice') === 'true';
 
 let cardCache    = {};
 let cardByName   = {};
@@ -1495,6 +1505,25 @@ function updateToggleAllBtn() {
     collapsedSections.size > 0 ? 'Expand All' : 'Collapse All';
 }
 
+// ── Price toggle buttons ──────────────────────────────────────────────────
+function applyPriceState() {
+  document.getElementById('btnShowPrices').classList.toggle('active', showPrices);
+  document.getElementById('btnSortPrice').classList.toggle('active', sortByPrice);
+}
+document.getElementById('btnShowPrices').addEventListener('click', () => {
+  showPrices = !showPrices;
+  localStorage.setItem('showPrices', showPrices);
+  applyPriceState();
+  render();
+});
+document.getElementById('btnSortPrice').addEventListener('click', () => {
+  sortByPrice = !sortByPrice;
+  localStorage.setItem('sortByPrice', sortByPrice);
+  applyPriceState();
+  render();
+});
+applyPriceState();
+
 document.getElementById('btnToggleAll').addEventListener('click', () => {
   if (collapsedSections.size > 0) {
     collapsedSections.clear();
@@ -1814,29 +1843,47 @@ function renderCards() {
       if (groups[key]) groups[key].push(c);
     }
   }
-  const cnInt = c => parseInt(c.collector_number) || 99999;
-  for (const k of COLOR_ORDER) groups[k].sort((a, b) => cnInt(a) - cnInt(b));
-  for (const [, grp] of specialGroups) grp.sort((a, b) => cnInt(a) - cnInt(b));
+  const cnInt  = c => parseInt(c.collector_number) || 99999;
+  const priceOf = c => parseFloat(c.prices?.usd) || 0;
+  if (sortByPrice) {
+    for (const k of COLOR_ORDER) groups[k].sort((a, b) => priceOf(b) - priceOf(a));
+    for (const [, grp] of specialGroups) grp.sort((a, b) => priceOf(b) - priceOf(a));
+  } else {
+    for (const k of COLOR_ORDER) groups[k].sort((a, b) => cnInt(a) - cnInt(b));
+    for (const [, grp] of specialGroups) grp.sort((a, b) => cnInt(a) - cnInt(b));
+  }
 
   const secCount = (n, total) => isFiltered && n !== total ? `(${n}/${total})` : `(${n})`;
 
-  // Keep sections in standard WUBRG order; cards within each section sort by collector number.
-  const orderedKeys = COLOR_ORDER.filter(k => totals[k] > 0);
-
   const items = [];
-  for (const key of orderedKeys) {
-    const group = groups[key];
-    const collapsed = collapsedSections.has(key);
-    items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${key}">${COLOR_ICON[key]} ${COLOR_LABEL[key]} <span class="sec-count">${secCount(group.length, totals[key])}</span><span class="sec-chevron">▼</span></div>`);
-    if (!collapsed) for (const c of group) items.push(cardHTML(c, cube, owned));
-  }
 
-  for (const [label, total] of specialTotals) {
-    const group    = specialGroups.get(label) ?? [];
-    const sKey     = `special-${label}`;
-    const collapsed = collapsedSections.has(sKey);
-    items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${sKey}">★ ${label} <span class="sec-count">${secCount(group.length, total)}</span><span class="sec-chevron">▼</span></div>`);
-    if (!collapsed) for (const c of group) items.push(cardHTML(c, cube, owned));
+  if (sortByPrice) {
+    // Flatten all filtered cards into one price-sorted list
+    const allSorted = [
+      ...COLOR_ORDER.flatMap(k => groups[k]),
+      ...[...specialGroups.values()].flat(),
+    ].sort((a, b) => priceOf(b) - priceOf(a));
+    const totalAll = COLOR_ORDER.reduce((s, k) => s + totals[k], 0) + [...specialTotals.values()].reduce((s, n) => s + n, 0);
+    const pKey = 'price-section';
+    const collapsed = collapsedSections.has(pKey);
+    items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${pKey}">↓$ By Price <span class="sec-count">${secCount(allSorted.length, totalAll)}</span><span class="sec-chevron">▼</span></div>`);
+    if (!collapsed) for (const c of allSorted) items.push(cardHTML(c, cube, owned));
+  } else {
+    // Keep sections in standard WUBRG order
+    const orderedKeys = COLOR_ORDER.filter(k => totals[k] > 0);
+    for (const key of orderedKeys) {
+      const group = groups[key];
+      const collapsed = collapsedSections.has(key);
+      items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${key}">${COLOR_ICON[key]} ${COLOR_LABEL[key]} <span class="sec-count">${secCount(group.length, totals[key])}</span><span class="sec-chevron">▼</span></div>`);
+      if (!collapsed) for (const c of group) items.push(cardHTML(c, cube, owned));
+    }
+    for (const [label, total] of specialTotals) {
+      const group    = specialGroups.get(label) ?? [];
+      const sKey     = `special-${label}`;
+      const collapsed = collapsedSections.has(sKey);
+      items.push(`<div class="section-header${collapsed ? ' sec-collapsed' : ''}" data-color-key="${sKey}">★ ${label} <span class="sec-count">${secCount(group.length, total)}</span><span class="sec-chevron">▼</span></div>`);
+      if (!collapsed) for (const c of group) items.push(cardHTML(c, cube, owned));
+    }
   }
 
   // Tokens section after Lands (and special sections)
@@ -2034,6 +2081,15 @@ function cardHTML(c, cube, owned) {
     imgHtml = `<div class="card-img-wrap"><img src="${cardImage(c)}" loading="lazy" alt="${c.name}"></div>`;
   }
 
+  let priceHtml = '';
+  if (showPrices) {
+    const usd = parseFloat(c.prices?.usd);
+    if (!isNaN(usd)) {
+      const cls2 = usd >= 20 ? 'price-top' : usd >= 5 ? 'price-high' : usd >= 1 ? 'price-mid' : '';
+      priceHtml = `<div class="card-price${cls2 ? ' ' + cls2 : ''}">$${usd.toFixed(2)}</div>`;
+    }
+  }
+
   return `<div class="card ${cls}${isExcluded ? ' excluded' : ''}${flash}" data-name="${safeName}" data-rarity="${c.rarity}" data-cube="${activeCube}">
     ${imgHtml}
     ${flipBtn}
@@ -2043,6 +2099,7 @@ function cardHTML(c, cube, owned) {
       <button class="footer-excl" type="button" aria-label="Exclude from draft">✕</button>
     </div>
     <div class="card-name">${displayName}</div>
+    ${priceHtml}
   </div>`;
 }
 
