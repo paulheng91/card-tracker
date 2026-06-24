@@ -283,7 +283,7 @@
       position: relative;
     }
     .card:hover                    { transform: scale(1.03); }
-    .card:not(.token-card):active  { transform: scale(0.93); }
+    .card:not(.token-card):has(.card-img-wrap:active) { transform: scale(0.93); }
     .count-btn:active              { transform: scale(0.75); background: #111; }
 
     .card.basic-land { border-color: #2a2a2a; cursor: default; }
