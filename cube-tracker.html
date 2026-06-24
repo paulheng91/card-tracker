@@ -1518,6 +1518,7 @@ document.getElementById('btnShowPrices').addEventListener('click', () => {
 });
 document.getElementById('btnSortPrice').addEventListener('click', () => {
   sortByPrice = !sortByPrice;
+  if (sortByPrice && !showPrices) { showPrices = true; localStorage.setItem('showPrices', true); }
   localStorage.setItem('sortByPrice', sortByPrice);
   applyPriceState();
   render();
