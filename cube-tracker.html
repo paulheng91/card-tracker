@@ -225,6 +225,33 @@
     .filter-btn[data-rarity="uncommon"].active { background: #2a3a4a; color: #8ab0c8; }
     .filter-btn[data-rarity="common"].active   { background: #2a2a2a; color: #aaa; border: 1px solid #555; }
 
+    /* ── Card name search bar ───────────────────────────────────────────── */
+    .search-input {
+      flex: 1; background: #0a0a0a; border: 1px solid #444; color: #d0d0d0;
+      padding: 0 0.75rem; border-radius: 999px; font-size: 0.8rem; height: 2rem;
+      outline: none; min-width: 0;
+    }
+    .search-input:focus { border-color: #c9a84c; }
+
+    /* ── All-sets dashboard ──────────────────────────────────────────────── */
+    .dash-grid { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.25rem 0; }
+    .dash-cube {
+      display: flex; align-items: center; gap: 0.75rem;
+      background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px;
+      padding: 0.65rem 0.9rem; cursor: pointer; transition: background 0.15s, border-color 0.15s;
+    }
+    .dash-cube:hover { background: #222; border-color: #3a3a3a; }
+    .dash-cube.dash-active { border-color: #c9a84c; }
+    .dash-sym { width: 28px; height: 28px; flex-shrink: 0; filter: brightness(0) invert(1); opacity: 0.7; }
+    .dash-info { flex: 1; min-width: 0; }
+    .dash-name { font-size: 0.8rem; font-weight: 700; color: #c9a84c; margin-bottom: 0.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dash-bar-wrap { background: #111; border-radius: 999px; height: 5px; overflow: hidden; margin-bottom: 0.25rem; }
+    .dash-bar-fill { height: 100%; border-radius: 999px; background: #52b788; transition: width 0.4s ease; }
+    .dash-bar-fill.partial { background: #c9a84c; }
+    .dash-stat { font-size: 0.68rem; color: #666; }
+    .dash-stat .dash-pct { font-weight: 700; color: #888; margin-right: 0.35rem; }
+    .dash-stat .dash-excl { color: #555; font-style: italic; }
+
     /* Token input + generic button */
     .token-input { background: #0a0a0a; border: 1px solid #333; color: #aaa; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.73rem; width: 100%; }
     .btn { padding: 0.3rem 0.7rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.73rem; font-weight: 700; background: #242424; color: #c9a84c; transition: background 0.15s; white-space: nowrap; }
@@ -516,12 +543,14 @@
     <div class="ctrl-group btn-group" id="viewTabs">
       <div class="pill-slide"></div>
       <button class="view-tab active" data-view="cards">Cards</button>
+      <button class="view-tab"        data-view="all">All Sets</button>
       <button class="view-tab"        data-view="info">Info</button>
     </div>
     <div class="ctrl-group btn-group" id="filterRow">
       <div class="pill-slide"></div>
       <button class="filter-btn active" data-filter="all">All</button>
       <button class="filter-btn"        data-filter="missing">Missing</button>
+      <button class="filter-btn"        data-filter="excluded">Excluded</button>
     </div>
     <div class="ctrl-group btn-group" id="rarityRow">
       <button class="filter-btn" data-rarity="common"   title="Common"><span class="rarity-sym-mask r-common"></span></button>
@@ -543,7 +572,14 @@
       <button class="filter-btn" id="btnToggleAll">Collapse All</button>
     </div>
     <div class="ctrl-group btn-group">
+      <button class="filter-btn" id="btnSearch" title="Search cards">🔍</button>
+    </div>
+    <div class="ctrl-group btn-group">
       <button class="lock-btn" id="btnLock" title="Lock this set">🔓</button>
+    </div>
+    <div id="searchRow" style="display:none; flex: 1 1 100%; gap: 0.35rem; padding: 0 0.5rem 0.1rem;">
+      <input type="text" id="searchInput" class="search-input" placeholder="Search cards by name…" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="filter-btn" id="searchClear" title="Close search">✕</button>
     </div>
   </div>
 
@@ -903,6 +939,7 @@ function showLockNotice() {
 }
 
 let justToggledCard = null;
+let searchQuery     = '';
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1231,7 +1268,11 @@ document.getElementById('grid').addEventListener('click', e => {
     const nowExcluded = !excludedCards[activeCube][name];
     if (nowExcluded) excludedCards[activeCube][name] = true;
     else delete excludedCards[activeCube][name];
-    card.classList.toggle('excluded', nowExcluded);
+    if (activeFilter === 'excluded') {
+      render(); // un-excluding should remove the card from the excluded list
+    } else {
+      card.classList.toggle('excluded', nowExcluded);
+    }
     scheduleSave();
     return;
   }
@@ -1356,13 +1397,19 @@ document.getElementById('grid').addEventListener('click', e => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function updateControlsForView() {
-  const isInfo = activeView === 'info';
-  ['filterRow', 'rarityRow'].forEach(id => {
+  const isCards = activeView === 'cards';
+  const dim = !isCards;
+  ['filterRow', 'rarityRow', 'priceRow', 'btnToggleAll', 'btnSearch'].forEach(id => {
     const el = document.getElementById(id);
-    el.style.opacity      = isInfo ? '0.3' : '';
-    el.style.pointerEvents = isInfo ? 'none' : '';
+    if (!el) return;
+    el.style.opacity      = dim ? '0.3' : '';
+    el.style.pointerEvents = dim ? 'none' : '';
   });
-  if (isInfo) { const el = document.getElementById('cardCount'); if (el) el.textContent = ''; }
+  if (dim) {
+    const el = document.getElementById('cardCount');
+    if (el) el.textContent = '';
+    closeSearch();
+  }
 }
 
 document.querySelectorAll('.view-tab').forEach(btn => {
@@ -1429,6 +1476,46 @@ document.getElementById('btnSortPrice').addEventListener('click', () => {
   render();
 });
 applyPriceState();
+
+// ── Card name search ─────────────────────────────────────────────────────
+function openSearch() {
+  searchQuery = '';
+  document.getElementById('searchRow').style.display = 'flex';
+  document.getElementById('filterRow').style.display = 'none';
+  document.getElementById('rarityRow').style.display = 'none';
+  document.getElementById('btnSearch').classList.add('active');
+  document.getElementById('searchInput').value = '';
+  setTimeout(() => document.getElementById('searchInput').focus(), 50);
+}
+
+function closeSearch() {
+  searchQuery = '';
+  document.getElementById('searchRow').style.display = 'none';
+  document.getElementById('filterRow').style.display = '';
+  document.getElementById('rarityRow').style.display = '';
+  document.getElementById('btnSearch').classList.remove('active');
+  document.getElementById('searchInput').value = '';
+}
+
+document.getElementById('btnSearch').addEventListener('click', () => {
+  if (document.getElementById('searchRow').style.display === 'none' || !document.getElementById('searchRow').style.display) {
+    openSearch();
+  } else {
+    closeSearch();
+    render();
+  }
+});
+
+document.getElementById('searchClear').addEventListener('click', () => { closeSearch(); render(); });
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQuery = e.target.value.trim();
+  render();
+});
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeSearch(); render(); }
+});
 
 document.getElementById('btnToggleAll').addEventListener('click', () => {
   if (collapsedSections.size > 0) {
@@ -1697,6 +1784,7 @@ function tokenCardHTML(t) {
 function render() {
   if      (activeView === 'cards') renderCards();
   else if (activeView === 'info')  renderInfo();
+  else if (activeView === 'all')   renderDashboard();
   updateToggleAllBtn();
 }
 
@@ -1709,7 +1797,8 @@ function renderCards() {
   const cube  = CUBES[activeCube];
   const cards = cardCache[activeCube] ?? [];
   const owned = ownedMap[activeCube]  ?? {};
-
+  const excl  = excludedCards[activeCube] ?? {};
+  const sq    = searchQuery.toLowerCase();
 
   const groups = {};
   const totals = {};
@@ -1717,7 +1806,7 @@ function renderCards() {
   const specialGroups = new Map();
   const specialTotals = new Map();
 
-  const isFiltered = activeFilter !== 'all' || activeRarityFilter.size > 0;
+  const isFiltered = activeFilter !== 'all' || activeRarityFilter.size > 0 || sq;
 
   for (const c of cards) {
     // Unfiltered totals — always count every card for the header denominator
@@ -1725,7 +1814,9 @@ function renderCards() {
     else specialTotals.set(c._specialLabel, (specialTotals.get(c._specialLabel) ?? 0) + 1);
 
     const target = cube.counts[c.rarity] ?? 1;
-    if (activeFilter === 'missing' && (owned[c.name] ?? 0) >= target) continue;
+    if (activeFilter === 'missing'  && (owned[c.name] ?? 0) >= target) continue;
+    if (activeFilter === 'excluded' && !excl[c.name]) continue;
+    if (sq && !c.name.toLowerCase().includes(sq)) continue;
     if (activeRarityFilter.size > 0) {
       const rm = (activeRarityFilter.has('common')   && c.rarity === 'common')
               || (activeRarityFilter.has('uncommon')  && c.rarity === 'uncommon')
@@ -1782,7 +1873,7 @@ function renderCards() {
   }
 
   // Tokens section after Lands (and special sections)
-  if (activeRarityFilter.size === 0 && (activeFilter === 'all' || activeFilter === 'missing')) {
+  if (activeRarityFilter.size === 0 && !sq && (activeFilter === 'all' || activeFilter === 'missing')) {
     const cnVal  = s => { const n = parseInt(s); return isNaN(n) ? 99999 : n; };
     const allTokens = (tokenPool[cube.setCode] ?? [])
       .slice().sort((a, b) => cnVal(a.collector_number) - cnVal(b.collector_number));
@@ -1905,6 +1996,68 @@ function renderInfo() {
   }
 
   document.getElementById('grid').innerHTML = items.join('') || '<div class="empty">No info for this set yet.</div>';
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RENDER — ALL-SETS DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderDashboard() {
+  const rows = sortedCubeEntries.map(([key, cube]) => {
+    const cards   = cardCache[key] ?? [];
+    const owned   = ownedMap[key]  ?? {};
+    const excl    = excludedCards[key] ?? {};
+    const isActive = key === activeCube;
+
+    let pct = null, ownedCount = 0, totalCount = 0, exclCount = 0;
+    if (cards.length) {
+      for (const c of cards) {
+        if (excl[c.name]) { exclCount++; continue; }
+        const t = cube.counts[c.rarity] ?? 1;
+        totalCount += t;
+        ownedCount += Math.min(owned[c.name] ?? 0, t);
+      }
+      pct = totalCount ? Math.round(ownedCount / totalCount * 100) : 0;
+    } else {
+      // Cache not loaded — use raw owned keys as a rough count
+      ownedCount = Object.values(owned).filter(n => n > 0).length;
+    }
+
+    const barFill  = pct !== null ? pct : 0;
+    const barClass = pct === 100 ? '' : ' partial';
+    const statText = pct !== null
+      ? `<span class="dash-pct">${pct}%</span>${ownedCount} / ${totalCount} cards${exclCount ? ` <span class="dash-excl">(${exclCount} excluded)</span>` : ''}`
+      : `<span class="dash-pct">—</span>${ownedCount} owned · tap to load`;
+
+    return `<div class="dash-cube${isActive ? ' dash-active' : ''}" data-cube-key="${key}">
+      <img class="dash-sym" src="${setSymUrl(cube.setCode)}" alt="${cube.setCode}">
+      <div class="dash-info">
+        <div class="dash-name">${cube.name}</div>
+        <div class="dash-bar-wrap"><div class="dash-bar-fill${barClass}" style="width:${barFill}%"></div></div>
+        <div class="dash-stat">${statText}</div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('grid').innerHTML = `<div class="dash-grid">${rows.join('')}</div>`;
+
+  document.querySelectorAll('.dash-cube').forEach(el => {
+    el.addEventListener('click', async () => {
+      const key = el.dataset.cubeKey;
+      document.querySelectorAll('.cube-option').forEach(o => o.classList.toggle('selected', o.dataset.key === key));
+      activeCube = key;
+      localStorage.setItem('activeCube', activeCube);
+      updateCubeTrigger(key);
+      activeView = 'cards';
+      localStorage.setItem('activeView', 'cards');
+      document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === 'cards'));
+      updatePillSlide(document.getElementById('viewTabs'));
+      updateControlsForView();
+      if (!cardCache[activeCube] && await loadCubeData(activeCube) === false) return;
+      render();
+    });
+  });
 }
 
 
