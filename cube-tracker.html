@@ -2188,25 +2188,35 @@ async function loadCubeData(cubeKey) {
 
   document.getElementById('grid').innerHTML = `<div class="loading">Fetching ${cube.name} cards from Scryfall…</div>`;
 
-  const [mainCards, tokens] = await Promise.all([
-    fetchSetCards(code, { maxCN: cube.maxCN, noDFCLands: cube.noDFCLands }),
-    fetchTokens(code),
-  ]);
+  let mainCards, tokens;
+  try {
+    [mainCards, tokens] = await Promise.all([
+      fetchSetCards(code, { maxCN: cube.maxCN, noDFCLands: cube.noDFCLands }),
+      fetchTokens(code),
+    ]);
+  } catch (e) {
+    document.getElementById('grid').innerHTML = `<div class="empty">Failed to load ${cube.name} — check your connection and refresh.</div>`;
+    return;
+  }
 
   let allCards = mainCards;
   if (cube.specials?.length) {
-    const specialBatches = await Promise.all(
-      cube.specials.map(sc => {
-        if (typeof sc === 'string') return fetchSetCards(sc);
-        if (sc.code)               return fetchSetCards(sc.code, {}, sc.label ?? null);
-        return fetchByQuery(sc.q, sc.label ?? null);
-      })
-    );
-    const seen = new Set(mainCards.map(c => c.id));
-    for (const batch of specialBatches) {
-      for (const c of batch) {
-        if (!seen.has(c.id)) { seen.add(c.id); allCards.push(c); }
+    try {
+      const specialBatches = await Promise.all(
+        cube.specials.map(sc => {
+          if (typeof sc === 'string') return fetchSetCards(sc);
+          if (sc.code)               return fetchSetCards(sc.code, {}, sc.label ?? null);
+          return fetchByQuery(sc.q, sc.label ?? null);
+        })
+      );
+      const seen = new Set(mainCards.map(c => c.id));
+      for (const batch of specialBatches) {
+        for (const c of batch) {
+          if (!seen.has(c.id)) { seen.add(c.id); allCards.push(c); }
+        }
       }
+    } catch (e) {
+      // Special card batches failed — continue with main cards only
     }
   }
 
