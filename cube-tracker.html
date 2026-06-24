@@ -2157,11 +2157,13 @@ function slimCard(c) {
     id: c.id, name: c.name, oracle_text: c.oracle_text, type_line: c.type_line,
     rarity: c.rarity, collector_number: c.collector_number, layout: c.layout,
     power: c.power, toughness: c.toughness, _specialLabel: c._specialLabel,
+    colors: c.colors, color_identity: c.color_identity,
     image_uris: c.image_uris ? { normal: c.image_uris.normal } : undefined,
     prices: c.prices ? { usd: c.prices.usd } : undefined,
     purchase_uris: c.purchase_uris?.tcgplayer ? { tcgplayer: c.purchase_uris.tcgplayer } : undefined,
     card_faces: c.card_faces?.map(f => ({
       name: f.name, oracle_text: f.oracle_text, type_line: f.type_line,
+      colors: f.colors,
       image_uris: f.image_uris ? { normal: f.image_uris.normal } : undefined,
     })),
   };
@@ -2172,7 +2174,7 @@ async function loadCubeData(cubeKey) {
   const code = cube.setCode;
 
   // Try sessionStorage cache first — avoids re-fetching on refresh
-  const cacheKey = `scry_v1_${cubeKey}`;
+  const cacheKey = `scry_v2_${cubeKey}`;
   try {
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
