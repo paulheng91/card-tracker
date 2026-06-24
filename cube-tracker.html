@@ -1804,14 +1804,6 @@ function renderCards() {
   const cards = cardCache[activeCube] ?? [];
   const owned = ownedMap[activeCube]  ?? {};
 
-  let totalNeeded = 0, totalOwned = 0;
-  cards.forEach(c => {
-    if (excludedCards[activeCube]?.[c.name]) return;
-    const t = cube.counts[c.rarity] ?? 1;
-    totalNeeded += t;
-    totalOwned  += Math.min(owned[c.name] ?? 0, t);
-  });
-  const pct = totalNeeded ? Math.round((totalOwned / totalNeeded) * 100) : 0;
 
   const groups = {};
   const totals = {};
