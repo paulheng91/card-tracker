@@ -1499,8 +1499,9 @@ document.querySelectorAll('#rarityRow .filter-btn').forEach(btn => {
 });
 
 function updateToggleAllBtn() {
-  document.getElementById('btnToggleAll').textContent =
-    collapsedSections.size > 0 ? 'Expand All' : 'Collapse All';
+  const anyCollapsed = [...document.querySelectorAll('.section-header[data-color-key]')]
+    .some(h => collapsedSections.has(h.dataset.colorKey));
+  document.getElementById('btnToggleAll').textContent = anyCollapsed ? 'Expand All' : 'Collapse All';
 }
 
 // ── Price toggle buttons ──────────────────────────────────────────────────
