@@ -316,7 +316,7 @@
       font-size: 0.75rem; font-weight: 900;
       color: rgba(255,255,255,0.2);
       transition: color 0.15s;
-      cursor: pointer; line-height: 1; min-width: 28px;
+      cursor: pointer; line-height: 1;
     }
     .footer-excl:hover { color: rgba(255,80,80,0.6); }
     .card.excluded .footer-excl { color: rgba(255,100,100,0.85); }
@@ -348,7 +348,7 @@
     }
     .card-num  { color: #666; }
     .card-name  { padding: 0 0.5rem 0.25rem; font-size: 0.68rem; font-weight: 700; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .card-price { padding: 0 0.5rem 0.3rem; font-size: 0.62rem; font-weight: 700; color: #555; white-space: nowrap; text-decoration: none; display: block; }
+    .card-price { padding: 0 0.5rem 0.3rem; font-size: 0.62rem; font-weight: 700; color: #555; white-space: nowrap; text-decoration: none; display: inline-block; }
     .card-price.price-mid  { color: #999; }
     .card-price.price-high { color: #c9a84c; }
     .card-price.price-top  { color: #e8820a; }
@@ -1226,16 +1226,7 @@ document.getElementById('grid').addEventListener('click', e => {
     return;
   }
 
-  // Only the X button (.footer-excl) triggers exclude.
-  // Fallback: clicks that pass through the pointer-events:none SVG land on .card-footer —
-  // treat those as exclude if they're in the right third of the footer.
-  const footerExcl = e.target.closest('.footer-excl');
-  const footerEl = footerExcl ?? (() => {
-    const f = e.target.closest('.card-footer');
-    if (!f) return null;
-    const r = f.getBoundingClientRect();
-    return e.clientX >= r.right - r.width * 0.38 ? f : null;
-  })();
+  const footerEl = e.target.closest('.footer-excl');
   if (footerEl) {
     const card = footerEl.closest('.card[data-name]');
     if (!card || activeView !== 'cards') return;
