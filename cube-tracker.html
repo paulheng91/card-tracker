@@ -948,6 +948,7 @@ let searchQuery         = '';
 let loadingCubes        = new Set();
 let failedCubes         = new Set();
 let dashboardLoaderRunning = false;
+let cubeStats           = {}; // { [cubeKey]: { total, owned, excluded } } — persisted to Gist
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1022,17 +1023,35 @@ function setStatus(msg, cls = '') {
 // GIST I/O
 // ═══════════════════════════════════════════════════════════════════════════
 
+function recomputeStats(key) {
+  const cube  = CUBES[key];
+  const cards = cardCache[key];
+  if (!cards?.length) return;
+  const owned = ownedMap[key]     ?? {};
+  const excl  = excludedCards[key] ?? {};
+  let total = 0, ownedCount = 0, exclCount = 0;
+  for (const c of cards) {
+    if (excl[c.name]) { exclCount++; continue; }
+    const t = cube.counts[c.rarity] ?? 1;
+    total += t;
+    ownedCount += Math.min(owned[c.name] ?? 0, t);
+  }
+  cubeStats[key] = { total, owned: ownedCount, excluded: exclCount };
+}
+
 async function loadCollection() {
   try {
     const res = await fetch(GIST_RAW + '?t=' + Date.now());
     if (res.ok) {
       const data = await res.json();
-      tokenOwned     = data._tokens    ?? {};
-      lockedCubes    = new Set(data._locked ?? []);
-      excludedCards  = data._excluded  ?? {};
+      tokenOwned    = data._tokens  ?? {};
+      lockedCubes   = new Set(data._locked ?? []);
+      excludedCards = data._excluded ?? {};
+      cubeStats     = data._stats   ?? {};
       delete data._tokens;
       delete data._locked;
       delete data._excluded;
+      delete data._stats;
       ownedMap = data;
     }
   } catch (e) {}
@@ -1054,6 +1073,7 @@ async function pushCollection() {
         _tokens:    tokenOwned,
         _locked:    [...lockedCubes],
         _excluded:  excludedCards,
+        _stats:     cubeStats,
       }, null, 2) } } })
     });
     if (!res.ok) {
@@ -1067,6 +1087,10 @@ async function pushCollection() {
 }
 
 function scheduleSave() {
+  // Recompute stats for all loaded cubes so _stats in the Gist is always fresh
+  for (const key of Object.keys(CUBES)) {
+    if (cardCache[key]?.length) recomputeStats(key);
+  }
   clearTimeout(saveTimer);
   saveTimer = setTimeout(pushCollection, 1500);
 }
@@ -2036,7 +2060,7 @@ async function loadAllCubesForDashboard() {
     let attempted = 0;
     for (const [key] of ordered) {
       if (activeView !== 'all') { dashboardLoaderRunning = false; return; }
-      if (cardCache[key] || loadingCubes.has(key)) continue;
+      if (cardCache[key] || loadingCubes.has(key) || cubeStats[key]) continue;
       attempted++;
       loadingCubes.add(key);
       failedCubes.delete(key);
@@ -2050,7 +2074,7 @@ async function loadAllCubesForDashboard() {
     }
 
     // If nothing left to attempt, we're done
-    if (!sortedCubeEntries.some(([k]) => !cardCache[k] && !loadingCubes.has(k))) break;
+    if (!sortedCubeEntries.some(([k]) => !cardCache[k] && !loadingCubes.has(k) && !cubeStats[k])) break;
     // If all remaining failed and no more passes, give up
     if (pass === 2) break;
   }
@@ -2075,6 +2099,12 @@ function renderDashboard() {
         totalCount += t;
         ownedCount += Math.min(owned[c.name] ?? 0, t);
       }
+      pct = totalCount ? Math.round(ownedCount / totalCount * 100) : 0;
+    } else if (cubeStats[key]) {
+      const s = cubeStats[key];
+      totalCount = s.total;
+      ownedCount = s.owned;
+      exclCount  = s.excluded;
       pct = totalCount ? Math.round(ownedCount / totalCount * 100) : 0;
     }
 
@@ -2385,6 +2415,11 @@ async function loadCubeData(cubeKey, silent = false) {
     }
   }
   if (needsSave) scheduleSave();
+
+  // Persist stats so the dashboard can render without Scryfall next time
+  recomputeStats(cubeKey);
+  scheduleSave();
+
   return true;
 }
 
