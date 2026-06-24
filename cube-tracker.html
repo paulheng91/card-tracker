@@ -1213,6 +1213,9 @@ document.getElementById('modal').addEventListener('click', e => {
 
 document.getElementById('grid').addEventListener('click', e => {
 
+  const priceLink = e.target.closest('.card-price[href]');
+  if (priceLink) { e.preventDefault(); window.open(priceLink.href, '_blank', 'noopener'); return; }
+
   const secHeader = e.target.closest('.section-header[data-color-key]');
   if (secHeader) {
     const key = secHeader.dataset.colorKey;
