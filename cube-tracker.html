@@ -242,6 +242,9 @@
     }
     .dash-cube:hover { background: #222; border-color: #3a3a3a; }
     .dash-cube.dash-active { border-color: #c9a84c; }
+    .dash-cube.dash-loading { cursor: default; opacity: 0.7; }
+    @keyframes dash-pulse { 0%,100%{ opacity:0.7; } 50%{ opacity:1; } }
+    .dash-cube.dash-loading { animation: dash-pulse 1.2s ease-in-out infinite; }
     .dash-sym { width: 28px; height: 28px; flex-shrink: 0; filter: brightness(0) invert(1); opacity: 0.7; }
     .dash-info { flex: 1; min-width: 0; }
     .dash-name { font-size: 0.8rem; font-weight: 700; color: #c9a84c; margin-bottom: 0.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -942,6 +945,8 @@ function showLockNotice() {
 
 let justToggledCard = null;
 let searchQuery     = '';
+let loadingCubes    = new Set();
+let failedCubes     = new Set();
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2009,21 +2014,33 @@ function renderInfo() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function loadAllCubesForDashboard() {
-  for (const [key] of sortedCubeEntries) {
-    if (activeView !== 'all') return; // user navigated away
-    if (!cardCache[key]) {
-      await loadCubeData(key, true); // silent — never overwrite the dashboard grid
-      if (activeView === 'all') renderDashboard();
-    }
+  // Prioritize activeCube first so the Cards view works immediately if user switches
+  const ordered = [
+    ...sortedCubeEntries.filter(([k]) => k === activeCube),
+    ...sortedCubeEntries.filter(([k]) => k !== activeCube),
+  ];
+  for (const [key] of ordered) {
+    if (activeView !== 'all') return;
+    if (cardCache[key] || loadingCubes.has(key)) continue;
+    loadingCubes.add(key);
+    failedCubes.delete(key);
+    if (activeView === 'all') renderDashboard();
+    const ok = await loadCubeData(key, true);
+    loadingCubes.delete(key);
+    if (!ok) failedCubes.add(key);
+    if (activeView === 'all') renderDashboard();
+    await new Promise(r => setTimeout(r, 250)); // breathe between sets — helps on slow mobile
   }
 }
 
 function renderDashboard() {
   const rows = sortedCubeEntries.map(([key, cube]) => {
-    const cards   = cardCache[key] ?? [];
-    const owned   = ownedMap[key]  ?? {};
-    const excl    = excludedCards[key] ?? {};
+    const cards    = cardCache[key] ?? [];
+    const owned    = ownedMap[key]  ?? {};
+    const excl     = excludedCards[key] ?? {};
     const isActive = key === activeCube;
+    const isLoading = loadingCubes.has(key);
+    const isFailed  = failedCubes.has(key);
 
     let pct = null, ownedCount = 0, totalCount = 0, exclCount = 0;
     if (cards.length) {
@@ -2034,18 +2051,22 @@ function renderDashboard() {
         ownedCount += Math.min(owned[c.name] ?? 0, t);
       }
       pct = totalCount ? Math.round(ownedCount / totalCount * 100) : 0;
-    } else {
-      // Cache not loaded — use raw owned keys as a rough count
-      ownedCount = Object.values(owned).filter(n => n > 0).length;
     }
 
     const barFill  = pct !== null ? pct : 0;
     const barClass = pct === 100 ? '' : ' partial';
-    const statText = pct !== null
-      ? `<span class="dash-pct">${pct}%</span>${ownedCount} / ${totalCount} cards${exclCount ? ` <span class="dash-excl">(${exclCount} excluded)</span>` : ''}`
-      : `<span class="dash-pct">—</span>${ownedCount} owned · tap to load`;
+    let statText;
+    if (isLoading) {
+      statText = `<span class="dash-pct" style="color:#c9a84c">Loading…</span>`;
+    } else if (isFailed) {
+      statText = `<span class="dash-pct" style="color:#cc4444">Failed</span><span style="color:#555"> — tap to retry</span>`;
+    } else if (pct !== null) {
+      statText = `<span class="dash-pct">${pct}%</span>${ownedCount} / ${totalCount} cards${exclCount ? ` <span class="dash-excl">(${exclCount} excluded)</span>` : ''}`;
+    } else {
+      statText = `<span class="dash-pct">—</span><span style="color:#444">tap to open</span>`;
+    }
 
-    return `<div class="dash-cube${isActive ? ' dash-active' : ''}" data-cube-key="${key}">
+    return `<div class="dash-cube${isActive ? ' dash-active' : ''}${isLoading ? ' dash-loading' : ''}" data-cube-key="${key}">
       <img class="dash-sym" src="${setSymUrl(cube.setCode)}" alt="${cube.setCode}">
       <div class="dash-info">
         <div class="dash-name">${cube.name}</div>
@@ -2057,10 +2078,34 @@ function renderDashboard() {
 
   document.getElementById('grid').innerHTML = `<div class="dash-grid">${rows.join('')}</div>`;
 
-  document.querySelectorAll('.dash-cube').forEach(el => {
+  document.querySelectorAll('.dash-cube:not(.dash-loading)').forEach(el => {
     el.addEventListener('click', async () => {
       const key = el.dataset.cubeKey;
-      document.querySelectorAll('.cube-option').forEach(o => o.classList.toggle('selected', o.dataset.key === key));
+
+      if (cardCache[key]) {
+        // Already loaded — switch straight to Cards view
+        activeCube = key;
+        localStorage.setItem('activeCube', activeCube);
+        updateCubeTrigger(key);
+        activeView = 'cards';
+        localStorage.setItem('activeView', 'cards');
+        document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === 'cards'));
+        updatePillSlide(document.getElementById('viewTabs'));
+        updateControlsForView();
+        render();
+        return;
+      }
+
+      // Not loaded yet — load silently within the dashboard, never leave this view
+      loadingCubes.add(key);
+      failedCubes.delete(key);
+      renderDashboard();
+      const ok = await loadCubeData(key, true);
+      loadingCubes.delete(key);
+      if (!ok) { failedCubes.add(key); renderDashboard(); return; }
+      failedCubes.delete(key);
+
+      // Success — now switch to Cards view
       activeCube = key;
       localStorage.setItem('activeCube', activeCube);
       updateCubeTrigger(key);
@@ -2069,7 +2114,6 @@ function renderDashboard() {
       document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === 'cards'));
       updatePillSlide(document.getElementById('viewTabs'));
       updateControlsForView();
-      if (!cardCache[activeCube] && await loadCubeData(activeCube) === false) return;
       render();
     });
   });
