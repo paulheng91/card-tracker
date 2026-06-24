@@ -540,10 +540,12 @@
   </div>
 
   <div class="controls-row">
+    <div class="ctrl-group btn-group">
+      <button class="view-tab" id="btnAllSets" data-view="all">All Sets</button>
+    </div>
     <div class="ctrl-group btn-group" id="viewTabs">
       <div class="pill-slide"></div>
       <button class="view-tab active" data-view="cards">Cards</button>
-      <button class="view-tab"        data-view="all">All Sets</button>
       <button class="view-tab"        data-view="info">Info</button>
     </div>
     <div class="ctrl-group btn-group" id="filterRow">
@@ -1402,9 +1404,11 @@ function updateControlsForView() {
   ['filterRow', 'rarityRow', 'priceRow', 'btnToggleAll', 'btnSearch'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.style.opacity      = dim ? '0.3' : '';
+    el.style.opacity       = dim ? '0.3' : '';
     el.style.pointerEvents = dim ? 'none' : '';
   });
+  // All Sets button shows active when on 'all' view; viewTabs reflect cards/info
+  document.getElementById('btnAllSets')?.classList.toggle('active', activeView === 'all');
   if (dim) {
     const el = document.getElementById('cardCount');
     if (el) el.textContent = '';
@@ -1420,6 +1424,7 @@ document.querySelectorAll('.view-tab').forEach(btn => {
     updatePillSlide(document.getElementById('viewTabs'));
     updateControlsForView();
     render();
+    if (activeView === 'all') loadAllCubesForDashboard();
   });
 });
 
@@ -2003,6 +2008,16 @@ function renderInfo() {
 // RENDER — ALL-SETS DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════
 
+async function loadAllCubesForDashboard() {
+  for (const [key] of sortedCubeEntries) {
+    if (activeView !== 'all') return; // user navigated away
+    if (!cardCache[key]) {
+      await loadCubeData(key);
+      if (activeView === 'all') renderDashboard();
+    }
+  }
+}
+
 function renderDashboard() {
   const rows = sortedCubeEntries.map(([key, cube]) => {
     const cards   = cardCache[key] ?? [];
@@ -2302,7 +2317,12 @@ async function init() {
   await loadCollection();
   updateLockBtn();
   updateControlsForView();
-  if (await loadCubeData(activeCube) !== false) render();
+  if (activeView === 'all') {
+    render();
+    loadAllCubesForDashboard();
+  } else {
+    if (await loadCubeData(activeCube) !== false) render();
+  }
 }
 
 init();
