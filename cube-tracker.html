@@ -260,7 +260,6 @@
     .section-header[data-color-key] { cursor: pointer; user-select: none; }
     .section-header[data-color-key]:hover { background: #282828; }
     .section-header.errata-high[data-color-key]:hover { background: #201c18; }
-    .section-header.errata-low[data-color-key]:hover  { background: #142030; }
 
     /* Chevron — fixed square so rotation has a stable center */
     .sec-count { font-size: 0.65rem; font-weight: 400; opacity: 0.5; margin-left: 0.25rem; }
@@ -1109,10 +1108,6 @@ async function fetchTokens(setCode) {
   return tokens;
 }
 
-
-// ═══════════════════════════════════════════════════════════════════════════
-// INFO DETAIL MODAL (errata cards)
-// ═══════════════════════════════════════════════════════════════════════════
 
 
 
@@ -2137,15 +2132,13 @@ async function loadCubeData(cubeKey) {
     }
   }
   if (needsSave) scheduleSave();
-
+  return true;
 }
 
 
 // ═══════════════════════════════════════════════════════════════════════════
 // RESTORE UI STATE & INIT
 // ═══════════════════════════════════════════════════════════════════════════
-
-document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active', b.dataset.view === activeView));
 
 async function init() {
   await loadCollection();
