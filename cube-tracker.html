@@ -1842,10 +1842,7 @@ function renderCards() {
   }
   const cnInt  = c => parseInt(c.collector_number) || 99999;
   const priceOf = c => parseFloat(c.prices?.usd) || 0;
-  if (sortByPrice) {
-    for (const k of COLOR_ORDER) groups[k].sort((a, b) => priceOf(b) - priceOf(a));
-    for (const [, grp] of specialGroups) grp.sort((a, b) => priceOf(b) - priceOf(a));
-  } else {
+  if (!sortByPrice) {
     for (const k of COLOR_ORDER) groups[k].sort((a, b) => cnInt(a) - cnInt(b));
     for (const [, grp] of specialGroups) grp.sort((a, b) => cnInt(a) - cnInt(b));
   }
@@ -2004,7 +2001,6 @@ function renderInfo() {
         for (const c of group) items.push(errataCardHTML(c));
       }
     }
-  } else {
   }
 
   document.getElementById('grid').innerHTML = items.join('') || '<div class="empty">No info for this set yet.</div>';
@@ -2173,12 +2169,12 @@ async function loadCubeData(cubeKey) {
       cachedCards.forEach(c => { cardByName[c.name] = c; oracleMap[c.name] = c.oracle_text ?? c.card_faces?.map(f => f.oracle_text || '').join('\n\n──\n\n') ?? ''; });
       cardCache[cubeKey] = cachedCards;
       tokenPool[code]    = filteredTokens;
-      if (cube.allOwned && !ownedMap[cubeKey]) { ownedMap[cubeKey] = {}; cachedCards.forEach(c => { ownedMap[cubeKey][c.name] = cube.counts[c.rarity] ?? 1; }); scheduleSave(); }
+      if (cube.allOwned && !Object.keys(ownedMap[cubeKey] ?? {}).length) { ownedMap[cubeKey] = {}; cachedCards.forEach(c => { ownedMap[cubeKey][c.name] = cube.counts[c.rarity] ?? 1; }); scheduleSave(); }
       if (!tokenOwned[cubeKey]) tokenOwned[cubeKey] = {};
       let ns = false;
       for (const t of filteredTokens) { if (tokenOwned[cubeKey][t.id] === undefined) { tokenOwned[cubeKey][t.id] = 1; ns = true; } }
       if (ns) scheduleSave();
-      render(); return;
+      return;
     }
   } catch {}
 
@@ -2215,7 +2211,7 @@ async function loadCubeData(cubeKey) {
     sessionStorage.setItem(cacheKey, JSON.stringify({ cards: allCards.map(slimCard), filteredTokens: tokenPool[code] }));
   } catch {}
 
-  if (cube.allOwned && !ownedMap[cubeKey]) {
+  if (cube.allOwned && !Object.keys(ownedMap[cubeKey] ?? {}).length) {
     ownedMap[cubeKey] = {};
     allCards.forEach(c => { ownedMap[cubeKey][c.name] = cube.counts[c.rarity] ?? 1; });
     scheduleSave();
