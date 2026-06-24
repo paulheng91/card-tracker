@@ -1300,7 +1300,9 @@ document.getElementById('grid').addEventListener('click', e => {
 
   // If a filter is active it may need to hide/show this card — full render.
   if (activeFilter === 'missing' || activeRarityFilter.size > 0) {
+    justToggledCard = name;
     render();
+    justToggledCard = null;
   } else {
     // Surgical update: only touch this card's class + status circle.
     // Avoids reloading all card images (causes flash on mobile).
@@ -2174,6 +2176,11 @@ async function loadCubeData(cubeKey) {
       let ns = false;
       for (const t of filteredTokens) { if (tokenOwned[cubeKey][t.id] === undefined) { tokenOwned[cubeKey][t.id] = 1; ns = true; } }
       if (ns) scheduleSave();
+      if (!oracleSnapshot[cubeKey]) {
+        oracleSnapshot[cubeKey] = {};
+        for (const c of cachedCards) oracleSnapshot[cubeKey][c.name] = oracleMap[c.name] ?? '';
+        scheduleSave();
+      }
       return;
     }
   } catch {}
@@ -2226,6 +2233,12 @@ async function loadCubeData(cubeKey) {
     }
   }
   if (needsSave) scheduleSave();
+
+  if (!oracleSnapshot[cubeKey]) {
+    oracleSnapshot[cubeKey] = {};
+    for (const c of allCards) oracleSnapshot[cubeKey][c.name] = oracleMap[c.name] ?? '';
+    scheduleSave();
+  }
 }
 
 
@@ -2240,15 +2253,6 @@ async function init() {
   await loadCubeData(activeCube);
   updateLockBtn();
   updateControlsForView();
-
-  if (!oracleSnapshot[activeCube]) {
-    oracleSnapshot[activeCube] = {};
-    for (const c of cardCache[activeCube]) {
-      oracleSnapshot[activeCube][c.name] = oracleMap[c.name] ?? '';
-    }
-    scheduleSave();
-  }
-
   render();
 }
 
