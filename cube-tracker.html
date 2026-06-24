@@ -1586,7 +1586,7 @@ sortedCubeEntries.forEach(([key, cube]) => {
     activeCube = key;
     localStorage.setItem('activeCube', activeCube);
     updateCubeTrigger(key);
-    if (!cardCache[activeCube]) await loadCubeData(activeCube);
+    if (!cardCache[activeCube] && await loadCubeData(activeCube) === false) return;
     render();
   });
   cubeMenu.appendChild(item);
@@ -1628,7 +1628,7 @@ async function switchCube(delta) {
   activeCube = next;
   localStorage.setItem('activeCube', activeCube);
   updateCubeTrigger(next);
-  if (!cardCache[activeCube]) await loadCubeData(activeCube);
+  if (!cardCache[activeCube] && await loadCubeData(activeCube) === false) return;
   render();
 }
 
@@ -2182,7 +2182,7 @@ async function loadCubeData(cubeKey) {
         for (const c of cachedCards) oracleSnapshot[cubeKey][c.name] = oracleMap[c.name] ?? '';
         scheduleSave();
       }
-      return;
+      return true;
     }
   } catch {}
 
@@ -2196,7 +2196,7 @@ async function loadCubeData(cubeKey) {
     ]);
   } catch (e) {
     document.getElementById('grid').innerHTML = `<div class="empty">Failed to load ${cube.name} — check your connection and refresh.</div>`;
-    return;
+    return false;
   }
 
   let allCards = mainCards;
@@ -2261,10 +2261,9 @@ document.querySelectorAll('.view-tab').forEach(b => b.classList.toggle('active',
 
 async function init() {
   await loadCollection();
-  await loadCubeData(activeCube);
   updateLockBtn();
   updateControlsForView();
-  render();
+  if (await loadCubeData(activeCube) !== false) render();
 }
 
 init();
