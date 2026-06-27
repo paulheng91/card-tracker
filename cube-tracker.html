@@ -166,6 +166,13 @@
     }
     .lock-btn:hover { background: #2e2e2e; color: #aaa; }
     .lock-btn.locked { color: #c9a84c; }
+    .lock-btn.verified { color: #52b788; cursor: default; }
+    .lock-btn.verified:hover { background: #242424; color: #52b788; }
+
+    /* ── Verified set badges ─────────────────────────────────────────────── */
+    .verified-badge { color: #52b788; font-size: 0.65rem; font-weight: 800; margin-left: auto; padding-left: 0.4rem; flex-shrink: 0; }
+    .dash-verified  { font-size: 0.62rem; color: #52b788; font-weight: 700; margin-left: 0.3rem; }
+    #cubeVerifiedBadge { color: #52b788; font-size: 0.72rem; font-weight: 800; }
     @keyframes lockPulse {
       0%   { color: #c9a84c; box-shadow: 0 0 0 0 rgba(201,168,76,0.55); }
       30%  { color: #e8c96a; box-shadow: 0 0 0 6px rgba(201,168,76,0.25); transform: translateX(-3px); }
@@ -517,6 +524,7 @@
           <button class="cube-trigger" id="cubeTrigger">
             <img class="set-sym" id="cubeSymImg" src="" alt="">
             <span id="cubeLabel">…</span>
+            <span id="cubeVerifiedBadge" style="display:none">✓</span>
             <span class="cube-arr">▼</span>
           </button>
           <div class="cube-menu" id="cubeMenu"></div>
@@ -932,7 +940,10 @@ let tokenOwned = {};
 
 let lockedCubes   = new Set(JSON.parse(localStorage.getItem('lockedCubes') || '[]'));
 let excludedCards = {}; // { [cubeKey]: { [cardName]: true } }
-function isLocked() { return lockedCubes.has(activeCube); }
+function isLocked()   { return lockedCubes.has(activeCube); }
+
+let verifiedSets  = new Set(); // loaded from verified-sets.json; read-only at runtime
+function isVerified() { return verifiedSets.has(activeCube); }
 
 function showLockNotice() {
   document.querySelector('header').style.transform = '';
@@ -1294,7 +1305,7 @@ document.getElementById('grid').addEventListener('click', e => {
   if (footerEl) {
     const card = footerEl.closest('.card[data-name]');
     if (!card || activeView !== 'cards') return;
-    if (isLocked()) { showLockNotice(); return; }
+    if (isLocked() && !isVerified()) { showLockNotice(); return; }
     const name = card.dataset.name;
     if (!excludedCards[activeCube]) excludedCards[activeCube] = {};
     const nowExcluded = !excludedCards[activeCube][name];
@@ -1328,7 +1339,7 @@ document.getElementById('grid').addEventListener('click', e => {
 
   const countBtn = e.target.closest('.count-btn');
   if (countBtn) {
-    if (isLocked()) { showLockNotice(); return; }
+    if (isLocked() && !isVerified()) { showLockNotice(); return; }
     const tokenCard = countBtn.closest('[data-token-id]');
     const id = tokenCard?.dataset.tokenId;
     if (id) {
@@ -1353,7 +1364,7 @@ document.getElementById('grid').addEventListener('click', e => {
   const card = e.target.closest('.card[data-name]');
   if (!card) return;
   if (activeView !== 'cards') return;
-  if (isLocked()) { showLockNotice(); return; }
+  if (isLocked() || isVerified()) { showLockNotice(); return; }
 
   const name   = card.dataset.name;
   const rarity = card.dataset.rarity;
@@ -1587,10 +1598,21 @@ function updateRaritySymbols(code) {
 
 function updateLockBtn() {
   const btn = document.getElementById('btnLock');
-  const locked = isLocked();
-  btn.textContent = locked ? '🔒' : '🔓';
-  btn.classList.toggle('locked', locked);
-  btn.title = locked ? 'Locked — click to unlock' : 'Lock this set';
+  const trigBadge = document.getElementById('cubeVerifiedBadge');
+  if (isVerified()) {
+    btn.textContent = '✅';
+    btn.classList.remove('locked');
+    btn.classList.add('verified');
+    btn.title = 'Fully verified — card list confirmed';
+    if (trigBadge) trigBadge.style.display = '';
+  } else {
+    btn.classList.remove('verified');
+    const locked = isLocked();
+    btn.textContent = locked ? '🔒' : '🔓';
+    btn.classList.toggle('locked', locked);
+    btn.title = locked ? 'Locked — click to unlock' : 'Lock this set';
+    if (trigBadge) trigBadge.style.display = 'none';
+  }
 }
 
 function updateCubeTrigger(key) {
@@ -1704,6 +1726,7 @@ function openUnlockDialog() {
 }
 
 document.getElementById('btnLock').addEventListener('click', () => {
+  if (isVerified()) return;
   if (lockedCubes.has(activeCube)) {
     openUnlockDialog();
   } else {
@@ -2121,10 +2144,11 @@ function renderDashboard() {
       statText = `<span class="dash-pct">—</span><span style="color:#444">tap to open</span>`;
     }
 
+    const verifiedBadge = verifiedSets.has(key) ? '<span class="dash-verified">✓ Verified</span>' : '';
     return `<div class="dash-cube${isActive ? ' dash-active' : ''}${isLoading ? ' dash-loading' : ''}" data-cube-key="${key}">
       <img class="dash-sym" src="${setSymUrl(cube.setCode)}" alt="${cube.setCode}">
       <div class="dash-info">
-        <div class="dash-name">${cube.name}</div>
+        <div class="dash-name">${cube.name}${verifiedBadge}</div>
         <div class="dash-bar-wrap"><div class="dash-bar-fill${barClass}" style="width:${barFill}%"></div></div>
         <div class="dash-stat">${statText}</div>
       </div>
@@ -2425,11 +2449,44 @@ async function loadCubeData(cubeKey, silent = false) {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
+// VERIFIED SETS — load from verified-sets.json
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function loadVerifiedSets() {
+  try {
+    const res = await fetch('./verified-sets.json?t=' + Date.now());
+    if (res.ok) {
+      const data = await res.json();
+      verifiedSets = new Set(data.verified ?? []);
+    }
+  } catch {}
+}
+
+function updateVerifiedBadges() {
+  document.querySelectorAll('.cube-option[data-key]').forEach(el => {
+    const key = el.dataset.key;
+    let badge = el.querySelector('.verified-badge');
+    if (verifiedSets.has(key)) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'verified-badge';
+        badge.textContent = '✓';
+        el.appendChild(badge);
+      }
+    } else if (badge) {
+      badge.remove();
+    }
+  });
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
 // RESTORE UI STATE & INIT
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function init() {
-  await loadCollection();
+  await Promise.all([loadCollection(), loadVerifiedSets()]);
+  updateVerifiedBadges();
   updateLockBtn();
   updateControlsForView();
   if (activeView === 'all') {

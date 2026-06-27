@@ -1,0 +1,4 @@
+{
+  "_comment": "Hardcoded verified sets. Edit this file manually to add/remove sets. Keys match CUBES in cube-tracker.html.",
+  "verified": ["isd", "ktk", "ltr", "neo"]
+}
